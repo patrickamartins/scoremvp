@@ -1,7 +1,8 @@
 // scoremvp-frontend/postcss.config.js
+
 module.exports = {
   plugins: {
-    // em vez de usar `tailwindcss` diretamente, usamos o pacote separado
+    // usa o plugin separado, não o 'tailwindcss' direto
     '@tailwindcss/postcss': {},
     autoprefixer: {},
   },
