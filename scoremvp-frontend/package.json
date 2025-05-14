@@ -19,7 +19,10 @@
     "tailwind-merge": "^3.3.0",
     "tw-animate-css": "^1.2.9",
     "web-vitals": "^2.1.4",
-    "@tailwindcss/postcss": "^4.1.5"
+    "@tailwindcss/postcss": "^4.1.5",
+    "tailwindcss": "^4.1.6",
+    "postcss": "^8.5.3",
+    "autoprefixer": "^10.4.21"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -27,9 +30,5 @@
     "test":  "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "devDependencies": {
-  "tailwindcss": "^4.1.6",
-  "postcss": "^8",
-  "autoprefixer": "^10"
-  }
+  "devDependencies": { }
 }
