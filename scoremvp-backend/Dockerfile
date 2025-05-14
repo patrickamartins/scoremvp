@@ -1,20 +1,23 @@
+# 1) Imagem base com Python
 FROM python:3.11-slim
 
+# 2) Define o diretório de trabalho
 WORKDIR /app
 
-# 1) Copia requirements e instala no ambiente global
+# 3) Copia requirements e instala dependências
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 2) Copia o resto do código
+# 4) Copia todo o resto do código
 COPY . .
 
-# 3) Define variáveis para o Flask
+# 5) Variáveis para o Flask
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 ENV PORT=8000
 
+# 6) Exponha a porta
 EXPOSE 8000
 
-# 4) Comando default que o Railway agora vai usar
+# 7) Comando ÚNICO para rodar o Flask (sem usar 'source')
 CMD ["flask", "run", "--host=0.0.0.0", "--port=8000"]
