@@ -1,29 +1,27 @@
-# stage 1: build
+# -------- STAGE 1: build --------
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# 1.1) Copia só manifestos e o postcss.config.js
-COPY package.json package-lock.json postcss.config.js tailwind.config.js ./
+# 1.1) Copia manifestos e configs de PostCSS/Tailwind
+COPY package.json package-lock.json tailwind.config.js postcss.config.js ./
 
-# 1.2) Instala dependências (tanto dependencies quanto devDependencies)
+# 1.2) Garante instalação de devDependencies
+ENV NODE_ENV=development
 RUN npm install
 
-# 1.3) Copia o resto do código
+# 1.3) Copia todo o resto do código
 COPY . .
 
 # 1.4) Gera o build de produção
 RUN npm run build
 
-# stage 2: ship
+# -------- STAGE 2: ship --------
 FROM nginx:alpine
-# remove site default do nginx
+# Limpa o site default do nginx
 RUN rm -rf /usr/share/nginx/html/*
 
-# 2.1) Copia o build estático
+# 2.1) Copia o build final
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# expõe a porta 80
 EXPOSE 80
-
-# 2.2) Inicia o nginx
 CMD ["nginx", "-g", "daemon off;"]
