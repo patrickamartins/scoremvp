@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ /app.py/$1 [QSA,L]
+
+# Configurações de segurança
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Configurações do Python
+AddHandler fcgid-script .py
+FcgidInitialEnv PYTHONPATH /home/u123456789/domains/seu-dominio.com/public_html
+FcgidInitialEnv PATH /usr/local/bin:/usr/bin:/bin
+FcgidInitialEnv FLASK_APP app.py
+FcgidInitialEnv FLASK_ENV production 
