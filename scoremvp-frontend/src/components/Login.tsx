@@ -1,13 +1,12 @@
+// src/components/Login.tsx
 import React, { useState } from 'react';
-import axios from 'axios';
+import API from '../api';
 import { useNavigate } from 'react-router-dom';
-
-const API_URL = 'https://scoremvp-backend-production.up.railway.app';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -16,12 +15,10 @@ const Login: React.FC = () => {
     setLoading(true);
     setError('');
 
+    console.log('↗️  POST', `${process.env.REACT_APP_API_URL}/login`);
     try {
-      const response = await axios.post(`${API_URL}/login`, {
-        username,
-        password
-      });
-      
+      const response = await API.post('/login', { username, password });
+
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         navigate('/dashboard');
@@ -29,6 +26,7 @@ const Login: React.FC = () => {
         setError('Credenciais inválidas');
       }
     } catch (err) {
+      console.error(err);
       setError('Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setLoading(false);
@@ -60,7 +58,7 @@ const Login: React.FC = () => {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Usuário"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={e => setUsername(e.target.value)}
               />
             </div>
             <div>
@@ -75,7 +73,7 @@ const Login: React.FC = () => {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Senha"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
               />
             </div>
           </div>
@@ -101,4 +99,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login; 
+export default Login;

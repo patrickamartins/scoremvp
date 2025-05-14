@@ -25,6 +25,9 @@ const Dashboard: React.FC = () => {
   const [jogoSelecionado, setJogoSelecionado] = useState<string>('');
   const [estatisticas, setEstatisticas] = useState<Estatistica[]>([]);
 
+
+  const { data } = await API.get(`/dashboard?jogo_id=${jogoId}`);
+  
   // Carrega lista de jogos para o dropdown
   useEffect(() => {
     axios
