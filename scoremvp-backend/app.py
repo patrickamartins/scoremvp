@@ -5,11 +5,18 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import jwt
 from functools import wraps
-from database import SessionLocal
+
+# importa engine, Base e registra os models
+from database import engine, Base, SessionLocal
 from models import Jogadora, Jogo, Estatistica, Acao
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'troque_para_uma_chave_secreta')
+# chave JWT
+SECRET_KEY = os.environ.get('SECRET_KEY', '04bb6aa6ebf19028beaa629565f14cb88c686159f291fc508741b18d2940eea9')
 
+# --- CRIA AS TABELAS SE NÃO EXISTIREM ---
+Base.metadata.create_all(bind=engine)
+
+# --- APP FLASK ---
 app = Flask(__name__)
 CORS(app)
 
@@ -21,8 +28,8 @@ def token_required(f):
             return jsonify({'message':'Token não fornecido'}), 401
         token = auth.split()[1]
         try:
-            data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        except Exception:
+            jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        except:
             return jsonify({'message':'Token inválido'}), 401
         return f(*args, **kwargs)
     return decorated
