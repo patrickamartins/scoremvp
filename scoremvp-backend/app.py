@@ -11,43 +11,40 @@ from models import Base, User, Jogadora, Jogo, Estatistica, Acao
 app = Flask(__name__, static_folder='frontend/build')
 CORS(app)
 
-# --- Garante criação de tabela no primeiro request e loga via flask.logger ---
+# Cria as tabelas na inicialização
 @app.before_first_request
 def initialize_database():
-    app.logger.info("⚙️  Criando tabelas no banco (se ainda não existirem)…")
+    app.logger.info("⚙️  Criando tabelas (se não existirem)…")
     Base.metadata.create_all(bind=engine)
     app.logger.info("✅ Tabelas criadas ou já existentes.")
 
-# Chave secreta para JWT (use env var em produção)
-SECRET_KEY = os.environ.get('SECRET_KEY', 'chave_teste')
+# JWT secret
+SECRET_KEY = os.environ.get('SECRET_KEY', 'sua_chave_secreta_aqui')
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return jsonify({'message': 'Token não fornecido!'}), 401
+        auth = request.headers.get('Authorization', '')
+        parts = auth.split(' ')
+        if len(parts) != 2 or parts[0] != 'Bearer':
+            return jsonify({'message': 'Token não fornecido ou inválido!'}), 401
         try:
-            token = token.split(' ')[1]
-            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            data = jwt.decode(parts[1], SECRET_KEY, algorithms=["HS256"])
             current_user = data['username']
-        except:
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token expirado!'}), 401
+        except Exception:
             return jsonify({'message': 'Token inválido!'}), 401
         return f(current_user, *args, **kwargs)
     return decorated
 
-# Serve React build
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    if path and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, 'index.html')
+#
+#  ─── API PREFIX: /api ────────────────────────────────────────────────────────────
+#
 
-# Autenticação
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json() or {}
     if data.get('username') == 'admin' and data.get('password') == 'admin':
         token = jwt.encode({
             'username': 'admin',
@@ -56,20 +53,19 @@ def login():
         return jsonify({'token': token})
     return jsonify({'message': 'Credenciais inválidas!'}), 401
 
-# Endpoints protegidos
-@app.route('/jogadoras', methods=['GET'])
+@app.route('/api/jogadoras', methods=['GET'])
 @token_required
-def get_jogadoras(current_user):
+def api_jogadoras(current_user):
     db = SessionLocal()
     try:
         return jsonify([{'id': j.id, 'nome': j.nome} for j in db.query(Jogadora).all()])
     finally:
         db.close()
 
-@app.route('/jogos', methods=['POST'])
+@app.route('/api/jogos', methods=['POST'])
 @token_required
-def create_jogo(current_user):
-    data = request.get_json()
+def api_create_jogo(current_user):
+    data = request.get_json() or {}
     db = SessionLocal()
     try:
         j = Jogo(
@@ -87,9 +83,9 @@ def create_jogo(current_user):
     finally:
         db.close()
 
-@app.route('/jogos', methods=['GET'])
+@app.route('/api/jogos', methods=['GET'])
 @token_required
-def get_jogos(current_user):
+def api_get_jogos(current_user):
     db = SessionLocal()
     try:
         return jsonify([{
@@ -103,10 +99,10 @@ def get_jogos(current_user):
     finally:
         db.close()
 
-@app.route('/estatistica', methods=['POST'])
+@app.route('/api/estatistica', methods=['POST'])
 @token_required
-def add_estatistica(current_user):
-    data = request.get_json()
+def api_add_estatistica(current_user):
+    data = request.get_json() or {}
     db = SessionLocal()
     try:
         est = Estatistica(
@@ -124,9 +120,9 @@ def add_estatistica(current_user):
     finally:
         db.close()
 
-@app.route('/desfazer', methods=['POST'])
+@app.route('/api/desfazer', methods=['POST'])
 @token_required
-def desfazer_acao(current_user):
+def api_desfazer(current_user):
     db = SessionLocal()
     try:
         ult = db.query(Acao).order_by(Acao.timestamp.desc()).limit(5).all()
@@ -141,9 +137,8 @@ def desfazer_acao(current_user):
     finally:
         db.close()
 
-# Dashboard público
-@app.route('/dashboard', methods=['GET'])
-def get_dashboard():
+@app.route('/api/dashboard', methods=['GET'])
+def api_dashboard():
     jogo_id = request.args.get('jogo_id')
     if not jogo_id:
         return jsonify({'message': 'ID do jogo não fornecido!'}), 400
@@ -159,12 +154,25 @@ def get_dashboard():
             'tipo': t,
             'jogadora': max(j.items(), key=lambda x: x[1])[0],
             'quantidade': max(j.items(), key=lambda x: x[1])[1]
-        } for t, j in destaques.items()]
+        } for t, j in destaques.items() if j]
         return jsonify({'totais': totais, 'destaques': destaques_fmt})
     finally:
         db.close()
 
+#
+#  ─── STATIC REACT ROUTES ────────────────────────────────────────────────────────
+#
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    # se existir arquivo estático (css, js, img)
+    fp = os.path.join(app.static_folder, path)
+    if path and os.path.exists(fp):
+        return send_from_directory(app.static_folder, path)
+    # senão devolve index.html (react-router)
+    return send_from_directory(app.static_folder, 'index.html')
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    # NOTE: em produção recomenda usar gunicorn/uwsgi em vez do dev server
     app.run(host="0.0.0.0", port=port, debug=False)
