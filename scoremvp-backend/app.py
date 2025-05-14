@@ -5,23 +5,22 @@ from datetime import datetime, timedelta
 import jwt
 from functools import wraps
 
-# Importa o engine e o SessionLocal do SQLAlchemy
-from database import engine, SessionLocal  
-# Importa a Base (para metadata.create_all) e seus modelos
-from models import Base, User, Jogadora, Jogo, Estatistica, Acao  
+from database import engine, SessionLocal
+from models import Base, User, Jogadora, Jogo, Estatistica, Acao
 
 app = Flask(__name__, static_folder='frontend/build')
 CORS(app)
 
-# Cria todas as tabelas que ainda não existirem
-print("⚙️  Criando tabelas no banco de dados (se não existirem)…")
-Base.metadata.create_all(bind=engine)
-print("✅ Tabelas criadas ou já existentes.")
+# --- Garante criação de tabela no primeiro request e loga via flask.logger ---
+@app.before_first_request
+def initialize_database():
+    app.logger.info("⚙️  Criando tabelas no banco (se ainda não existirem)…")
+    Base.metadata.create_all(bind=engine)
+    app.logger.info("✅ Tabelas criadas ou já existentes.")
 
-# Chave secreta para JWT (em produção use algo seguro e fora do código)
-SECRET_KEY = os.environ.get('SECRET_KEY', 'sua_chave_secreta_aqui')
+# Chave secreta para JWT (use env var em produção)
+SECRET_KEY = os.environ.get('SECRET_KEY', 'chave_teste')
 
-# Decorator para verificar o token JWT
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -29,7 +28,7 @@ def token_required(f):
         if not token:
             return jsonify({'message': 'Token não fornecido!'}), 401
         try:
-            token = token.split(' ')[1]  # Remove o 'Bearer '
+            token = token.split(' ')[1]
             data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
             current_user = data['username']
         except:
@@ -37,7 +36,7 @@ def token_required(f):
         return f(current_user, *args, **kwargs)
     return decorated
 
-# Serve o build do React
+# Serve React build
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
@@ -45,28 +44,25 @@ def serve(path):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
 
-# --- Autenticação ---
+# Autenticação
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-    if username == 'admin' and password == 'admin':
+    if data.get('username') == 'admin' and data.get('password') == 'admin':
         token = jwt.encode({
-            'username': username,
+            'username': 'admin',
             'exp': datetime.utcnow() + timedelta(hours=24)
         }, SECRET_KEY)
         return jsonify({'token': token})
     return jsonify({'message': 'Credenciais inválidas!'}), 401
 
-# --- Endpoints protegidos por token ---
+# Endpoints protegidos
 @app.route('/jogadoras', methods=['GET'])
 @token_required
 def get_jogadoras(current_user):
     db = SessionLocal()
     try:
-        jogadoras = db.query(Jogadora).all()
-        return jsonify([{'id': j.id, 'nome': j.nome} for j in jogadoras])
+        return jsonify([{'id': j.id, 'nome': j.nome} for j in db.query(Jogadora).all()])
     finally:
         db.close()
 
@@ -76,17 +72,15 @@ def create_jogo(current_user):
     data = request.get_json()
     db = SessionLocal()
     try:
-        novo_jogo = Jogo(
+        j = Jogo(
             data=datetime.strptime(data['data'], '%Y-%m-%d'),
             local=data['local'],
             horario=data['horario'],
             adversario=data['adversario'],
             categoria=data['categoria']
         )
-        db.add(novo_jogo)
-        db.commit()
-        db.refresh(novo_jogo)
-        return jsonify({'id': novo_jogo.id, 'message': 'Jogo criado com sucesso!'})
+        db.add(j); db.commit(); db.refresh(j)
+        return jsonify({'id': j.id, 'message': 'Jogo criado!'})
     except Exception as e:
         db.rollback()
         return jsonify({'message': str(e)}), 400
@@ -98,7 +92,6 @@ def create_jogo(current_user):
 def get_jogos(current_user):
     db = SessionLocal()
     try:
-        jogos = db.query(Jogo).all()
         return jsonify([{
             'id': j.id,
             'data': j.data.strftime('%Y-%m-%d'),
@@ -106,7 +99,7 @@ def get_jogos(current_user):
             'horario': j.horario,
             'adversario': j.adversario,
             'categoria': j.categoria
-        } for j in jogos])
+        } for j in db.query(Jogo).all()])
     finally:
         db.close()
 
@@ -116,19 +109,15 @@ def add_estatistica(current_user):
     data = request.get_json()
     db = SessionLocal()
     try:
-        nova_estatistica = Estatistica(
+        est = Estatistica(
             id_jogadora=data['id_jogadora'],
             id_jogo=data['id_jogo'],
             tipo=data['tipo']
         )
-        db.add(nova_estatistica)
-        db.commit()
-        db.refresh(nova_estatistica)
-
-        nova_acao = Acao(id_estatistica=nova_estatistica.id)
-        db.add(nova_acao)
-        db.commit()
-        return jsonify({'message': 'Estatística registrada com sucesso!'})
+        db.add(est); db.commit(); db.refresh(est)
+        ac = Acao(id_estatistica=est.id)
+        db.add(ac); db.commit()
+        return jsonify({'message': 'Estatística registrada!'})
     except Exception as e:
         db.rollback()
         return jsonify({'message': str(e)}), 400
@@ -140,24 +129,19 @@ def add_estatistica(current_user):
 def desfazer_acao(current_user):
     db = SessionLocal()
     try:
-        ultimas_acoes = db.query(Acao).order_by(Acao.timestamp.desc()).limit(5).all()
-        if not ultimas_acoes:
-            return jsonify({'message': 'Não há ações para desfazer!'})
-        acao_para_remover = ultimas_acoes[0]
-        estat = db.query(Estatistica).filter_by(id=acao_para_remover.id_estatistica).first()
-        if estat:
-            db.delete(estat)
-            db.delete(acao_para_remover)
-            db.commit()
-            return jsonify({'message': 'Ação desfeita com sucesso!'})
-        return jsonify({'message': 'Erro ao desfazer ação!'}), 400
-    except Exception as e:
-        db.rollback()
-        return jsonify({'message': str(e)}), 400
+        ult = db.query(Acao).order_by(Acao.timestamp.desc()).limit(5).all()
+        if not ult:
+            return jsonify({'message': 'Nada para desfazer!'})
+        ac = ult[0]
+        est = db.query(Estatistica).filter_by(id=ac.id_estatistica).first()
+        if est:
+            db.delete(est); db.delete(ac); db.commit()
+            return jsonify({'message': 'Ação desfeita!'})
+        return jsonify({'message': 'Erro ao desfazer!'}), 400
     finally:
         db.close()
 
-# --- Dashboard público (sem token) ---
+# Dashboard público
 @app.route('/dashboard', methods=['GET'])
 def get_dashboard():
     jogo_id = request.args.get('jogo_id')
@@ -165,22 +149,22 @@ def get_dashboard():
         return jsonify({'message': 'ID do jogo não fornecido!'}), 400
     db = SessionLocal()
     try:
-        estatisticas = db.query(Estatistica).filter_by(id_jogo=jogo_id).all()
-        totais = {}
-        destaques = {}
-        for est in estatisticas:
+        stats = db.query(Estatistica).filter_by(id_jogo=jogo_id).all()
+        totais, destaques = {}, {}
+        for est in stats:
             totais[est.tipo] = totais.get(est.tipo, 0) + 1
             destaques.setdefault(est.tipo, {}).setdefault(est.jogadora.nome, 0)
             destaques[est.tipo][est.jogadora.nome] += 1
         destaques_fmt = [{
-            'tipo': tipo,
-            'jogadora': max(jogs.items(), key=lambda x: x[1])[0],
-            'quantidade': max(jogs.items(), key=lambda x: x[1])[1]
-        } for tipo, jogs in destaques.items() if jogs]
+            'tipo': t,
+            'jogadora': max(j.items(), key=lambda x: x[1])[0],
+            'quantidade': max(j.items(), key=lambda x: x[1])[1]
+        } for t, j in destaques.items()]
         return jsonify({'totais': totais, 'destaques': destaques_fmt})
     finally:
         db.close()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
+    # NOTE: em produção recomenda usar gunicorn/uwsgi em vez do dev server
     app.run(host="0.0.0.0", port=port, debug=False)
