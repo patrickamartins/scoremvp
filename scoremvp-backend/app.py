@@ -104,6 +104,11 @@ def api_estatistica():
     finally:
         db.close()
 
+# Healthcheck simples para o Railway validar
+@app.route('/health')
+def health():
+    return jsonify({'status':'OK'}), 200
+
 # 5) “Catch-all” para servir o index do React
 @app.route('/', defaults={'path':''})
 @app.route('/<path:path>')
