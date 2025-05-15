@@ -20,7 +20,8 @@
     "autoprefixer": "^10.4.21"
   },
   "scripts": {
-    "build": "react-scripts build",
+  "build:css": "tailwindcss -i ./src/index.css -o ./src/tailwind.css --minify",
+  "build": "npm run build:css && react-scripts build",
     "start": "serve -s build"
   },
   "browserslist": {
