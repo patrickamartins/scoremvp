@@ -22,7 +22,7 @@
   },
   "scripts": {
     "build": "react-scripts build",
-    "start": "serve -s build -l $PORT"
+    "start": "serve -s build"
   },
   "browserslist": {
     "production": [
