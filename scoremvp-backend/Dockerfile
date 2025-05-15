@@ -1,16 +1,19 @@
 FROM python:3.11-slim
+
 WORKDIR /app
 
+# Instala dependências
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia código Flask + build do React
+# Copia todo o código (incluindo frontend/build se estiver aqui)
 COPY . .
 
-# NÃO sobrescreva PORT
-# EXPOSE 8080    # opcional, a plataforma já faz isso por você
+# Garanta que o PORT padrão é 8080 (Railway usa 8080 para HTTP)
+ENV PORT 8080
 
-# Inicia com Gunicorn na porta que a plataforma passar (via env PORT)
-CMD ["gunicorn", "--bind", "0.0.0.0:0.0.0.0:$PORT", "app:app"]
-# ou, se a sintaxe acima não funcionar, deixe:
-# CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Expõe a porta (opcional, o Railway já faz isso)
+EXPOSE 8080
+
+# Usa shell form para que $PORT seja expandido
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
