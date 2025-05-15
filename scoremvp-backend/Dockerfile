@@ -9,14 +9,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia todo o código (incluindo frontend/build se estiver aqui)
 COPY . .
 
-# Garanta que o PORT padrão é 8080 (Railway usa 8080 para HTTP)
+# Define a porta padrão (Railway usa 8080 para HTTP)
 ENV PORT 8080
 
-# Expõe a porta (opcional, o Railway já faz isso)
 EXPOSE 8080
 
-# Usa sh -c para expandir a variável $PORT
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT app:app"]
+# Use sh -c com expansão e valor default se PORT não estiver definido
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-8080} app:app"]
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD sh -c "curl -f http://localhost:$PORT/health || exit 1"
+  CMD sh -c "curl -f http://localhost:${PORT:-8080}/health || exit 1"
