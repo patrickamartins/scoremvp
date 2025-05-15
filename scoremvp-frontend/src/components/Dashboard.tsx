@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import API from './api';
+import API from '../api';
 
 interface Jogo {
   id: number;
@@ -68,4 +68,11 @@ const Dashboard: React.FC = () => {
             {JSON.stringify(dashboardData, null, 2)}
           </pre>
         </div>
-      ) : selectedJogoId !== '' ?
+      ) : selectedJogoId !== '' ? (
+        <p>Carregando dados...</p>
+      ) : null}
+    </div>
+  );
+};
+
+export default Dashboard;
