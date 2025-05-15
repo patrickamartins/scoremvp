@@ -1,14 +1,16 @@
 FROM python:3.11-slim
-
 WORKDIR /app
 
-COPY requirements.txt .
-
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copia código Flask + build do React
 COPY . .
 
-# Exponha a porta padrão
-ENV PORT 5000
+# NÃO sobrescreva PORT
+# EXPOSE 8080    # opcional, a plataforma já faz isso por você
 
-CMD ["python", "app.py"]
+# Inicia com Gunicorn na porta que a plataforma passar (via env PORT)
+CMD ["gunicorn", "--bind", "0.0.0.0:0.0.0.0:$PORT", "app:app"]
+# ou, se a sintaxe acima não funcionar, deixe:
+# CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
