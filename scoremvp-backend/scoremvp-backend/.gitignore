@@ -12,24 +12,22 @@ __pycache__/
 env/
 venv/
 
-# Flask/Django
-.env
-
-# Node/React
-node_modules/
-build/
-dist/
-frontend/node_modules/
-frontend/build/static/js/*.map
-frontend/build/static/css/*.map
-
-# IDEs e ferramentas
+# IDEs
 .vscode/
 .idea/
 
 # Sistema operacional
 .DS_Store
 Thumbs.db
+
+# Arquivos de ambiente
+.env
+
+# Node/Frontend
+node_modules/
+frontend/node_modules/
+frontend/build/static/js/*.map
+frontend/build/static/css/*.map
 
 # Outros
 *.bak

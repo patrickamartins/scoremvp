@@ -1,19 +1,20 @@
-# Node / React
+# Node
 node_modules/
 build/
-dist/
+.env.local
 
-# Python / Flask
+# Python
 __pycache__/
 *.py[cod]
-env/
+*$py.class
 .env
+.venv/
+venv/
 
-# Logs
-*.log
-
-# VSCode
+# IDE
 .vscode/
+.idea/
 
-# Sistema
+# Outros
+*.log
 .DS_Store

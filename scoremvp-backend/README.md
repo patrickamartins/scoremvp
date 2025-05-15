@@ -2,88 +2,51 @@
 
 Sistema de registro e acompanhamento de estatísticas de jogos de basquete.
 
-## Requisitos
+Este projeto é um **monorepo** contendo:
+
+- `scoremvp-backend/`: Backend em Flask
+- `scoremvp-frontend/`: Frontend em React
+
+Hospedado na plataforma [Railway](https://railway.app/).
+
+---
+
+## Requisitos Locais (opcional para desenvolvimento)
 
 - Python 3.8+
 - Node.js 14+
 - MySQL 5.7+
 
+---
+
 ## Backend (Python/Flask)
 
-1. Crie um ambiente virtual:
+### Desenvolvimento local
+
 ```bash
+cd scoremvp-backend
 python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 .venv\Scripts\activate     # Windows
+pip install -r requirements.txt
 ```
 
-2. Instale as dependências:
+---
+
+## Deploy (Railway)
+
+### Configuração
+
+1. Conecte seu repositório GitHub ao Railway
+2. Configure as variáveis de ambiente:
+   - `MYSQL_URL`: URL de conexão do MySQL
+   - `SECRET_KEY`: Chave secreta para JWT
+   - `PORT`: Porta para o servidor (opcional)
+
+### Deploy Manual
+
 ```bash
-pip install flask flask-cors pyjwt sqlalchemy mysql-connector-python
+railway up
 ```
 
-3. Configure o banco de dados:
-- Crie um banco de dados MySQL chamado `scoremvp`
-- Atualize as credenciais no arquivo `database.py`
-
-4. Execute o script para criar as tabelas e popular dados iniciais:
-```bash
-python create_tables.py
-python populate_initial_data.py
-```
-
-5. Inicie o servidor:
-```bash
-python app.py
-```
-
-O backend estará rodando em `http://localhost:5000`
-
-## Frontend (React)
-
-1. Entre no diretório do frontend:
-```bash
-cd frontend
-```
-
-2. Instale as dependências:
-```bash
-npm install
-```
-
-3. Inicie o servidor de desenvolvimento:
-```bash
-npm start
-```
-
-O frontend estará rodando em `http://localhost:3000`
-
-## Acesso ao Sistema
-
-- Usuário: `admin`
-- Senha: `admin`
-
-## Funcionalidades
-
-1. **Login**
-   - Autenticação com usuário e senha
-   - Geração de token JWT
-
-2. **Registro de Estatísticas**
-   - Criação de novos jogos
-   - Registro de estatísticas por jogadora
-   - Botões para cada tipo de estatística
-   - Funcionalidade de desfazer última ação
-
-3. **Dashboard**
-   - Visualização de estatísticas em tempo real
-   - Filtro por jogo
-   - Destaques individuais
-   - Totais por tipo de estatística
-
-## Estrutura do Banco de Dados
-
-- `jogadoras`: Cadastro de jogadoras
-- `jogos`: Informações dos jogos
-- `estatisticas`: Registro de estatísticas
-- `acoes`: Histórico de ações para desfazer 
+---

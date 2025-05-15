@@ -1,101 +1,71 @@
-// src/components/Dashboard.tsx
-import React, { useState, useEffect } from 'react';
-import API from '../api';
+import React, { useEffect, useState } from 'react';
+import API from './api';
 
 interface Jogo {
   id: number;
-  nome: string;
-}
-
-interface Totais {
-  [tipo: string]: number;
-}
-
-interface Destaque {
-  tipo: string;
-  jogadora: string;
-  quantidade: number;
+  data: string;
+  local: string;
+  horario: string;
+  adversario: string;
+  categoria: string;
 }
 
 const Dashboard: React.FC = () => {
-  const [jogos, setJogos]               = useState<Jogo[]>([]);
-  const [jogoSelecionado, setJogo]      = useState<number | ''>('');
-  const [totais, setTotais]             = useState<Totais>({});
-  const [destaques, setDestaques]       = useState<Destaque[]>([]);
-  const token = localStorage.getItem('token') || '';
+  const [jogos, setJogos] = useState<Jogo[]>([]);
+  const [selectedJogoId, setSelectedJogoId] = useState<number | ''>('');
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
-  // lista jogos no dropdown
+  // Carrega lista de jogos
   useEffect(() => {
-    API.get('/jogos', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => setJogos(res.data))
-      .catch(err => console.error('Erro ao listar jogos:', err));
-  }, [token]);
+    (async () => {
+      try {
+        const res = await API.get<Jogo[]>('/jogos');
+        setJogos(res.data);
+      } catch (err) {
+        console.error('Erro ao buscar jogos:', err);
+      }
+    })();
+  }, []);
 
-  // busca dados do dashboard para o jogo selecionado
+  // Carrega dados do dashboard sempre que mudar o jogo selecionado
   useEffect(() => {
-    if (!jogoSelecionado) return;
-    API.get(`/dashboard?jogo_id=${jogoSelecionado}`)
-      .then(res => {
-        setTotais(res.data.totais);
-        setDestaques(res.data.destaques);
-      })
-      .catch(err => console.error('Erro ao buscar dashboard:', err));
-  }, [jogoSelecionado]);
+    if (selectedJogoId !== '') {
+      (async () => {
+        try {
+          const res = await API.get<any>(`/dashboard?jogo_id=${selectedJogoId}`);
+          setDashboardData(res.data);
+        } catch (err) {
+          console.error('Erro ao buscar dashboard:', err);
+        }
+      })();
+    }
+  }, [selectedJogoId]);
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <h1>Dashboard do Jogo</h1>
+    <div className="max-w-4xl mx-auto mt-12 p-6">
+      <h1 className="text-3xl mb-6">Dashboard de Estatísticas</h1>
 
-      <div style={{ margin: '1rem 0' }}>
-        <label>Selecione o jogo:</label>
+      <div className="mb-6">
+        <label className="block mb-2">Selecione um Jogo:</label>
         <select
-          className="form-control"
-          value={jogoSelecionado}
-          onChange={e => {
-            const v = Number(e.target.value);
-            setJogo(isNaN(v) ? '' : v);
-          }}
+          className="w-full border p-2 rounded"
+          value={selectedJogoId}
+          onChange={e => setSelectedJogoId(Number(e.target.value))}
         >
-          <option value="">-- Selecione um jogo --</option>
+          <option value="">-- Escolha --</option>
           {jogos.map(j => (
             <option key={j.id} value={j.id}>
-              {j.nome}
+              {j.data} — {j.adversario}
             </option>
           ))}
         </select>
       </div>
 
-      {!jogoSelecionado && (
-        <p style={{ color: '#666' }}>
-          Selecione um jogo acima para carregar os dados.
-        </p>
-      )}
-
-      {jogoSelecionado && (
-        <>
-          <h2>Totais por Tipo</h2>
-          <ul>
-            {Object.entries(totais).map(([tipo, qt]) => (
-              <li key={tipo}>
-                {tipo}: {qt}
-              </li>
-            ))}
-          </ul>
-
-          <h2>Destaques</h2>
-          <ul>
-            {destaques.map(d => (
-              <li key={d.tipo}>
-                {d.tipo}: {d.jogadora} ({d.quantidade})
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
-  );
-};
-
-export default Dashboard;
+      {dashboardData ? (
+        <div className="bg-gray-100 p-4 rounded">
+          {/* Aqui você pode criar cards/charts com os dados */}
+          <pre className="whitespace-pre-wrap text-sm">
+            {JSON.stringify(dashboardData, null, 2)}
+          </pre>
+        </div>
+      ) : selectedJogoId !== '' ?
