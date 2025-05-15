@@ -163,6 +163,10 @@ def get_dashboard():
     finally:
         db.close()
 
+@app.route("/health", methods=["GET"])
+def health():
+    return {"status": "ok"}, 200
+
 # Rota para servir o frontend React
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
