@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Flask/Django
+.env
+
+# Node/React
+node_modules/
+build/
+dist/
+frontend/node_modules/
+frontend/build/static/js/*.map
+frontend/build/static/css/*.map
+
+# IDEs e ferramentas
+.vscode/
+.idea/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Outros
+*.bak
+*.swp
