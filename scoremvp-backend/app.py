@@ -13,7 +13,9 @@ CORS(app)
 
 # -- JWT SECRET_KEY -------------------------------------------------
 # Em produção, defina SECRET_KEY via variável de ambiente no Railway
-SECRET_KEY = os.environ.get('SECRET_KEY', 'troque_para_uma_chave_secreta')  
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY não definido no ambiente!") 
 
 # Decorator para checar token
 def token_required(f):
