@@ -10,7 +10,12 @@ COPY . .
 ENV PORT 8080
 EXPOSE 8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+ # (não precisamos mais forçar ENV PORT 8080 — o Railway injeta o $PORT)
+ EXPOSE 8080
 
-#HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+ # usa shell form para expandir $PORT no runtime
+ CMD gunicorn --bind 0.0.0.0:$PORT app:app
+
+ # healthcheck interno (opcional, pois o Railway já faz /health)
+ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+   CMD curl -f http://localhost:$PORT/health || exit 1
