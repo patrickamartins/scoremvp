@@ -104,10 +104,6 @@ def api_estatistica():
     finally:
         db.close()
 
-# Healthcheck simples para o Railway validar
-@app.route('/health')
-def health():
-    return jsonify({'status':'OK'}), 200
 
 # 5) “Catch-all” para servir o index do React
 @app.route('/', defaults={'path':''})
@@ -116,6 +112,10 @@ def serve(path):
     if path and os.path.exists(app.static_folder+'/'+path):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/health')
+def health():
+    return jsonify({'status':'OK'}), 200
 
 if __name__ == "__main__":
     # localmente
