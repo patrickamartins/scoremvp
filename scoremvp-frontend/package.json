@@ -8,20 +8,16 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.2",
     "recharts": "^2.15.3",
-    "@tailwindcss/postcss": "^4.1.5",
-    "lucide-react": "^0.510.0",
-    "clsx": "^2.1.1",
-    "react-scripts": "5.0.1"
-  },
-  "devDependencies": {
-    "serve": "^14.2.0",
     "tailwindcss": "^4.1.6",
     "postcss": "^8.5.3",
-    "autoprefixer": "^10.4.21"
+    "autoprefixer": "^10.4.21",
+    "@tailwindcss/postcss": "^4.1.5",
+    "react-scripts": "5.0.1",
+    "serve": "^14.2.0"
   },
   "scripts": {
-  "build:css": "tailwindcss -i ./src/index.css -o ./src/tailwind.css --minify",
-  "build": "npm run build:css && react-scripts build",
+    "build:css": "tailwindcss -i ./src/index.css -o ./src/tailwind.css --minify",
+    "build": "npm run build:css && react-scripts build",
     "start": "serve -s build"
   },
   "browserslist": {
