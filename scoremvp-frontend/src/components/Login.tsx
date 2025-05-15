@@ -15,7 +15,7 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const res = await API.post('/login', { username, password });
+      const response = await API.post('/login', { username, password });
       if (res.data.token) {
         localStorage.setItem('token', res.data.token);
         navigate('/dashboard');

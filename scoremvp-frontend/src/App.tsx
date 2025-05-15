@@ -1,3 +1,4 @@
+// src/App.tsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
@@ -8,8 +9,9 @@ const App: React.FC = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
     <Route path="/dashboard" element={<Dashboard />} />
-    <Route path="/registro" element={<RegistroEstatisticas />} />
-    <Route path="*" element={<Navigate to="/login" />} />
+    <Route path="/register" element={<RegistroEstatisticas />} />
+    {/* redireciona tudo para /login */}
+    <Route path="*" element={<Navigate to="/login" replace />} />
   </Routes>
 );
 
