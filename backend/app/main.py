@@ -17,8 +17,10 @@ app = FastAPI(title="Score MVP API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5173",
         "https://scoremvp-frontend.onrender.com",
-        "https://scoremvp.com.br"
+        "https://scoremvp.com.br",
+        "https://score-mvp.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
