@@ -9,7 +9,7 @@ import {
 } from 'react-router-dom';
 import './index.css';
 
-import Login from './components/Login';
+import LoginPage from './pages/LoginPage';
 import Players from './components/Players';
 import Games from './components/Games';
 import PublicPanel from './components/PublicPanel';
@@ -42,7 +42,7 @@ function App() {
         <Route
           path="/login"
           element={
-            token ? <Navigate to="/players" replace /> : <Login onLogin={setToken} />
+            token ? <Navigate to="/players" replace /> : <LoginPage />
           }
         />
         <Route

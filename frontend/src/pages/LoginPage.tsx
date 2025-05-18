@@ -35,8 +35,8 @@ const LoginPage: React.FC = () => {
         {/* Lado esquerdo: mensagem e arte */}
         <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-[#7b2ff2] to-[#f357a8] text-white p-10 relative">
           <h2 className="text-3xl font-bold mb-4 text-left w-full">ScoreMVP</h2>
-          <h3 className="text-2xl font-bold mb-2 w-full">Faça login para conectar o seu jogo.</h3>
-          <p className="text-base opacity-80 w-full">Bem-vindo de volta! Use sua conta para acessar o sistema.</p>
+          <h3 className="text-2xl font-bold mb-2 w-full">Faça login para controlar o seu jogo</h3>
+          <p className="text-base opacity-80 w-full">Ou registre-se para começar a contabilizar sues números.</p>
           {/* Arte decorativa */}
           <svg className="absolute bottom-0 left-0 w-full h-32 opacity-30" viewBox="0 0 400 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M0,100 Q100,0 200,100 T400,100" stroke="#fff" strokeWidth="2" fill="none" />
@@ -50,27 +50,27 @@ const LoginPage: React.FC = () => {
               {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="username">Usuário ou email</Label>
+                  
                   <Input
                     id="username"
                     name="username"
                     type="text"
                     value={username}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                    placeholder="Username or email"
+                    placeholder="Usuário ou email"
                     className="rounded-full bg-[#f3f4f6] border border-gray-300 px-4 py-2"
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="password">Senha</Label>
+                  
                   <Input
                     id="password"
                     name="password"
                     type="password"
                     value={password}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                    placeholder="Password"
+                    placeholder="Senha"
                     className="rounded-full bg-[#f3f4f6] border border-gray-300 px-4 py-2"
                     required
                   />
