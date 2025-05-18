@@ -16,7 +16,10 @@ app = FastAPI(title="Score MVP API")
 # Configuração do CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especifique as origens permitidas
+    allow_origins=[
+        "https://scoremvp-frontend.onrender.com",
+        "https://scoremvp.com.br"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
