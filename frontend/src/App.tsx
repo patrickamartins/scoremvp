@@ -12,12 +12,12 @@ const App: React.FC = () => {
     <Router>
       <Toaster position="top-right" />
       <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/painel" element={<Painel />} />
         <Route path="/game/register" element={<GameRegisterPage />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );
