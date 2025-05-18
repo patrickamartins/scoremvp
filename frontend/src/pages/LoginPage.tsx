@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, Button, Input, Label } from "../components/ui";
 import { Link } from "react-router-dom";
 
 const LoginPage: React.FC = () => {
+  useEffect(() => {
+    document.title = "ScoreMVP | Seu jogo sob controle";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
       <Card className="w-full max-w-md mx-auto">
