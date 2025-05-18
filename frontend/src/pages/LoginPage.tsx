@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, Button, Input, Label } from "../components/ui";
+import { Card, Button, Input } from "../components/ui";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../services/api";
 import { usePageTitle } from "../hooks/usePageTitle";

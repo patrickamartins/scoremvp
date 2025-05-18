@@ -20,7 +20,7 @@ import { Dashboard } from './pages/Dashboard';
 
 function App() {
   // 1) Estado para guardar o token
-  const [token, setToken] = useState<string | null>(
+  const [token] = useState<string | null>(
     localStorage.getItem('token')
   );
 
