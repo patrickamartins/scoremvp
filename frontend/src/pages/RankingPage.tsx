@@ -1,6 +1,7 @@
 import React from "react";
 import '../components/ui';
 import { Card } from '../components/ui';
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const highlights = [
   { name: "Luka Dončić", team: "Los Angeles Lakers", pos: "Armador", points: 30.2, img: "https://cdn.nba.com/headshots/nba/latest/1040x760/1629029.png" },
@@ -19,6 +20,8 @@ const players = [
 ];
 
 const RankingPage: React.FC = () => {
+  usePageTitle("Ranking");
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="flex flex-col md:flex-row gap-6 mb-8 justify-center">

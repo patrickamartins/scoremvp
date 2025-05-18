@@ -3,11 +3,14 @@ import { Card, Button, Input, Label, Select, SelectTrigger, SelectValue, SelectC
 import { useGameStats } from '../hooks/useGameStats';
 import type { Player } from '../types/game';
 import { toast } from 'sonner';
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const GameRegisterPage: React.FC = () => {
   const { game, setGame, stats, addStat, undoLastAction, resetStats, saveGame } = useGameStats();
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [newPlayer, setNewPlayer] = useState<Partial<Player>>({ name: "", number: 0 });
+
+  usePageTitle("Registrar Jogo");
 
   const handleGameChange = (field: string, value: any) => {
     setGame((prev: any) => prev ? { ...prev, [field]: value } : {

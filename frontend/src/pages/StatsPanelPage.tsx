@@ -1,6 +1,7 @@
 import React from "react";
 import '../components/ui';
 import { Card, Button } from '../components/ui';
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const stats = [
   { label: "Jogos", value: 12 },
@@ -14,6 +15,8 @@ const stats = [
 ];
 
 const StatsPanelPage: React.FC = () => {
+  usePageTitle("Painel de Estatísticas");
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8">

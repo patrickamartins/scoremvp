@@ -1,8 +1,11 @@
 import React from "react";
 import { Card, Button, Input, Label } from '../components/ui';
 import { Link } from "react-router-dom";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const RegisterPage: React.FC = () => {
+  usePageTitle("Cadastro");
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
       <Card className="w-full max-w-md mx-auto">

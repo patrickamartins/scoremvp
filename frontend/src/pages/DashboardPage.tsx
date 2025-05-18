@@ -1,8 +1,11 @@
 import React from "react";
 import '../components/ui';
 import { Card } from '../components/ui';
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const DashboardPage: React.FC = () => {
+  usePageTitle("Dashboard");
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="flex flex-col md:flex-row gap-6 mb-6">

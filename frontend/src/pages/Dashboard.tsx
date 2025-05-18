@@ -7,6 +7,7 @@ import { addDays } from 'date-fns';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
+import { usePageTitle } from "../hooks/usePageTitle";
 
 interface OverviewData {
   total_jogos: number;
@@ -88,6 +89,8 @@ export function Dashboard() {
   });
   const [jogos, setJogos] = useState<JogoStats[]>([]);
   const [selectedJogo, setSelectedJogo] = useState<string>('todos');
+
+  usePageTitle("Dashboard");
 
   // Buscar lista de jogos para o seletor
   useEffect(() => {

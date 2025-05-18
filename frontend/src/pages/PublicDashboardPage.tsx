@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, Button, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui';
 import type { Game, GameCategory } from '../types/game';
 import { Link } from "react-router-dom";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const PublicDashboardPage: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
@@ -40,6 +41,8 @@ const PublicDashboardPage: React.FC = () => {
       return teamPoints === 0;
     }).length,
   };
+
+  usePageTitle("Dashboard Público");
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
