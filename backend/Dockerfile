@@ -23,4 +23,4 @@ ENV PORT=8000
 EXPOSE ${PORT}
 
 # Comando para iniciar a aplicação
-CMD ["./start.sh"] 
+CMD ["/bin/bash", "-c", "./start.sh"] 
