@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Button, Input, Label } from "@/components/ui";
+import { Card, Button, Input, Label } from "../components/ui";
 import { Link } from "react-router-dom";
 
 const LoginPage: React.FC = () => {

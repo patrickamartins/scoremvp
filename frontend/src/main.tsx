@@ -34,15 +34,10 @@ function App() {
     }
   }, [token]);
 
-  // Função de logout
-  function handleLogout() {
-    setToken(null);
-  }
-
   return (
     <BrowserRouter>
       {/* Header só aparece se estiver autenticado */}
-      {token && <Header onLogout={handleLogout} />}
+      {token && <Header />}
       <Routes>
         <Route
           path="/login"

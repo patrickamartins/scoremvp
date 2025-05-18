@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, Button } from "@/components/ui";
+import '../components/ui';
+import { Card, Button } from '../components/ui';
 
 const stats = [
   { label: "Jogos", value: 12 },

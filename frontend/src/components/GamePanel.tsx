@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { getPlayers, createGame, createEstatistica } from "../services/api";
-import { useNavigate } from "react-router-dom";
 
 interface Player {
   id: number;
@@ -54,8 +53,6 @@ export default function GamePanel() {
   const [stats, setStats] = useState<{ [id: number]: EstatisticasJogadora }>({});
   // Histórico para desfazer
   const [history, setHistory] = useState<Acao[]>([]);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('Executando useEffect do painel');
@@ -170,11 +167,6 @@ export default function GamePanel() {
     }
   }
 
-  function handleLogout() {
-    localStorage.removeItem('token');
-    navigate('/login');
-  }
-
   return (
     <>
       <div className="p-2 md:p-6">
@@ -247,7 +239,7 @@ export default function GamePanel() {
               </tr>
             </thead>
             <tbody>
-              {players.map((player, idx) => (
+              {players.map((player) => (
                 <tr key={player.id} className="bg-white even:bg-gray-50 hover:bg-yellow-50">
                   <td className="text-center font-bold text-xs md:text-sm text-gray-700 align-middle border-b">{player.numero}</td>
                   <td className="text-left font-semibold text-xs md:text-sm text-gray-900 align-middle border-b">{player.nome}</td>

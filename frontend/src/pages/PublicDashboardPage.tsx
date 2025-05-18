@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui";
-import { Game, GameCategory } from "@/types/game";
+import { Card, Button, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui';
+import type { Game, GameCategory } from '../types/game';
 import { Link } from "react-router-dom";
 
 const PublicDashboardPage: React.FC = () => {
@@ -26,18 +26,18 @@ const PublicDashboardPage: React.FC = () => {
   };
 
   const filteredGames = games.filter(game => 
-    selectedCategory === "all" || game.category === selectedCategory
+    selectedCategory === "all" || (game.category ?? "") === selectedCategory
   );
 
   const stats = {
     totalGames: games.length,
     wins: games.filter(game => {
-      const teamPoints = game.stats.reduce((acc, curr) => acc + curr.stats.points, 0);
-      return teamPoints > 0; // Simplificado para exemplo
+      const teamPoints = (game.stats ?? []).reduce((acc: any, curr: any) => acc + curr.stats.points, 0);
+      return teamPoints > 0;
     }).length,
     losses: games.filter(game => {
-      const teamPoints = game.stats.reduce((acc, curr) => acc + curr.stats.points, 0);
-      return teamPoints === 0; // Simplificado para exemplo
+      const teamPoints = (game.stats ?? []).reduce((acc: any, curr: any) => acc + curr.stats.points, 0);
+      return teamPoints === 0;
     }).length,
   };
 
@@ -99,7 +99,7 @@ const PublicDashboardPage: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">
-                      {game.stats.reduce((acc, curr) => acc + curr.stats.points, 0)} pontos
+                      {(game.stats ?? []).reduce((acc: any, curr: any) => acc + curr.stats.points, 0)} pontos
                     </p>
                     <Link to={`/game/${game.id}`}>
                       <Button variant="outline" size="sm">Ver Detalhes</Button>

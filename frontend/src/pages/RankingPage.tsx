@@ -1,5 +1,6 @@
 import React from "react";
-import { Card } from "@/components/ui";
+import '../components/ui';
+import { Card } from '../components/ui';
 
 const highlights = [
   { name: "Luka Dončić", team: "Los Angeles Lakers", pos: "Armador", points: 30.2, img: "https://cdn.nba.com/headshots/nba/latest/1040x760/1629029.png" },

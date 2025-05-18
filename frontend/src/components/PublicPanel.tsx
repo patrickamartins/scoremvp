@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { getGame, getEstatisticasByJogo } from "../services/api";
+import { getEstatisticasByJogo } from "../services/api";
 import type { Estatistica } from "../services/api";
 
 export default function PublicPanel() {

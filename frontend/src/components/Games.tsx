@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { listGames, createGame } from "../services/api";
 import type { Game } from "../services/api";
 

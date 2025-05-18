@@ -1,16 +1,16 @@
 import React, { useState } from "react";
-import { Card, Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui";
-import { useGameStats } from "@/hooks/useGameStats";
-import { GameCategory, Player } from "@/types/game";
-import { toast } from "sonner";
+import { Card, Button, Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui';
+import { useGameStats } from '../hooks/useGameStats';
+import type { Player } from '../types/game';
+import { toast } from 'sonner';
 
 const GameRegisterPage: React.FC = () => {
   const { game, setGame, stats, addStat, undoLastAction, resetStats, saveGame } = useGameStats();
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [newPlayer, setNewPlayer] = useState<Partial<Player>>({ name: "", number: 0 });
 
-  const handleGameChange = (field: string, value: string) => {
-    setGame(prev => prev ? { ...prev, [field]: value } : {
+  const handleGameChange = (field: string, value: any) => {
+    setGame((prev: any) => prev ? { ...prev, [field]: value } : {
       id: Date.now().toString(),
       name: "",
       category: "sub-13",
@@ -30,16 +30,14 @@ const GameRegisterPage: React.FC = () => {
       toast.error("Preencha todos os campos do jogador");
       return;
     }
-
     const player: Player = {
       id: Date.now().toString(),
       name: newPlayer.name,
       number: newPlayer.number,
     };
-
-    setGame(prev => prev ? {
+    setGame((prev: any) => prev ? {
       ...prev,
-      players: [...prev.players, player]
+      players: [...(prev.players ?? []), player]
     } : null);
     setNewPlayer({ name: "", number: 0 });
   };
@@ -73,7 +71,7 @@ const GameRegisterPage: React.FC = () => {
               <Input
                 id="name"
                 value={game?.name || ""}
-                onChange={(e) => handleGameChange("name", e.target.value)}
+                onChange={(e: any) => handleGameChange("name", e.target.value)}
                 placeholder="Ex: Jogo 1"
               />
             </div>
@@ -81,7 +79,7 @@ const GameRegisterPage: React.FC = () => {
               <Label htmlFor="category">Categoria</Label>
               <Select
                 value={game?.category || "sub-13"}
-                onValueChange={(value) => handleGameChange("category", value)}
+                onValueChange={(value: any) => handleGameChange("category", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a categoria" />
@@ -97,7 +95,7 @@ const GameRegisterPage: React.FC = () => {
               <Input
                 id="location"
                 value={game?.location || ""}
-                onChange={(e) => handleGameChange("location", e.target.value)}
+                onChange={(e: any) => handleGameChange("location", e.target.value)}
                 placeholder="Local do jogo"
               />
             </div>
@@ -107,7 +105,7 @@ const GameRegisterPage: React.FC = () => {
                 id="date"
                 type="date"
                 value={game?.date || ""}
-                onChange={(e) => handleGameChange("date", e.target.value)}
+                onChange={(e: any) => handleGameChange("date", e.target.value)}
               />
             </div>
             <div>
@@ -116,7 +114,7 @@ const GameRegisterPage: React.FC = () => {
                 id="time"
                 type="time"
                 value={game?.time || ""}
-                onChange={(e) => handleGameChange("time", e.target.value)}
+                onChange={(e: any) => handleGameChange("time", e.target.value)}
               />
             </div>
           </div>
@@ -131,7 +129,7 @@ const GameRegisterPage: React.FC = () => {
               <Input
                 id="playerName"
                 value={newPlayer.name}
-                onChange={(e) => setNewPlayer(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e: any) => setNewPlayer((prev: any) => ({ ...prev, name: e.target.value }))}
                 placeholder="Nome do jogador"
               />
             </div>
@@ -141,7 +139,7 @@ const GameRegisterPage: React.FC = () => {
                 id="playerNumber"
                 type="number"
                 value={newPlayer.number || ""}
-                onChange={(e) => setNewPlayer(prev => ({ ...prev, number: parseInt(e.target.value) }))}
+                onChange={(e: any) => setNewPlayer((prev: any) => ({ ...prev, number: parseInt(e.target.value) }))}
                 placeholder="Número"
               />
             </div>
@@ -152,7 +150,7 @@ const GameRegisterPage: React.FC = () => {
 
           {/* Lista de Jogadores */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {game?.players.map((player) => (
+            {(game?.players ?? []).map((player) => (
               <div key={player.id} className="p-4 bg-gray-50 rounded-lg">
                 <p className="font-semibold">{player.name}</p>
                 <p className="text-sm text-gray-600">#{player.number}</p>
@@ -172,7 +170,7 @@ const GameRegisterPage: React.FC = () => {
                   <SelectValue placeholder="Selecione um jogador" />
                 </SelectTrigger>
                 <SelectContent>
-                  {game?.players.map((player) => (
+                  {(game?.players ?? []).map((player) => (
                     <SelectItem key={player.id} value={player.id}>
                       {player.name} (#{player.number})
                     </SelectItem>
@@ -205,7 +203,7 @@ const GameRegisterPage: React.FC = () => {
           <h2 className="text-2xl font-bold mb-6 text-eerieblack">Estatísticas Atuais</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {stats.map((playerStat) => {
-              const player = game?.players.find(p => p.id === playerStat.playerId);
+              const player = (game?.players ?? []).find((p) => p.id === playerStat.playerId);
               return (
                 <div key={playerStat.playerId} className="p-4 bg-gray-50 rounded-lg">
                   <h3 className="font-semibold mb-2">{player?.name} (#{player?.number})</h3>

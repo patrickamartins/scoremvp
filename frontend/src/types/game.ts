@@ -21,16 +21,17 @@ export interface PlayerGameStats {
 }
 
 export interface Game {
-  id: string;
-  name: string;
-  category: GameCategory;
-  location: string;
-  date: string;
-  time: string;
-  players: Player[];
-  stats: PlayerGameStats[];
-  createdAt: string;
-  updatedAt: string;
+  id?: number | string;
+  opponent?: string;
+  date?: string;
+  location?: string;
+  name?: string;
+  time?: string;
+  category?: GameCategory;
+  stats?: PlayerGameStats[];
+  players?: Player[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface GameAction {

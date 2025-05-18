@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Game, GameAction, PlayerGameStats, GameStats } from '@/types/game';
+import type { Game, GameAction, PlayerGameStats, GameStats } from '../types/game';
 
 const initialStats: GameStats = {
   points: 0,
