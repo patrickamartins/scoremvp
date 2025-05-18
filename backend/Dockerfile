@@ -15,9 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar o resto do código
 COPY . .
 
+# Tornar o script executável
+RUN chmod +x start.sh
+
 # Expor a porta dinâmica
 ENV PORT=8000
 EXPOSE ${PORT}
 
 # Comando para iniciar a aplicação
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"] 
+CMD ["./start.sh"] 
