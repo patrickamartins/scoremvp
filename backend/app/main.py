@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, players, games, estatisticas
 from app.routes.dashboard import router as dashboard_router
 from sqlalchemy.exc import IntegrityError
+import os
+import uvicorn
 
 app = FastAPI(title="Score MVP API")
 
@@ -24,4 +26,12 @@ app.include_router(dashboard_router, prefix="/api")
 
 @app.get("/")
 def read_root():
-    return {"message": "Bem-vindo à API do Score MVP"} 
+    return {"message": "Bem-vindo à API do Score MVP"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port) 
