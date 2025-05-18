@@ -3,8 +3,8 @@ from typing import List
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="postgresql+psycopg2://scoremvp_user:tEISM0baf5PNnxiL26y1OqvsiE1fXgXo@dpg-d0l17856ubrc73bmt21g-a:5432/scoremvp",
-        description="dpg-d0l17856ubrc73bmt21g-a"
+        default="postgresql+psycopg2://scoremvp_user:tEISM0baf5PNnxiL26y1OqvsiE1fXgXo@dpg-d0l17856ubrc73bmt21g-a.oregon-postgres.render.com:5432/scoremvp",
+        description="dpg-d0l17856ubrc73bmt21g-a.oregon-postgres.render.com"
     )
     # JWT
     SECRET_KEY: str = Field(
