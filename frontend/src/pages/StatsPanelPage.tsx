@@ -25,9 +25,9 @@ const StatsPanelPage: React.FC = () => {
         ))}
       </div>
       <div className="flex flex-wrap gap-4 mb-8">
-        <Button variant="primary">Registrar Novo Jogo</Button>
+        <Button variant="default">Registrar Novo Jogo</Button>
         <Button variant="secondary">Registrar Estatística</Button>
-        <Button variant="danger">Resetar Painel</Button>
+        <Button variant="destructive">Resetar Painel</Button>
       </div>
       <Card className="mt-8">
         <div className="font-semibold mb-2">Últimos Jogos</div>

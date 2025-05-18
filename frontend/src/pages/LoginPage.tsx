@@ -1,11 +1,34 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, Button, Input, Label } from "../components/ui";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { login } from "../services/api";
 
 const LoginPage: React.FC = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.title = "ScoreMVP | Seu jogo sob controle";
   }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await login({ username, password });
+      const token = res.data.access_token;
+      localStorage.setItem('token', token);
+      navigate('/players');
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      setError(
+        Array.isArray(detail)
+          ? detail.map((d: any) => d.msg).join('; ')
+          : detail || 'Erro no login'
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-600 to-indigo-600">
@@ -20,14 +43,30 @@ const LoginPage: React.FC = () => {
           <Card className="w-full max-w-md">
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-6 text-eerieblack text-center">Entrar</h2>
-              <form className="space-y-4">
+              {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="seu@email.com" required />
+                  <Label htmlFor="username">Usuário</Label>
+                  <Input 
+                    id="username" 
+                    name="username" 
+                    type="text" 
+                    value={username}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                    placeholder="Seu usuário" 
+                    required 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="password">Senha</Label>
-                  <Input id="password" name="password" type="password" required />
+                  <Input 
+                    id="password" 
+                    name="password" 
+                    type="password" 
+                    value={password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                    required 
+                  />
                 </div>
                 <Button type="submit" className="w-full mt-2">Entrar</Button>
               </form>
