@@ -3,8 +3,8 @@ from typing import List
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="mysql://root:Palexandre23@localhost:3306/scoremvp",
-        description="URL de conexão com o banco de dados"
+        default="postgresql+psycopg2://scoremvp_user:tEISM0baf5PNnxiL26y1OqvsiE1fXgXo@dpg-d0l17856ubrc73bmt21g-a:5432/scoremvp",
+        description="dpg-d0l17856ubrc73bmt21g-a"
     )
     # JWT
     SECRET_KEY: str = Field(
