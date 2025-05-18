@@ -4,4 +4,4 @@ restartPolicyType     = "on-failure"
 restartPolicyMaxRetries = 5    # opcional
 healthcheckPath       = "/health"
 healthcheckTimeout    = 60
-startCommand          = "./start.sh"
+# startCommand          = "./start.sh"
