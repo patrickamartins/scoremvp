@@ -36,7 +36,6 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    logger.info("Health check endpoint accessed")
     return {"status": "ok"}
 
 if __name__ == "__main__":
