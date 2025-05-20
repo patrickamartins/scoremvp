@@ -5,7 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import GameRegisterPage from "./pages/GameRegisterPage";
 import { Dashboard } from './pages/Dashboard';
-import { Painel } from './pages/Painel';
+import Painel from './pages/Painel';
 
 const App: React.FC = () => {
   return (

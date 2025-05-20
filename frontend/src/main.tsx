@@ -10,13 +10,30 @@ import {
 import './index.css';
 
 import LoginPage from './pages/LoginPage';
-import Players from './components/Players';
+import PlayersPage from './pages/PlayersPage';
 import Games from './components/Games';
 import PublicPanel from './components/PublicPanel';
-import GamePanel from './components/GamePanel';
 import { setAuthToken } from './services/api';
 import Header from './components/Header';
 import { Dashboard } from './pages/Dashboard';
+import Painel from './pages/Painel';
+
+declare global {
+  interface Window {
+    gtmInjected?: boolean;
+  }
+}
+
+if (typeof window !== "undefined" && !window.gtmInjected) {
+  window.gtmInjected = true;
+  const script = document.createElement("script");
+  script.innerHTML = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-M4FG7VQJ');`;
+  document.head.appendChild(script);
+}
 
 function App() {
   // 1) Estado para guardar o token
@@ -40,6 +57,12 @@ function App() {
       {token && <Header />}
       <Routes>
         <Route
+          path="/"
+          element={
+            token ? <Navigate to="/players" replace /> : <LoginPage />
+          }
+        />
+        <Route
           path="/login"
           element={
             token ? <Navigate to="/players" replace /> : <LoginPage />
@@ -47,7 +70,7 @@ function App() {
         />
         <Route
           path="/players"
-          element={token ? <Players /> : <Navigate to="/login" replace />}
+          element={token ? <PlayersPage /> : <Navigate to="/login" replace />}
         />
         <Route
           path="/games"
@@ -56,7 +79,7 @@ function App() {
         <Route path="/public/:gameId" element={<PublicPanel />} />
         <Route
           path="/painel"
-          element={token ? <GamePanel /> : <Navigate to="/login" replace />}
+          element={token ? <Painel /> : <Navigate to="/login" replace />}
         />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

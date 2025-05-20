@@ -1,8 +1,7 @@
 import { usePageTitle } from "../hooks/usePageTitle";
+import GamePanel from "../components/GamePanel";
 
-export const Painel = () => {
+export default function Painel() {
   usePageTitle("Painel");
-  return <div>Painel</div>;
-};
-
-export default Painel; 
+  return <GamePanel />;
+} 
