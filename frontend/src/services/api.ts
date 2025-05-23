@@ -2,9 +2,36 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 
-export const api = axios.create({
+const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
+
+// Interceptor para adicionar o token em todas as requisições
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
+// Interceptor para tratamento de erros
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Se o token expirou, limpa o localStorage e redireciona para o login
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // —— Auth ————————————————————————————————
 
@@ -22,20 +49,17 @@ export interface SignupResponse {
 /**
  * Faz login usando OAuth2PasswordRequestForm (x-www-form-urlencoded)
  */
-export function login(payload: {
-  username: string;
-  password: string;
-}): Promise<AxiosResponse<LoginResponse>> {
+export const login = async (credentials: { username: string; password: string }) => {
   const form = new URLSearchParams();
-  form.append('username', payload.username);
-  form.append('password', payload.password);
+  form.append('username', credentials.username);
+  form.append('password', credentials.password);
 
   return api.post<LoginResponse>('/auth/login', form, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
   });
-}
+};
 
 /**
  * Cadastra novo usuário
@@ -149,3 +173,13 @@ export function undoLastEstatistica(
 ): Promise<AxiosResponse<void>> {
   return api.delete<void>(`/estatisticas/ultimo/${jogoId}`);
 }
+
+export const forgotPassword = async (email: string) => {
+  return api.post('/auth/forgot-password', { email });
+};
+
+export const resetPassword = async (token: string, newPassword: string) => {
+  return api.post('/auth/reset-password', { token, new_password: newPassword });
+};
+
+export default api;

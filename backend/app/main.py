@@ -20,7 +20,8 @@ app.add_middleware(
         "http://localhost:5173",
         "https://scoremvp-frontend.onrender.com",
         "https://scoremvp.com.br",
-        "https://score-mvp.vercel.app"
+        "https://score-mvp.vercel.app",
+        "https://scoremvp.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],

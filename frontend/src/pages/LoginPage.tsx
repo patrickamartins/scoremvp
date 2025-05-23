@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, Button, Input } from "../components/ui";
 import { Link, useNavigate } from "react-router-dom";
-import { login } from "../services/api";
+import { login, setAuthToken } from "../services/api";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
+      setAuthToken(token);
       navigate('/players');
     }
   }, [navigate]);
@@ -26,6 +27,7 @@ const LoginPage: React.FC = () => {
       const res = await login({ username, password });
       const token = res.data.access_token;
       localStorage.setItem('token', token);
+      setAuthToken(token);
       toast.success("Login realizado com sucesso!");
       navigate('/players');
     } catch (err: any) {
