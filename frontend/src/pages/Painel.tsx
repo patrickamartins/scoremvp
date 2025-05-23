@@ -17,9 +17,21 @@ const Painel: React.FC = () => {
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
 
   useEffect(() => {
+    console.log('Painel montado');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Token não encontrado. Faça login novamente.');
+      return;
+    }
     getPlayers()
-      .then(res => setPlayers(res.data))
-      .catch(() => toast.error("Erro ao carregar jogadoras"));
+      .then(res => {
+        console.log('Jogadoras recebidas:', res.data);
+        setPlayers(res.data);
+      })
+      .catch((err) => {
+        console.error('Erro ao buscar jogadoras:', err);
+        toast.error("Erro ao carregar jogadoras");
+      });
   }, []);
 
   const handlePlayerSelection = (playerId: number) => {
