@@ -2,28 +2,27 @@ import React, { useState, useEffect } from "react";
 import { Card, Button, Checkbox } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "sonner";
+import { getPlayers } from "../services/api";
 
 interface Player {
-  id: string;
-  name: string;
-  number: number;
-  position: string;
+  id: number;
+  nome: string;
+  numero: number;
+  posicao?: string;
 }
 
 const Painel: React.FC = () => {
   usePageTitle("Painel");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
 
   useEffect(() => {
-    // Carregar jogadores do localStorage
-    const savedPlayers = localStorage.getItem('players');
-    if (savedPlayers) {
-      setPlayers(JSON.parse(savedPlayers));
-    }
+    getPlayers()
+      .then(res => setPlayers(res.data))
+      .catch(() => toast.error("Erro ao carregar jogadoras"));
   }, []);
 
-  const handlePlayerSelection = (playerId: string) => {
+  const handlePlayerSelection = (playerId: number) => {
     setSelectedPlayers(prev => {
       if (prev.includes(playerId)) {
         return prev.filter(id => id !== playerId);
@@ -55,14 +54,14 @@ const Painel: React.FC = () => {
               <div key={player.id} className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
                   <Checkbox
-                    id={player.id}
+                    id={String(player.id)}
                     checked={selectedPlayers.includes(player.id)}
                     onCheckedChange={() => handlePlayerSelection(player.id)}
                   />
                   <div>
-                    <h3 className="font-semibold">{player.name}</h3>
-                    <p className="text-sm text-gray-600">#{player.number}</p>
-                    <p className="text-sm text-gray-600">{player.position}</p>
+                    <h3 className="font-semibold">{player.nome}</h3>
+                    <p className="text-sm text-gray-600">#{player.numero}</p>
+                    <p className="text-sm text-gray-600">{player.posicao}</p>
                   </div>
                 </div>
               </div>

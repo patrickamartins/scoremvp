@@ -14,18 +14,23 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Score MVP API")
 
 # Configuração do CORS
+origins = [
+    "http://localhost:5173",
+    "https://scoremvp-frontend.onrender.com",
+    "https://scoremvp.com.br",
+    "https://www.scoremvp.com.br",
+    "https://score-mvp.vercel.app",
+    "https://scoremvp.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://scoremvp-frontend.onrender.com",
-        "https://scoremvp.com.br",
-        "https://score-mvp.vercel.app",
-        "https://scoremvp.vercel.app"
-    ],
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # Incluir routers
