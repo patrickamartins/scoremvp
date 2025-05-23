@@ -35,21 +35,14 @@ class PlayerBase(BaseModel):
 class PlayerCreate(PlayerBase):
     pass
 
-
-from typing import Optional
-
-class PlayerUpdate(BaseModel):
+class PlayerUpdate(PlayerBase):
     nome: Optional[str] = Field(None, min_length=2, max_length=100)
     numero: Optional[int] = Field(None, ge=0, le=99)
     posicao: Optional[str] = Field(None, max_length=50)
 
-    model_config = {"from_attributes": True}
-
-
-
 class PlayerOut(PlayerBase):
     id: int
-    estatisticas: List["EstatisticaOut"] = []
+    created_at: datetime
 
     class Config:
         orm_mode = True

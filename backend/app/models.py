@@ -24,7 +24,7 @@ class Jogadora(Base):
     __tablename__ = "jogadoras"
 
     id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(100), unique=True, index=True, nullable=False)
+    nome = Column(String(100), index=True, nullable=False)
     numero = Column(Integer, nullable=False)
     posicao = Column(String(50))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
