@@ -130,6 +130,7 @@ export default function GamePanel() {
       alert("Preencha o adversário e a data do jogo.");
       return;
     }
+
     try {
       // 1. Criar o jogo
       const gamePayload = {
@@ -138,16 +139,24 @@ export default function GamePanel() {
         location
       };
       console.log('Payload do jogo:', gamePayload);
+      
       const gameRes = await createGame(gamePayload);
+      if (!gameRes.data?.id) {
+        throw new Error('Erro ao criar jogo: ID não retornado');
+      }
       const jogo_id = gameRes.data.id;
 
       // 2. Criar estatísticas para cada jogadora
       const estatisticasPromises = players.map(player => {
         const s = stats[player.id];
         // Só envia se houver alguma estatística
-        const total = (s?.dois || 0) + (s?.tres || 0) + (s?.lance || 0) + (s?.assistencias || 0) + (s?.rebotes || 0) + (s?.roubos || 0) + (s?.faltas || 0) + (s?.tocos || 0) + (s?.turnovers || 0);
+        const total = (s?.dois || 0) + (s?.tres || 0) + (s?.lance || 0) + 
+                     (s?.assistencias || 0) + (s?.rebotes || 0) + (s?.roubos || 0) + 
+                     (s?.faltas || 0) + (s?.tocos || 0) + (s?.turnovers || 0);
+        
         if (!total) return null;
-        return createEstatistica({
+
+        const estatisticaPayload = {
           jogadora_id: player.id,
           jogo_id,
           pontos: (s?.dois || 0) * 2 + (s?.tres || 0) * 3 + (s?.lance || 0),
@@ -156,14 +165,31 @@ export default function GamePanel() {
           roubos: s?.roubos || 0,
           faltas: s?.faltas || 0,
           quarto: quarto,
-        });
+        };
+
+        console.log('Payload da estatística:', estatisticaPayload);
+        return createEstatistica(estatisticaPayload);
       }).filter(Boolean);
+
+      if (estatisticasPromises.length === 0) {
+        throw new Error('Nenhuma estatística para salvar');
+      }
+
       await Promise.all(estatisticasPromises);
       alert("Jogo e estatísticas salvos com sucesso!");
       resetStats();
-    } catch (err) {
-      alert("Erro ao salvar jogo/estatísticas. Veja o console.");
-      console.error(err);
+    } catch (error: any) {
+      console.error('Erro detalhado:', error);
+      if (error.response) {
+        console.error('Resposta do servidor:', error.response.data);
+        alert(`Erro ao salvar: ${error.response.data.detail || 'Erro desconhecido'}`);
+      } else if (error.request) {
+        console.error('Sem resposta do servidor:', error.request);
+        alert('Erro de conexão com o servidor. Verifique sua conexão.');
+      } else {
+        console.error('Erro:', error.message);
+        alert(`Erro: ${error.message}`);
+      }
     }
   }
 
