@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../services/api';
+import api from '../services/api';
 import Card from "../components/ui/Card";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -94,7 +94,7 @@ export function Dashboard() {
 
   // Buscar lista de jogos para o seletor
   useEffect(() => {
-    api.get('/dashboard/public/jogos').then(res => setJogos(res.data));
+    api.get('/dashboard/public/jogos').then(({ data }) => setJogos(data));
   }, []);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, validator, root_validator
 # --- Usuário e Token (já existentes) ---
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=32)
-    email: str = Field(..., regex=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+    email: str = Field(..., pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     password: str = Field(..., min_length=6)
 
 class UserOut(BaseModel):
@@ -75,7 +75,7 @@ class GameUpdate(BaseModel):
     opponent: Optional[str] = Field(None, min_length=2, max_length=100)
     date: Optional[datetime] = None
     location: Optional[str] = Field(None, max_length=100)
-    status: Optional[str] = Field(None, regex="^(pendente|em_andamento|finalizado)$")
+    status: Optional[str] = Field(None, pattern="^(pendente|em_andamento|finalizado)$")
 
 class GameOut(BaseModel):
     id: int

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getPlayers, createGame, createEstatistica } from "../services/api";
 
 interface Player {
@@ -9,9 +9,9 @@ interface Player {
 }
 
 interface EstatisticasJogadora {
-  dois: number;
-  tres: number;
-  lance: number;
+  dois: { tentativas: number; acertos: number };
+  tres: { tentativas: number; acertos: number };
+  lance: { tentativas: number; acertos: number };
   rebotes: number;
   assistencias: number;
   faltas: number;
@@ -24,18 +24,19 @@ type Acao = {
   playerId: number;
   stat: keyof EstatisticasJogadora;
   valor: number;
+  tipo: 'tentativa' | 'acerto';
 };
 
-const ESTATS: { key: keyof EstatisticasJogadora; label: string; color: string }[] = [
-  { key: "dois", label: "+2", color: "bg-blue-600" },
-  { key: "tres", label: "+3", color: "bg-indigo-700" },
-  { key: "lance", label: "LANCE", color: "bg-yellow-500" },
-  { key: "rebotes", label: "REBOTE", color: "bg-green-600" },
-  { key: "assistencias", label: "ASSIST", color: "bg-cyan-600" },
-  { key: "faltas", label: "FALTA", color: "bg-red-600" },
-  { key: "tocos", label: "TOCO", color: "bg-purple-700" },
-  { key: "turnovers", label: "TURN", color: "bg-gray-700" },
-  { key: "roubos", label: "ROUBO", color: "bg-pink-600" },
+const ESTATS: { key: keyof EstatisticasJogadora; label: string; color: string; pontos: number }[] = [
+  { key: "dois", label: "+2", color: "bg-blue-600", pontos: 2 },
+  { key: "tres", label: "+3", color: "bg-indigo-700", pontos: 3 },
+  { key: "lance", label: "LANCE", color: "bg-yellow-500", pontos: 1 },
+  { key: "rebotes", label: "REBOTE", color: "bg-green-600", pontos: 0 },
+  { key: "assistencias", label: "ASSIST", color: "bg-cyan-600", pontos: 0 },
+  { key: "faltas", label: "FALTA", color: "bg-red-600", pontos: 0 },
+  { key: "tocos", label: "TOCO", color: "bg-purple-700", pontos: 0 },
+  { key: "turnovers", label: "TURN", color: "bg-gray-700", pontos: 0 },
+  { key: "roubos", label: "ROUBO", color: "bg-pink-600", pontos: 0 },
 ];
 
 export default function GamePanel() {
@@ -54,6 +55,10 @@ export default function GamePanel() {
   // Histórico para desfazer
   const [history, setHistory] = useState<Acao[]>([]);
 
+  // Estado para controlar o botão que está aguardando confirmação
+  const [waitingButton, setWaitingButton] = useState<{ playerId: number; stat: keyof EstatisticasJogadora } | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   useEffect(() => {
     console.log('Executando useEffect do painel');
     getPlayers().then(res => {
@@ -63,9 +68,9 @@ export default function GamePanel() {
       const initialStats: { [id: number]: EstatisticasJogadora } = {};
       res.data.forEach((p: Player) => {
         initialStats[p.id] = {
-          dois: 0,
-          tres: 0,
-          lance: 0,
+          dois: { tentativas: 0, acertos: 0 },
+          tres: { tentativas: 0, acertos: 0 },
+          lance: { tentativas: 0, acertos: 0 },
           rebotes: 0,
           assistencias: 0,
           faltas: 0,
@@ -80,27 +85,81 @@ export default function GamePanel() {
     });
   }, []);
 
-  function addStat(playerId: number, stat: keyof EstatisticasJogadora) {
-    setStats(prev => ({
-      ...prev,
-      [playerId]: {
-        ...prev[playerId],
-        [stat]: prev[playerId][stat] + 1,
-      },
-    }));
-    setHistory(prev => [{ playerId, stat, valor: 1 }, ...prev.slice(0, 4)]); // até 5 ações
+  function handleStatClick(playerId: number, stat: keyof EstatisticasJogadora) {
+    // Se o botão já está aguardando confirmação
+    if (waitingButton && waitingButton.playerId === playerId && waitingButton.stat === stat) {
+      // Registra o acerto
+      setStats(prev => {
+        const newStats = { ...prev };
+        const currentStat = newStats[playerId][stat] as { tentativas: number; acertos: number };
+        newStats[playerId] = {
+          ...newStats[playerId],
+          [stat]: {
+            ...currentStat,
+            acertos: currentStat.acertos + 1
+          }
+        };
+        return newStats;
+      });
+      setHistory(prev => [{ playerId, stat, valor: 1, tipo: 'acerto' }, ...prev.slice(0, 4)]);
+      setWaitingButton(null);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    } else {
+      // Registra a tentativa
+      setStats(prev => {
+        const newStats = { ...prev };
+        const currentStat = newStats[playerId][stat] as { tentativas: number; acertos: number };
+        newStats[playerId] = {
+          ...newStats[playerId],
+          [stat]: {
+            ...currentStat,
+            tentativas: currentStat.tentativas + 1
+          }
+        };
+        return newStats;
+      });
+      setHistory(prev => [{ playerId, stat, valor: 1, tipo: 'tentativa' }, ...prev.slice(0, 4)]);
+      setWaitingButton({ playerId, stat });
+
+      // Limpa o timeout anterior se existir
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Define um novo timeout
+      timeoutRef.current = setTimeout(() => {
+        setWaitingButton(null);
+      }, 3000);
+    }
   }
 
   function undoAction() {
     if (history.length === 0) return;
     const [last, ...rest] = history;
-    setStats(prev => ({
-      ...prev,
-      [last.playerId]: {
-        ...prev[last.playerId],
-        [last.stat]: Math.max(0, prev[last.playerId][last.stat] - last.valor),
-      },
-    }));
+    setStats(prev => {
+      const newStats = { ...prev };
+      const currentStat = newStats[last.playerId][last.stat] as { tentativas: number; acertos: number };
+      if (last.tipo === 'tentativa') {
+        newStats[last.playerId] = {
+          ...newStats[last.playerId],
+          [last.stat]: {
+            ...currentStat,
+            tentativas: Math.max(0, currentStat.tentativas - 1)
+          }
+        };
+      } else {
+        newStats[last.playerId] = {
+          ...newStats[last.playerId],
+          [last.stat]: {
+            ...currentStat,
+            acertos: Math.max(0, currentStat.acertos - 1)
+          }
+        };
+      }
+      return newStats;
+    });
     setHistory(rest);
   }
 
@@ -109,9 +168,9 @@ export default function GamePanel() {
       const novo = { ...prev };
       Object.keys(novo).forEach(id => {
         novo[Number(id)] = {
-          dois: 0,
-          tres: 0,
-          lance: 0,
+          dois: { tentativas: 0, acertos: 0 },
+          tres: { tentativas: 0, acertos: 0 },
+          lance: { tentativas: 0, acertos: 0 },
           rebotes: 0,
           assistencias: 0,
           faltas: 0,
@@ -136,7 +195,8 @@ export default function GamePanel() {
       const gamePayload = {
         opponent,
         date: date + 'T' + (time || '00:00'),
-        location
+        location,
+        categoria
       };
       console.log('Payload do jogo:', gamePayload);
       
@@ -150,7 +210,7 @@ export default function GamePanel() {
       const estatisticasPromises = players.map(player => {
         const s = stats[player.id];
         // Só envia se houver alguma estatística
-        const total = (s?.dois || 0) + (s?.tres || 0) + (s?.lance || 0) + 
+        const total = (s?.dois?.tentativas || 0) + (s?.tres?.tentativas || 0) + (s?.lance?.tentativas || 0) + 
                      (s?.assistencias || 0) + (s?.rebotes || 0) + (s?.roubos || 0) + 
                      (s?.faltas || 0) + (s?.tocos || 0) + (s?.turnovers || 0);
         
@@ -159,12 +219,18 @@ export default function GamePanel() {
         const estatisticaPayload = {
           jogadora_id: player.id,
           jogo_id,
-          pontos: (s?.dois || 0) * 2 + (s?.tres || 0) * 3 + (s?.lance || 0),
+          pontos: (s?.dois?.acertos || 0) * 2 + (s?.tres?.acertos || 0) * 3 + (s?.lance?.acertos || 0),
           assistencias: s?.assistencias || 0,
           rebotes: s?.rebotes || 0,
           roubos: s?.roubos || 0,
           faltas: s?.faltas || 0,
           quarto: quarto,
+          dois_tentativas: s?.dois?.tentativas || 0,
+          dois_acertos: s?.dois?.acertos || 0,
+          tres_tentativas: s?.tres?.tentativas || 0,
+          tres_acertos: s?.tres?.acertos || 0,
+          lance_tentativas: s?.lance?.tentativas || 0,
+          lance_acertos: s?.lance?.acertos || 0,
         };
 
         console.log('Payload da estatística:', estatisticaPayload);
@@ -269,22 +335,28 @@ export default function GamePanel() {
                 <tr key={player.id} className="bg-white even:bg-gray-50 hover:bg-yellow-50">
                   <td className="text-center font-bold text-xs md:text-sm text-gray-700 align-middle border-b">{player.numero}</td>
                   <td className="text-left font-semibold text-xs md:text-sm text-gray-900 align-middle border-b">{player.nome}</td>
-                  {ESTATS.map(stat => (
-                    <td key={stat.key} className="text-center border-b">
-                      <div className="flex flex-col items-center gap-1">
+                  {ESTATS.map(stat => {
+                    const isWaiting = waitingButton?.playerId === player.id && waitingButton?.stat === stat.key;
+                    const statValue = stats[player.id]?.[stat.key];
+                    const displayValue = typeof statValue === 'object' 
+                      ? `${statValue.tentativas}/${statValue.acertos}`
+                      : statValue;
+
+                    return (
+                      <td key={stat.key} className="text-center border-b">
                         <button
-                          onClick={() => addStat(player.id, stat.key)}
-                          className={`w-16 h-10 md:w-20 md:h-12 rounded font-bold text-xs md:text-base text-white shadow ${stat.color} hover:scale-105 transition-transform uppercase`}
-                          type="button"
+                          onClick={() => handleStatClick(player.id, stat.key)}
+                          className={`w-full py-2 px-4 text-white font-bold rounded transition-all duration-200 ${
+                            stat.color
+                          } ${
+                            isWaiting ? 'ring-2 ring-offset-2 ring-white animate-pulse' : ''
+                          }`}
                         >
-                          {stat.label}
+                          {displayValue}
                         </button>
-                        <span className="block text-xs md:text-sm font-mono text-gray-800">
-                          {stats[player.id]?.[stat.key] || 0}
-                        </span>
-                      </div>
-                    </td>
-                  ))}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
