@@ -119,7 +119,11 @@ export interface Game {
   id: number;
   opponent: string;
   date: string;
+  time?: string;
   location?: string;
+  categoria?: string;
+  status?: string;
+  jogadoras?: number[];
 }
 
 type NewGame = Omit<Game, 'id'>;

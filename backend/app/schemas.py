@@ -52,8 +52,11 @@ class PlayerOut(PlayerBase):
 class GameCreate(BaseModel):
     opponent: str = Field(..., min_length=2, max_length=100)
     date: datetime = Field(default_factory=datetime.now)
+    time: Optional[str] = Field(None)
     location: Optional[str] = Field(None, max_length=100)
+    categoria: Optional[str] = Field(None)
     status: str = Field(default="pendente")
+    jogadoras: Optional[List[int]] = Field(None)
 
     @validator("date")
     def validate_date(cls, v):

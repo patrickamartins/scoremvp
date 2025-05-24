@@ -30,13 +30,25 @@ def criar_jogo(
     novo = models.Jogo(
         opponent=data['opponent'],
         date=data['date'],
+        time=data.get('time'),
         location=data.get('location'),
+        categoria=data.get('categoria'),
         status="PENDENTE",
         owner_id=current_user.id
     )
     db.add(novo)
     db.commit()
     db.refresh(novo)
+
+    # Adiciona as jogadoras selecionadas
+    if data.get('jogadoras'):
+        for jogadora_id in data['jogadoras']:
+            jogadora = db.query(models.Jogadora).filter(models.Jogadora.id == jogadora_id).first()
+            if jogadora:
+                novo.jogadoras.append(jogadora)
+        db.commit()
+        db.refresh(novo)
+
     return schemas.GameOut.from_orm(novo)
 
 
