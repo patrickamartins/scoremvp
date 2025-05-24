@@ -45,7 +45,7 @@ class PlayerOut(PlayerBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Game e Estatistica (se já não tiverem) ---
@@ -87,7 +87,7 @@ class GameOut(BaseModel):
     estatisticas: List["EstatisticaOut"] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EstatisticaCreate(BaseModel):
     jogadora_id: int
@@ -112,7 +112,8 @@ class EstatisticaOut(EstatisticaCreate):
     jogadora: PlayerOut
     jogo: GameOut
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
 
 PlayerOut.update_forward_refs()
 GameOut.update_forward_refs()

@@ -2,15 +2,19 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app import models, schemas
 from app.core.security import get_current_user
+import logging
 
 router = APIRouter(
     prefix="/players",
     tags=["players"],
 )
+
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -24,11 +28,26 @@ def criar_jogadora(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    nova = models.Jogadora(**player_in.dict())
-    db.add(nova)
-    db.commit()
-    db.refresh(nova)
-    return schemas.PlayerOut.from_orm(nova)
+    try:
+        nova = models.Jogadora(**player_in.dict())
+        db.add(nova)
+        db.commit()
+        db.refresh(nova)
+        return schemas.PlayerOut.from_orm(nova)
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Erro de integridade ao criar jogadora: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Já existe uma jogadora com esse nome. Escolha outro nome."
+        )
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao criar jogadora: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao criar jogadora: {str(e)}"
+        )
 
 
 @router.get(

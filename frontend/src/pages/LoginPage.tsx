@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, Button, Input } from "../components/ui";
 import { Link, useNavigate } from "react-router-dom";
 import { login, setAuthToken } from "../services/api";
@@ -12,14 +12,6 @@ const LoginPage: React.FC = () => {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setAuthToken(token);
-      navigate('/players');
-    }
-  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

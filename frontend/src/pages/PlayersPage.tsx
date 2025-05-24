@@ -13,13 +13,26 @@ const PlayersPage: React.FC = () => {
     numero: 0,
     posicao: ""
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const fetchPlayers = async () => {
+    setLoading(true);
+    setError("");
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError("Usuário não autenticado. Faça login novamente.");
+        setLoading(false);
+        return;
+      }
       const response = await getPlayers();
       setPlayers(response.data);
     } catch (error) {
+      setError("Erro ao carregar jogadores");
       toast.error("Erro ao carregar jogadores");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,26 +111,32 @@ const PlayersPage: React.FC = () => {
           <Button onClick={handleAddPlayer} className="mt-4">Adicionar Jogador</Button>
         </Card>
 
+        {/* Feedback visual */}
+        {loading && <div className="text-center text-gray-500">Carregando jogadores...</div>}
+        {error && <div className="text-center text-red-500 mb-4">{error}</div>}
+
         {/* Lista de Jogadores */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Lista de Jogadores</h2>
-          <div className="grid gap-4">
-            {players.map((player) => (
-              <div key={player.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-semibold">{player.nome}</p>
-                  <p className="text-sm text-gray-600">#{player.numero} - {player.posicao}</p>
+        {!loading && !error && (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Lista de Jogadores</h2>
+            <div className="grid gap-4">
+              {players.map((player) => (
+                <div key={player.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-semibold">{player.nome}</p>
+                    <p className="text-sm text-gray-600">#{player.numero} - {player.posicao}</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleRemovePlayer(player.id)}
+                  >
+                    Remover
+                  </Button>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleRemovePlayer(player.id)}
-                >
-                  Remover
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
