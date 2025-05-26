@@ -4,7 +4,7 @@ import axios from 'axios';
 // Adiciona Jakarta Sans globalmente via classe ou style inline
 const jakartaFont = { fontFamily: 'Jakarta Sans, sans-serif' };
 
-export function Home() {
+export default function Home() {
   const [form, setForm] = useState({ nome: '', email: '', whatsapp: '' });
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
