@@ -1,11 +1,12 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
+import os
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="postgresql://postgres:Palexandre23@localhost:5432/scoremvp",
-        description="Banco local de desenvolvimento"
+        default=os.getenv("DATABASE_URL"),
+        description="URL do banco de dados"
     )
     # JWT
     SECRET_KEY: str = Field(
