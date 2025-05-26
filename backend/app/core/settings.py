@@ -4,8 +4,8 @@ from typing import List
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="postgresql+psycopg2://scoremvp_user:tEISM0baf5PNnxiL26y1OqvsiE1fXgXo@dpg-d0l17856ubrc73bmt21g-a.oregon-postgres.render.com:5432/scoremvp",
-        description="dpg-d0l17856ubrc73bmt21g-a.oregon-postgres.render.com"
+        default="postgresql://postgres:Palexandre23@localhost:5432/scoremvp",
+        description="Banco local de desenvolvimento"
     )
     # JWT
     SECRET_KEY: str = Field(

@@ -6,7 +6,7 @@ const menu = [
   { label: 'Dashboard', to: '/dashboard' },
 ];
 
-export default function Header() {
+export function Header() {
   const location = useLocation();
   // Checa se o usuário está autenticado (exemplo: token no localStorage)
   const isAuthenticated = Boolean(localStorage.getItem('token'));

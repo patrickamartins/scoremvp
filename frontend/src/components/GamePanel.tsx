@@ -18,6 +18,7 @@ interface EstatisticasJogadora {
   tocos: number;
   turnovers: number;
   roubos: number;
+  interferencia: number;
 }
 
 type Acao = {
@@ -37,19 +38,26 @@ const ESTATS: { key: keyof EstatisticasJogadora; label: string; color: string; p
   { key: "tocos", label: "TOCO", color: "bg-purple-700", pontos: 0 },
   { key: "turnovers", label: "TURN", color: "bg-gray-700", pontos: 0 },
   { key: "roubos", label: "ROUBO", color: "bg-pink-600", pontos: 0 },
+  { key: "interferencia", label: "INTERF", color: "bg-orange-600", pontos: 0 },
 ];
 
-export default function GamePanel() {
+const ARREMESSOS: (keyof EstatisticasJogadora)[] = ["dois", "tres", "lance"];
+
+interface GamePanelProps {
+  game?: any;
+}
+
+export default function GamePanel({ game }: GamePanelProps) {
   // Formulário do jogo
-  const [opponent, setOpponent] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [categoria, setCategoria] = useState("");
+  const [opponent, setOpponent] = useState(game?.opponent || "");
+  const [date, setDate] = useState(game?.date ? game.date.split('T')[0] : "");
+  const [time, setTime] = useState(game?.date ? (game.date.split('T')[1] || "") : "");
+  const [location, setLocation] = useState(game?.location || "");
+  const [categoria, setCategoria] = useState(game?.categoria || "");
   const [quarto, setQuarto] = useState<number>(1);
 
   // Jogadoras
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>(game?.jogadoras || []);
   // Estatísticas locais
   const [stats, setStats] = useState<{ [id: number]: EstatisticasJogadora }>({});
   // Histórico para desfazer
@@ -60,13 +68,11 @@ export default function GamePanel() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    console.log('Executando useEffect do painel');
-    getPlayers().then(res => {
-      console.log('Players recebidos:', res.data);
-      setPlayers(res.data);
-      // Inicializa stats se necessário
+    if (game && game.jogadoras) {
+      setPlayers(game.jogadoras);
+      // Inicializa stats para as jogadoras do jogo
       const initialStats: { [id: number]: EstatisticasJogadora } = {};
-      res.data.forEach((p: Player) => {
+      game.jogadoras.forEach((p: Player) => {
         initialStats[p.id] = {
           dois: { tentativas: 0, acertos: 0 },
           tres: { tentativas: 0, acertos: 0 },
@@ -77,13 +83,36 @@ export default function GamePanel() {
           tocos: 0,
           turnovers: 0,
           roubos: 0,
+          interferencia: 0,
         };
       });
       setStats(initialStats);
-    }).catch(err => {
-      console.error('Erro ao buscar players:', err);
-    });
-  }, []);
+    } else {
+      // Comportamento antigo: busca todas as jogadoras
+      getPlayers().then(res => {
+        setPlayers(res.data);
+        const initialStats: { [id: number]: EstatisticasJogadora } = {};
+        res.data.forEach((p: Player) => {
+          initialStats[p.id] = {
+            dois: { tentativas: 0, acertos: 0 },
+            tres: { tentativas: 0, acertos: 0 },
+            lance: { tentativas: 0, acertos: 0 },
+            rebotes: 0,
+            assistencias: 0,
+            faltas: 0,
+            tocos: 0,
+            turnovers: 0,
+            roubos: 0,
+            interferencia: 0,
+          };
+        });
+        setStats(initialStats);
+      }).catch(err => {
+        console.error('Erro ao buscar players:', err);
+      });
+    }
+    // eslint-disable-next-line
+  }, [game]);
 
   function handleStatClick(playerId: number, stat: keyof EstatisticasJogadora) {
     // Se o botão já está aguardando confirmação
@@ -177,6 +206,7 @@ export default function GamePanel() {
           tocos: 0,
           turnovers: 0,
           roubos: 0,
+          interferencia: 0,
         };
       });
       return novo;
@@ -212,7 +242,7 @@ export default function GamePanel() {
         // Só envia se houver alguma estatística
         const total = (s?.dois?.tentativas || 0) + (s?.tres?.tentativas || 0) + (s?.lance?.tentativas || 0) + 
                      (s?.assistencias || 0) + (s?.rebotes || 0) + (s?.roubos || 0) + 
-                     (s?.faltas || 0) + (s?.tocos || 0) + (s?.turnovers || 0);
+                     (s?.faltas || 0) + (s?.tocos || 0) + (s?.turnovers || 0) + (s?.interferencia || 0);
         
         if (!total) return null;
 
@@ -231,6 +261,7 @@ export default function GamePanel() {
           tres_acertos: s?.tres?.acertos || 0,
           lance_tentativas: s?.lance?.tentativas || 0,
           lance_acertos: s?.lance?.acertos || 0,
+          interferencia: s?.interferencia || 0,
         };
 
         console.log('Payload da estatística:', estatisticaPayload);
@@ -262,40 +293,8 @@ export default function GamePanel() {
   return (
     <>
       <div className="p-2 md:p-6">
-        {/* Formulário do jogo + botões de ação lado a lado */}
-        <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-4 md:mb-8 bg-white p-2 md:p-4 rounded shadow">
-          <form className="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4 flex-1">
-            <input
-              className="border p-2 rounded text-sm"
-              placeholder="Adversário"
-              value={opponent}
-              onChange={e => setOpponent(e.target.value)}
-            />
-            <input
-              className="border p-2 rounded text-sm"
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
-            <input
-              className="border p-2 rounded text-sm"
-              type="time"
-              value={time}
-              onChange={e => setTime(e.target.value)}
-            />
-            <input
-              className="border p-2 rounded text-sm"
-              placeholder="Local"
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-            />
-            <input
-              className="border p-2 rounded text-sm"
-              placeholder="Categoria"
-              value={categoria}
-              onChange={e => setCategoria(e.target.value)}
-            />
-          </form>
+        {/* Botões de ação e seletor de quarto centralizados */}
+        <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-4 md:mb-8 bg-white p-2 md:p-4 rounded shadow justify-center items-center">
           <div className="flex items-center gap-2 mt-2 mb-4">
             <label className="font-semibold text-sm">Quarto:</label>
             <select
@@ -309,7 +308,7 @@ export default function GamePanel() {
               <option value={4}>4º Quarto</option>
             </select>
           </div>
-          {/* Botões de ação ao lado do formulário */}
+          {/* Botões de ação ao lado do seletor */}
           <div className="flex flex-row gap-2 md:gap-4 mt-2 md:mt-0">
             <button onClick={saveStats} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded font-bold shadow">Salvar</button>
             <button onClick={resetStats} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded font-bold shadow">Zerar estatísticas</button>
@@ -317,7 +316,7 @@ export default function GamePanel() {
           </div>
         </div>
         {/* Tabela de estatísticas */}
-        <div className="overflow-x-auto">
+        <div className="w-full max-w-full overflow-x-auto md:overflow-x-visible">
           <table className="min-w-full border-separate border-spacing-y-1">
             <thead className="sticky top-0 z-10 bg-gray-100">
               <tr>
@@ -331,34 +330,61 @@ export default function GamePanel() {
               </tr>
             </thead>
             <tbody>
-              {players.map((player) => (
-                <tr key={player.id} className="bg-white even:bg-gray-50 hover:bg-yellow-50">
-                  <td className="text-center font-bold text-xs md:text-sm text-gray-700 align-middle border-b">{player.numero}</td>
-                  <td className="text-left font-semibold text-xs md:text-sm text-gray-900 align-middle border-b">{player.nome}</td>
-                  {ESTATS.map(stat => {
-                    const isWaiting = waitingButton?.playerId === player.id && waitingButton?.stat === stat.key;
-                    const statValue = stats[player.id]?.[stat.key];
-                    const displayValue = typeof statValue === 'object' 
-                      ? `${statValue.tentativas}/${statValue.acertos}`
-                      : statValue;
-
-                    return (
-                      <td key={stat.key} className="text-center border-b">
-                        <button
-                          onClick={() => handleStatClick(player.id, stat.key)}
-                          className={`w-full py-2 px-4 text-white font-bold rounded transition-all duration-200 ${
-                            stat.color
-                          } ${
-                            isWaiting ? 'ring-2 ring-offset-2 ring-white animate-pulse' : ''
-                          }`}
-                        >
-                          {displayValue}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {players.map((player) => {
+                const faltas = stats[player.id]?.faltas || 0;
+                let alertClass = '';
+                if (faltas === 3) alertClass = 'bg-yellow-200';
+                if (faltas >= 4) alertClass = 'bg-red-300';
+                return (
+                  <tr key={player.id} className="bg-white even:bg-gray-50 hover:bg-yellow-50">
+                    <td className="text-center font-bold text-xs md:text-sm text-gray-700 align-middle border-b">{player.numero}</td>
+                    <td className={`text-left font-semibold text-xs md:text-sm text-gray-900 align-middle border-b transition-colors duration-200 ${alertClass}`}>
+                      {player.nome}
+                      {faltas === 3 && <span className="ml-1 text-yellow-700" title="3 faltas">⚠️</span>}
+                      {faltas >= 4 && <span className="ml-1 text-red-700" title="4 ou mais faltas">⛔</span>}
+                    </td>
+                    {ESTATS.map(stat => {
+                      const isArremesso = ARREMESSOS.includes(stat.key);
+                      const isWaiting = isArremesso && waitingButton?.playerId === player.id && waitingButton?.stat === stat.key;
+                      const statValue = stats[player.id]?.[stat.key];
+                      let displayValue;
+                      if (isArremesso) {
+                        displayValue = typeof statValue === 'object' ? `${statValue.tentativas}/${statValue.acertos}` : statValue;
+                      } else {
+                        displayValue = statValue ?? 0;
+                      }
+                      return (
+                        <td key={stat.key} className="text-center border-b">
+                          <button
+                            onClick={() => {
+                              if (isArremesso) {
+                                handleStatClick(player.id, stat.key);
+                              } else {
+                                // Incrementa +1 para stats simples
+                                setStats(prev => ({
+                                  ...prev,
+                                  [player.id]: {
+                                    ...prev[player.id],
+                                    [stat.key]: (prev[player.id]?.[stat.key] || 0) + 1
+                                  }
+                                }));
+                              }
+                            }}
+                            className={`w-full min-w-[48px] py-2 px-2 text-white font-bold rounded transition-all duration-200 ${
+                              stat.color
+                            } ${
+                              isWaiting ? 'ring-2 ring-offset-2 ring-white animate-pulse' : ''
+                            }`}
+                            style={{fontSize: '0.95rem'}}
+                          >
+                            {displayValue}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

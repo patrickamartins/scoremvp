@@ -17,11 +17,14 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     try {
       const res = await login({ username, password });
+      console.log('Resposta do login:', res);
       const token = res.data.access_token;
       localStorage.setItem('token', token);
       setAuthToken(token);
+      console.log('Token salvo no localStorage:', localStorage.getItem('token'));
       toast.success("Login realizado com sucesso!");
-      navigate('/players');
+      window.location.href = '/players';
+      console.log('Redirecionando para /players');
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(

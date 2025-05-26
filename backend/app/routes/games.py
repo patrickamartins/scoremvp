@@ -30,7 +30,6 @@ def criar_jogo(
     novo = models.Jogo(
         opponent=data['opponent'],
         date=data['date'],
-        time=data.get('time'),
         location=data.get('location'),
         categoria=data.get('categoria'),
         status="PENDENTE",

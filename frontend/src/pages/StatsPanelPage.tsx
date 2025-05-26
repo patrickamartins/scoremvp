@@ -14,7 +14,7 @@ const stats = [
   { label: "Faltas", value: 18 },
 ];
 
-const StatsPanelPage: React.FC = () => {
+export function StatsPanelPage() {
   usePageTitle("Painel de Estatísticas");
 
   return (
@@ -63,6 +63,4 @@ const StatsPanelPage: React.FC = () => {
       </Card>
     </div>
   );
-};
-
-export default StatsPanelPage; 
+} 

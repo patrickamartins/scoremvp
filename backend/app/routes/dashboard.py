@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+import logging
 
 from app.database import get_db
 from app import models, schemas
@@ -12,6 +13,8 @@ router = APIRouter(
     prefix="/dashboard",
     tags=["dashboard"],
 )
+
+logger = logging.getLogger(__name__)
 
 def get_stats_query(db: Session, data_inicio: Optional[datetime] = None, data_fim: Optional[datetime] = None):
     query = db.query(models.Jogo)
@@ -27,9 +30,28 @@ def get_public_overview(
     data_fim: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
 ):
-    # Query base com filtro de data
     jogos_query = get_stats_query(db, data_inicio, data_fim)
-    
+    jogos_ids = [j.id for j in jogos_query.all()]
+    logger.info(f"Dashboard overview: jogos_ids={jogos_ids}")
+    if not jogos_ids:
+        return {
+            "total_jogos": 0,
+            "estatisticas_gerais": {
+                "total_pontos": 0,
+                "total_assistencias": 0,
+                "total_rebotes": 0,
+                "total_roubos": 0,
+                "total_faltas": 0,
+                "media_pontos": 0,
+                "media_assistencias": 0,
+                "media_rebotes": 0,
+                "media_roubos": 0,
+                "media_faltas": 0
+            },
+            "jogadora_mais_pontos": None,
+            "ultimos_jogos": []
+        }
+
     # Total de jogos
     total_jogos = jogos_query.count()
 
@@ -109,7 +131,15 @@ def get_public_jogadoras_stats(
     db: Session = Depends(get_db),
 ):
     jogos_query = get_stats_query(db, data_inicio, data_fim)
-    jogadoras = db.query(models.Jogadora).all()
+    jogos_ids = [j.id for j in jogos_query.all()]
+    logger.info(f"Dashboard jogadoras: jogos_ids={jogos_ids}")
+    if not jogos_ids:
+        return []
+
+    # Buscar apenas jogadoras convocadas para os jogos filtrados
+    jogadoras = db.query(models.Jogadora).join(models.jogo_jogadora).filter(
+        models.jogo_jogadora.c.jogo_id.in_(jogos_ids)
+    ).distinct().all()
     stats = []
 
     for jogadora in jogadoras:
@@ -131,7 +161,7 @@ def get_public_jogadoras_stats(
         ).join(
             models.Jogo
         ).filter(
-            models.Jogo.id.in_([j.id for j in jogos_query.all()])
+            models.Jogo.id.in_(jogos_ids)
         ).first()
 
         if estatisticas:
@@ -163,6 +193,9 @@ def get_public_jogos_stats(
 ):
     jogos_query = get_stats_query(db, data_inicio, data_fim)
     jogos = jogos_query.order_by(models.Jogo.date.desc()).all()
+    logger.info(f"Dashboard jogos: jogos={[(j.id, j.date) for j in jogos]}")
+    if not jogos:
+        return []
     stats = []
 
     for jogo in jogos:

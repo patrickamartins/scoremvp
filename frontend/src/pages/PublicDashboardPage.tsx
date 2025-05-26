@@ -4,7 +4,7 @@ import type { Game, GameCategory } from '../types/game';
 import { Link } from "react-router-dom";
 import { usePageTitle } from "../hooks/usePageTitle";
 
-const PublicDashboardPage: React.FC = () => {
+export function PublicDashboardPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<GameCategory | "all">("all");
   const [loading, setLoading] = useState(true);
@@ -119,6 +119,4 @@ const PublicDashboardPage: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default PublicDashboardPage; 
+} 

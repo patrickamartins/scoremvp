@@ -2,17 +2,19 @@ version: '3.8'
 
 services:
   db:
-    image: mysql:8.0
+    image: postgres:15
+    container_name: scoremvp-db
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: score_mvp
-      MYSQL_USER: score_mvp
-      MYSQL_PASSWORD: score_mvp
+      POSTGRES_DB: scoremvp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      LANG: pt_BR.UTF-8
+      LC_ALL: pt_BR.UTF-8
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
+      - pgdata:/var/lib/postgresql/data
 
   api:
     build: .
@@ -32,4 +34,4 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
-  mysql_data: 
+  pgdata: 

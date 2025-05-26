@@ -1,1 +1,9 @@
-export { default as LoginPage } from './LoginPage'; 
+export { LoginPage } from './LoginPage';
+export { Home } from './Home';
+export { Profile } from './Profile';
+export { Users } from './Users';
+export { NotFound } from './NotFound';
+export { ForgotPassword } from './ForgotPassword';
+export { ResetPassword } from './ResetPassword';
+export { PublicDashboardPage } from './PublicDashboardPage';
+export { StatsPanelPage } from './StatsPanelPage'; 

@@ -3,11 +3,12 @@ import { api } from '../services/api';
 import Card from "../components/ui/Card";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { addDays } from 'date-fns';
+import { addDays, subDays, subMonths, subYears, startOfYear } from 'date-fns';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
 import { usePageTitle } from "../hooks/usePageTitle";
+import StatCard from '../components/ui/StatCard';
 
 interface OverviewData {
   total_jogos: number;
@@ -75,7 +76,7 @@ interface JogoStats {
   }>;
 }
 
-export function Dashboard() {
+export default function DashboardPage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [jogadorasStats, setJogadorasStats] = useState<JogadoraStats[]>([]);
   const [jogosStats, setJogosStats] = useState<JogoStats[]>([]);
@@ -87,8 +88,12 @@ export function Dashboard() {
     from: addDays(new Date(), -30),
     to: new Date(),
   });
+  const [localFrom, setLocalFrom] = useState(format(dateRange.from, 'yyyy-MM-dd'));
+  const [localTo, setLocalTo] = useState(format(dateRange.to, 'yyyy-MM-dd'));
   const [jogos, setJogos] = useState<JogoStats[]>([]);
   const [selectedJogo, setSelectedJogo] = useState<string>('todos');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'Geral' | number>('Geral');
 
   usePageTitle("Dashboard");
 
@@ -98,54 +103,83 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        let params;
-        if (selectedJogo !== 'todos') {
-          const jogo = jogos.find(j => String(j.id) === selectedJogo);
-          if (jogo) {
-            // Filtra por data exata do jogo selecionado
-            const data = new Date(jogo.date);
-            params = {
-              data_inicio: data.toISOString(),
-              data_fim: data.toISOString(),
-            };
-          } else {
-            params = {
-              data_inicio: dateRange.from.toISOString(),
-              data_fim: dateRange.to.toISOString(),
-            };
-          }
-        } else {
-          params = {
-            data_inicio: dateRange.from.toISOString(),
-            data_fim: dateRange.to.toISOString(),
-          };
-        }
+    // MOCK: dados fake para print
+    setOverview({
+      total_jogos: 6,
+      estatisticas_gerais: {
+        total_pontos: 480,
+        total_assistencias: 120,
+        total_rebotes: 210,
+        total_roubos: 35,
+        total_faltas: 50,
+        media_pontos: 80,
+        media_assistencias: 20,
+        media_rebotes: 35,
+        media_roubos: 5.8,
+        media_faltas: 8.3
+      },
+      jogadora_mais_pontos: {
+        id: 1,
+        nome: "Maria Jogadora",
+        total_pontos: 110
+      },
+      ultimos_jogos: [
+        { id: 1, opponent: "Time A", date: "2024-06-01T10:00:00", status: "FINALIZADO" },
+        { id: 2, opponent: "Time B", date: "2024-06-05T15:00:00", status: "FINALIZADO" },
+        { id: 3, opponent: "Time C", date: "2024-06-10T18:00:00", status: "FINALIZADO" },
+        { id: 4, opponent: "Time D", date: "2024-06-15T18:00:00", status: "FINALIZADO" },
+        { id: 5, opponent: "Time E", date: "2024-06-20T18:00:00", status: "FINALIZADO" },
+        { id: 6, opponent: "Time F", date: "2024-06-25T18:00:00", status: "FINALIZADO" }
+      ]
+    });
 
-        const [overviewRes, jogadorasRes, jogosRes] = await Promise.all([
-          api.get('/dashboard/public/overview', { params }),
-          api.get('/dashboard/public/jogadoras', { params }),
-          api.get('/dashboard/public/jogos', { params })
-        ]);
+    setJogadorasStats([
+      ...Array.from({ length: 10 }).map((_, i) => ({
+        id: i + 1,
+        nome: `Jogadora ${i + 1}`,
+        numero: i + 4,
+        posicao: ["Ala", "Pivô", "Armadora"][i % 3],
+        media_pontos: Math.round(Math.random() * 20),
+        media_assistencias: Math.round(Math.random() * 5),
+        media_rebotes: Math.round(Math.random() * 10),
+        media_roubos: Math.round(Math.random() * 3),
+        media_faltas: Math.round(Math.random() * 2),
+        total_jogos: 6,
+        total_pontos: Math.round(Math.random() * 100 + 20),
+        total_assistencias: Math.round(Math.random() * 30 + 5),
+        total_rebotes: Math.round(Math.random() * 50 + 10),
+        total_roubos: Math.round(Math.random() * 10 + 2),
+        total_faltas: Math.round(Math.random() * 10 + 2),
+      }))
+    ]);
 
-        setOverview(overviewRes.data);
-        setJogadorasStats(jogadorasRes.data);
-        setJogosStats(jogosRes.data);
-      } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setJogosStats([
+      ...Array.from({ length: 6 }).map((_, i) => ({
+        id: i + 1,
+        opponent: `Time ${String.fromCharCode(65 + i)}`,
+        date: `2024-06-${String(i + 1).padStart(2, '0')}T18:00:00`,
+        status: "FINALIZADO",
+        total_pontos: i === 5 ? 60 : 90, // 5 vitórias, 1 derrota
+        total_assistencias: Math.round(Math.random() * 20 + 10),
+        total_rebotes: Math.round(Math.random() * 40 + 10),
+        total_roubos: Math.round(Math.random() * 10 + 2),
+        total_faltas: Math.round(Math.random() * 10 + 2),
+        total_jogadoras: 10,
+        por_quarto: [
+          { quarto: 1, total_pontos: 20, total_assistencias: 5, total_rebotes: 10, total_roubos: 2, total_faltas: 2 },
+          { quarto: 2, total_pontos: 20, total_assistencias: 5, total_rebotes: 10, total_roubos: 2, total_faltas: 2 },
+          { quarto: 3, total_pontos: 25, total_assistencias: 5, total_rebotes: 10, total_roubos: 2, total_faltas: 2 },
+          { quarto: 4, total_pontos: i === 5 ? -5 : 25, total_assistencias: 5, total_rebotes: 10, total_roubos: 2, total_faltas: 2 },
+        ]
+      }))
+    ]);
 
-    fetchData();
-  }, [dateRange, selectedJogo, jogos]);
+    setLoading(false);
+  }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
@@ -171,8 +205,130 @@ export function Dashboard() {
     Faltas: j.total_faltas,
   }));
 
+  // Filtros rápidos de data
+  const quickFilters = [
+    {
+      label: 'Hoje',
+      onClick: () => {
+        const today = new Date();
+        setLocalFrom(format(today, 'yyyy-MM-dd'));
+        setLocalTo(format(today, 'yyyy-MM-dd'));
+        setDateRange({ from: today, to: today });
+        setActiveQuickFilter('Hoje');
+      }
+    },
+    {
+      label: 'Última semana',
+      onClick: () => {
+        const today = new Date();
+        const weekAgo = subDays(today, 6); // 7 dias incluindo hoje
+        setLocalFrom(format(weekAgo, 'yyyy-MM-dd'));
+        setLocalTo(format(today, 'yyyy-MM-dd'));
+        setDateRange({ from: weekAgo, to: today });
+        setActiveQuickFilter('Última semana');
+      }
+    },
+    {
+      label: 'Últimos 15 dias',
+      onClick: () => {
+        const today = new Date();
+        const daysAgo = subDays(today, 14);
+        setLocalFrom(format(daysAgo, 'yyyy-MM-dd'));
+        setLocalTo(format(today, 'yyyy-MM-dd'));
+        setDateRange({ from: daysAgo, to: today });
+        setActiveQuickFilter('Últimos 15 dias');
+      }
+    },
+    {
+      label: 'Último mês',
+      onClick: () => {
+        const today = new Date();
+        const monthAgo = subMonths(today, 1);
+        setLocalFrom(format(monthAgo, 'yyyy-MM-dd'));
+        setLocalTo(format(today, 'yyyy-MM-dd'));
+        setDateRange({ from: monthAgo, to: today });
+        setActiveQuickFilter('Último mês');
+      }
+    },
+    {
+      label: 'Semestre',
+      onClick: () => {
+        const today = new Date();
+        const semesterAgo = subMonths(today, 6);
+        setLocalFrom(format(semesterAgo, 'yyyy-MM-dd'));
+        setLocalTo(format(today, 'yyyy-MM-dd'));
+        setDateRange({ from: semesterAgo, to: today });
+        setActiveQuickFilter('Semestre');
+      }
+    },
+    {
+      label: 'Ano',
+      onClick: () => {
+        const today = new Date();
+        const yearStart = startOfYear(today);
+        setLocalFrom(format(yearStart, 'yyyy-MM-dd'));
+        setLocalTo(format(today, 'yyyy-MM-dd'));
+        setDateRange({ from: yearStart, to: today });
+        setActiveQuickFilter('Ano');
+      }
+    },
+  ];
+
+  // Função para extrair todos os quartos presentes nos jogos
+  const allQuarters = Array.from(new Set(jogosStats.flatMap(j => (j.por_quarto || []).map(q => q.quarto)))).sort();
+
+  // Função para filtrar estatísticas por quarto
+  function getStatsByQuarter(quarto: number) {
+    return jogosStats.map(jogo => {
+      const q = (jogo.por_quarto || []).find(q => q.quarto === quarto);
+      return q ? {
+        ...jogo,
+        total_pontos: q.total_pontos,
+        total_assistencias: q.total_assistencias,
+        total_rebotes: q.total_rebotes,
+        total_roubos: q.total_roubos,
+        total_faltas: q.total_faltas,
+      } : null;
+    }).filter(Boolean);
+  }
+
+  // Função para calcular percentual de crescimento/queda
+  function getPercentChange(current: number, previous: number) {
+    if (!previous || previous === 0) return 0;
+    return ((current - previous) / previous) * 100;
+  }
+
+  // Função para obter estatísticas do último jogo (para aba Geral)
+  function getLastGameStats() {
+    if (jogosStats.length < 2) return null;
+    return jogosStats[jogosStats.length - 2]; // penúltimo jogo
+  }
+
+  // Função para obter estatísticas do quarto anterior (para abas de quarto)
+  function getPreviousQuarterStats(quarto: number) {
+    if (typeof quarto !== 'number' || quarto <= 1) return null;
+    // Busca o mesmo jogo e o quarto anterior
+    return jogosStats.map(jogo => {
+      const prevQ = (jogo.por_quarto || []).find(q => q.quarto === (quarto - 1));
+      return prevQ || null;
+    }).filter(Boolean);
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-8">
+      {/* Filtros rápidos de data */}
+      <div className="flex flex-wrap gap-2 mb-2">
+        {quickFilters.map(f => (
+          <button
+            key={f.label}
+            className={`px-3 py-1 rounded font-semibold text-sm transition ${activeQuickFilter === f.label ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-blue-600 hover:text-white'}`}
+            onClick={f.onClick}
+            type="button"
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
       {/* Seletor de Jogo e Filtro de Data */}
       <div className="flex items-center gap-4 mb-6">
         <select
@@ -189,181 +345,237 @@ export function Dashboard() {
         </select>
         <input
           type="date"
-          value={format(dateRange.from, 'yyyy-MM-dd')}
-          onChange={e => setDateRange(r => ({ ...r, from: new Date(e.target.value) }))}
+          value={localFrom}
+          onChange={e => setLocalFrom(e.target.value)}
           className="border rounded px-2 py-1 mr-2"
           disabled={selectedJogo !== 'todos'}
         />
         <input
           type="date"
-          value={format(dateRange.to, 'yyyy-MM-dd')}
-          onChange={e => setDateRange(r => ({ ...r, to: new Date(e.target.value) }))}
+          value={localTo}
+          onChange={e => setLocalTo(e.target.value)}
           className="border rounded px-2 py-1"
           disabled={selectedJogo !== 'todos'}
         />
+        <button
+          className="ml-2 px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition"
+          disabled={selectedJogo !== 'todos'}
+          onClick={() => {
+            setDateRange({
+              from: new Date(localFrom),
+              to: new Date(localTo)
+            });
+          }}
+        >Aplicar</button>
+      </div>
+
+      {/* Abas para geral/quartos */}
+      <div className="flex gap-2 mb-4">
+        <button
+          className={`px-4 py-2 rounded-t font-bold border-b-2 ${activeTab === 'Geral' ? 'border-blue-600 bg-white' : 'border-transparent bg-gray-100'}`}
+          onClick={() => setActiveTab('Geral')}
+        >Geral</button>
+        {allQuarters.map(q => (
+          <button
+            key={q}
+            className={`px-4 py-2 rounded-t font-bold border-b-2 ${activeTab === q ? 'border-blue-600 bg-white' : 'border-transparent bg-gray-100'}`}
+            onClick={() => setActiveTab(q)}
+          >{q}º Quarto</button>
+        ))}
       </div>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <div className="p-4">
-            <div className="font-bold text-lg mb-2">Total de Jogos</div>
-            <p className="text-3xl font-bold">{overview?.total_jogos || 0}</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4">
-            <div className="font-bold text-lg mb-2">Total de Pontos</div>
-            <p className="text-3xl font-bold">{overview?.estatisticas_gerais.total_pontos || 0}</p>
-            <p className="text-sm text-gray-500">
-              Média: {overview?.estatisticas_gerais.media_pontos.toFixed(1) || 0} por jogo
-            </p>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4">
-            <div className="font-bold text-lg mb-2">Maior Pontuadora</div>
-            {overview?.jogadora_mais_pontos ? (
-              <>
-                <p className="text-xl font-semibold">{overview.jogadora_mais_pontos.nome}</p>
-                <p className="text-2xl font-bold text-primary">{overview.jogadora_mais_pontos.total_pontos} pontos</p>
-              </>
-            ) : (
-              <p className="text-gray-500">Nenhuma jogadora registrada</p>
-            )}
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4">
-            <div className="font-bold text-lg mb-2">Último Jogo</div>
-            {overview?.ultimos_jogos[0] ? (
-              <>
-                <p className="text-xl font-semibold">{overview.ultimos_jogos[0].opponent}</p>
-                <p className="text-sm text-gray-500">
-                  {format(new Date(overview.ultimos_jogos[0].date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
-              </>
-            ) : (
-              <p className="text-gray-500">Nenhum jogo registrado</p>
-            )}
-          </div>
-        </Card>
+        {/* Comparação com o último jogo */}
+        {(() => {
+          const lastGame = getLastGameStats();
+          const curr = overview?.estatisticas_gerais;
+          const prev = lastGame ? lastGame : {};
+          const percentPontos = getPercentChange(curr?.total_pontos || 0, prev.total_pontos || 0);
+          const percentAst = getPercentChange(curr?.total_assistencias || 0, prev.total_assistencias || 0);
+          const percentReb = getPercentChange(curr?.total_rebotes || 0, prev.total_rebotes || 0);
+          const percentFaltas = getPercentChange(curr?.total_faltas || 0, prev.total_faltas || 0);
+          return <>
+            <StatCard
+              title="Total de Pontos"
+              value={curr?.total_pontos || 0}
+              percent={`${percentPontos > 0 ? '↑' : percentPontos < 0 ? '↓' : ''} ${Math.abs(percentPontos).toFixed(1)}%`}
+              trend={percentPontos > 0 ? 'up' : percentPontos < 0 ? 'down' : undefined}
+              color="#2563eb"
+              progress={curr?.total_pontos ? Math.min(100, curr.total_pontos) : 0}
+            />
+            <StatCard
+              title="Total de Assistências"
+              value={curr?.total_assistencias || 0}
+              percent={`${percentAst > 0 ? '↑' : percentAst < 0 ? '↓' : ''} ${Math.abs(percentAst).toFixed(1)}%`}
+              trend={percentAst > 0 ? 'up' : percentAst < 0 ? 'down' : undefined}
+              color="#ef4444"
+              progress={curr?.total_assistencias ? Math.min(100, curr.total_assistencias) : 0}
+            />
+            <StatCard
+              title="Total de Rebotes"
+              value={curr?.total_rebotes || 0}
+              percent={`${percentReb > 0 ? '↑' : percentReb < 0 ? '↓' : ''} ${Math.abs(percentReb).toFixed(1)}%`}
+              trend={percentReb > 0 ? 'up' : percentReb < 0 ? 'down' : undefined}
+              color="#fbbf24"
+              progress={curr?.total_rebotes ? Math.min(100, curr.total_rebotes) : 0}
+            />
+            <StatCard
+              title="Total de Faltas"
+              value={curr?.total_faltas || 0}
+              percent={`${percentFaltas > 0 ? '↑' : percentFaltas < 0 ? '↓' : ''} ${Math.abs(percentFaltas).toFixed(1)}%`}
+              trend={percentFaltas > 0 ? 'up' : percentFaltas < 0 ? 'down' : undefined}
+              color="#22c55e"
+              progress={curr?.total_faltas ? Math.min(100, curr.total_faltas) : 0}
+            />
+          </>;
+        })()}
       </div>
 
       {/* Gráfico de Evolução dos Pontos do Time */}
-      <Card>
-        <div className="p-4">
-          <div className="font-bold text-lg mb-2">Evolução dos Pontos do Time</div>
-          <div className="w-full h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lineChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="Pontos" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="Assistências" stroke="#a78bfa" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Rebotes" stroke="#34d399" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Roubos" stroke="#fbbf24" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Faltas" stroke="#f87171" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+      {jogosStats.length === 0 ? (
+        <div className="text-center text-gray-400 py-8">Nenhum jogo encontrado para o filtro selecionado.</div>
+      ) : (
+        <Card>
+          <div className="p-4">
+            <div className="font-bold text-lg mb-2">Evolução dos Pontos do Time</div>
+            <div className="w-full h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={lineChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="Pontos" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="Assistências" stroke="#a78bfa" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Rebotes" stroke="#34d399" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Roubos" stroke="#fbbf24" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Faltas" stroke="#f87171" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Gráfico de Barras por Jogadora */}
-      <Card>
-        <div className="p-4">
-          <div className="font-bold text-lg mb-2">Comparativo de Estatísticas por Jogadora</div>
-          <div className="w-full h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="nome" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Pontos" fill="#6366f1" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="Assistências" fill="#a78bfa" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="Rebotes" fill="#34d399" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="Roubos" fill="#fbbf24" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="Faltas" fill="#f87171" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {jogadorasStats.length === 0 ? (
+        <div className="text-center text-gray-400 py-8">Nenhuma jogadora encontrada para o filtro selecionado.</div>
+      ) : (
+        <Card>
+          <div className="p-4">
+            <div className="font-bold text-lg mb-2">Comparativo de Estatísticas por Jogadora</div>
+            <div className="w-full h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="nome" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Pontos" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="Assistências" fill="#a78bfa" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="Rebotes" fill="#34d399" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="Roubos" fill="#fbbf24" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="Faltas" fill="#f87171" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Estatísticas Gerais do Time */}
-      <Card>
-        <div className="p-4">
-          <div className="font-bold text-lg mb-2">Estatísticas Gerais do Time</div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Assistências</p>
-              <p className="text-2xl font-bold">{overview?.estatisticas_gerais.total_assistencias || 0}</p>
-              <p className="text-xs text-gray-500">
-                Média: {overview?.estatisticas_gerais.media_assistencias.toFixed(1) || 0}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Rebotes</p>
-              <p className="text-2xl font-bold">{overview?.estatisticas_gerais.total_rebotes || 0}</p>
-              <p className="text-xs text-gray-500">
-                Média: {overview?.estatisticas_gerais.media_rebotes.toFixed(1) || 0}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Roubos</p>
-              <p className="text-2xl font-bold">{overview?.estatisticas_gerais.total_roubos || 0}</p>
-              <p className="text-xs text-gray-500">
-                Média: {overview?.estatisticas_gerais.media_roubos.toFixed(1) || 0}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Faltas</p>
-              <p className="text-2xl font-bold">{overview?.estatisticas_gerais.total_faltas || 0}</p>
-              <p className="text-xs text-gray-500">
-                Média: {overview?.estatisticas_gerais.media_faltas.toFixed(1) || 0}
-              </p>
-            </div>
-          </div>
+      <div className="mt-8">
+        <div className="font-bold text-lg mb-4">Estatísticas Gerais do Time</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Para cada aba de quarto, comparar com o quarto anterior */}
+          {(() => {
+            let curr = overview?.estatisticas_gerais;
+            let prevAst = 0, prevReb = 0, prevRoubo = 0, prevFalta = 0;
+            if (activeTab !== 'Geral' && typeof activeTab === 'number') {
+              const prevStatsArr = getPreviousQuarterStats(activeTab);
+              if (prevStatsArr.length > 0) {
+                prevAst = prevStatsArr.reduce((a, b) => a + (b.total_assistencias || 0), 0);
+                prevReb = prevStatsArr.reduce((a, b) => a + (b.total_rebotes || 0), 0);
+                prevRoubo = prevStatsArr.reduce((a, b) => a + (b.total_roubos || 0), 0);
+                prevFalta = prevStatsArr.reduce((a, b) => a + (b.total_faltas || 0), 0);
+              }
+            }
+            const percentAst = getPercentChange(curr?.total_assistencias || 0, prevAst);
+            const percentReb = getPercentChange(curr?.total_rebotes || 0, prevReb);
+            const percentRoubo = getPercentChange(curr?.total_roubos || 0, prevRoubo);
+            const percentFaltas = getPercentChange(curr?.total_faltas || 0, prevFalta);
+            return <>
+              <StatCard
+                title="Assistências"
+                value={curr?.total_assistencias || 0}
+                percent={`${percentAst > 0 ? '↑' : percentAst < 0 ? '↓' : ''} ${Math.abs(percentAst).toFixed(1)}%`}
+                trend={percentAst > 0 ? 'up' : percentAst < 0 ? 'down' : undefined}
+                color="#2563eb"
+                progress={curr?.total_assistencias ? Math.min(100, curr.total_assistencias * 10) : 0}
+              />
+              <StatCard
+                title="Rebotes"
+                value={curr?.total_rebotes || 0}
+                percent={`${percentReb > 0 ? '↑' : percentReb < 0 ? '↓' : ''} ${Math.abs(percentReb).toFixed(1)}%`}
+                trend={percentReb > 0 ? 'up' : percentReb < 0 ? 'down' : undefined}
+                color="#fbbf24"
+                progress={curr?.total_rebotes ? Math.min(100, curr.total_rebotes * 10) : 0}
+              />
+              <StatCard
+                title="Roubos"
+                value={curr?.total_roubos || 0}
+                percent={`${percentRoubo > 0 ? '↑' : percentRoubo < 0 ? '↓' : ''} ${Math.abs(percentRoubo).toFixed(1)}%`}
+                trend={percentRoubo > 0 ? 'up' : percentRoubo < 0 ? 'down' : undefined}
+                color="#22c55e"
+                progress={curr?.total_roubos ? Math.min(100, curr.total_roubos * 10) : 0}
+              />
+              <StatCard
+                title="Faltas"
+                value={curr?.total_faltas || 0}
+                percent={`${percentFaltas > 0 ? '↑' : percentFaltas < 0 ? '↓' : ''} ${Math.abs(percentFaltas).toFixed(1)}%`}
+                trend={percentFaltas > 0 ? 'up' : percentFaltas < 0 ? 'down' : undefined}
+                color="#ef4444"
+                progress={curr?.total_faltas ? Math.min(100, curr.total_faltas * 10) : 0}
+              />
+            </>;
+          })()}
         </div>
-      </Card>
+      </div>
 
       {/* Estatísticas por Jogadora */}
       <Card>
         <div className="p-4">
           <div className="font-bold text-lg mb-2">Estatísticas por Jogadora</div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
+            <table className="min-w-full text-xs border border-gray-300">
+              <thead className="bg-gray-200">
                 <tr>
-                  <th>Nome</th>
-                  <th>Número</th>
-                  <th>Posição</th>
-                  <th>Total PTS</th>
-                  <th>Total AST</th>
-                  <th>Total REB</th>
-                  <th>Total ROUB</th>
-                  <th>Total FALT</th>
-                  <th>Jogos</th>
+                  <th className="border px-1 py-1">Nome</th>
+                  <th className="border px-1 py-1">Número</th>
+                  <th className="border px-1 py-1">Posição</th>
+                  <th className="border px-1 py-1">Total PTS</th>
+                  <th className="border px-1 py-1">Total AST</th>
+                  <th className="border px-1 py-1">Total REB</th>
+                  <th className="border px-1 py-1">Total ROUB</th>
+                  <th className="border px-1 py-1">Total FALT</th>
+                  <th className="border px-1 py-1">Jogos</th>
                 </tr>
               </thead>
               <tbody>
                 {jogadorasStats.map((jogadora) => (
                   <tr key={jogadora.id}>
-                    <td>{jogadora.nome}</td>
-                    <td>{jogadora.numero}</td>
-                    <td>{jogadora.posicao}</td>
-                    <td>{jogadora.total_pontos}</td>
-                    <td>{jogadora.total_assistencias}</td>
-                    <td>{jogadora.total_rebotes}</td>
-                    <td>{jogadora.total_roubos}</td>
-                    <td>{jogadora.total_faltas}</td>
-                    <td>{jogadora.total_jogos}</td>
+                    <td className="border px-1 py-1">{jogadora.nome}</td>
+                    <td className="border px-1 py-1">{jogadora.numero}</td>
+                    <td className="border px-1 py-1">{jogadora.posicao}</td>
+                    <td className="border px-1 py-1">{jogadora.total_pontos}</td>
+                    <td className="border px-1 py-1">{jogadora.total_assistencias}</td>
+                    <td className="border px-1 py-1">{jogadora.total_rebotes}</td>
+                    <td className="border px-1 py-1">{jogadora.total_roubos}</td>
+                    <td className="border px-1 py-1">{jogadora.total_faltas}</td>
+                    <td className="border px-1 py-1">{jogadora.total_jogos}</td>
                   </tr>
                 ))}
               </tbody>
@@ -377,82 +589,155 @@ export function Dashboard() {
         <div className="p-4">
           <div className="font-bold text-lg mb-2">Estatísticas por Jogo</div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
+            <table className="min-w-full text-xs border border-gray-300">
+              <thead className="bg-gray-200">
                 <tr>
-                  <th>Data</th>
-                  <th>Adversário</th>
-                  <th>Status</th>
-                  <th>PTS</th>
-                  <th>AST</th>
-                  <th>REB</th>
-                  <th>ROUB</th>
-                  <th>FALT</th>
-                  <th>Jogadoras</th>
+                  <th className="border px-1 py-1">Data</th>
+                  <th className="border px-1 py-1">Adversário</th>
+                  <th className="border px-1 py-1">Status</th>
+                  <th className="border px-1 py-1">PTS</th>
+                  <th className="border px-1 py-1">AST</th>
+                  <th className="border px-1 py-1">REB</th>
+                  <th className="border px-1 py-1">ROUB</th>
+                  <th className="border px-1 py-1">FALT</th>
+                  <th className="border px-1 py-1">Jogadoras</th>
                 </tr>
               </thead>
               <tbody>
-                {jogosStats.map((jogo) => (
-                  <>
-                    <tr key={jogo.id}>
-                      <td>{format(new Date(jogo.date), "dd/MM/yyyy", { locale: ptBR })}</td>
-                      <td>{jogo.opponent}</td>
-                      <td>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          jogo.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' :
-                          jogo.status === 'EM_ANDAMENTO' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {jogo.status}
-                        </span>
-                      </td>
-                      <td>{jogo.total_pontos}</td>
-                      <td>{jogo.total_assistencias}</td>
-                      <td>{jogo.total_rebotes}</td>
-                      <td>{jogo.total_roubos}</td>
-                      <td>{jogo.total_faltas}</td>
-                      <td>{jogo.total_jogadoras}</td>
-                    </tr>
-                    {jogo.por_quarto && jogo.por_quarto.length > 0 && (
-                      <tr>
-                        <td colSpan={9}>
-                          <div className="mt-2 mb-2">
-                            <div className="font-semibold text-xs mb-1">Totais por Quarto</div>
-                            <table className="min-w-full text-xs border">
-                              <thead>
-                                <tr>
-                                  <th>Quarto</th>
-                                  <th>PTS</th>
-                                  <th>AST</th>
-                                  <th>REB</th>
-                                  <th>ROUB</th>
-                                  <th>FALT</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {jogo.por_quarto.map((q) => (
-                                  <tr key={q.quarto}>
-                                    <td>{q.quarto}º</td>
-                                    <td>{q.total_pontos}</td>
-                                    <td>{q.total_assistencias}</td>
-                                    <td>{q.total_rebotes}</td>
-                                    <td>{q.total_roubos}</td>
-                                    <td>{q.total_faltas}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
+                {jogosStats.filter(jogo => jogo.status !== 'PENDENTE').map((jogo) => (
+                  <tr key={jogo.id}>
+                    <td className="border px-1 py-1">{format(new Date(jogo.date), "dd/MM/yyyy", { locale: ptBR })}</td>
+                    <td className="border px-1 py-1">{jogo.opponent}</td>
+                    <td className="border px-1 py-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        jogo.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' :
+                        jogo.status === 'EM_ANDAMENTO' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {jogo.status}
+                      </span>
+                    </td>
+                    <td className="border px-1 py-1">{jogo.total_pontos}</td>
+                    <td className="border px-1 py-1">{jogo.total_assistencias}</td>
+                    <td className="border px-1 py-1">{jogo.total_rebotes}</td>
+                    <td className="border px-1 py-1">{jogo.total_roubos}</td>
+                    <td className="border px-1 py-1">{jogo.total_faltas}</td>
+                    <td className="border px-1 py-1">{jogo.total_jogadoras}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
       </Card>
+
+      {/* Tabela de estatísticas estilo referência */}
+      <div className="overflow-x-auto bg-white rounded shadow">
+        <table className="min-w-full text-xs border border-gray-300">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="border px-1 py-1">NO.</th>
+              <th className="border px-1 py-1">JOGADOR</th>
+              <th className="border px-1 py-1">POS</th>
+              <th className="border px-1 py-1">MIN</th>
+              <th className="border px-1 py-1">PTS</th>
+              <th className="border px-1 py-1">AQ</th>
+              <th className="border px-1 py-1">AC</th>
+              <th className="border px-1 py-1">2P</th>
+              <th className="border px-1 py-1">2P2TS</th>
+              <th className="border px-1 py-1">3P</th>
+              <th className="border px-1 py-1">3P3PTS</th>
+              <th className="border px-1 py-1">LL</th>
+              <th className="border px-1 py-1">PLL</th>
+              <th className="border px-1 py-1">REBO</th>
+              <th className="border px-1 py-1">REBD</th>
+              <th className="border px-1 py-1">TREB</th>
+              <th className="border px-1 py-1">ASS</th>
+              <th className="border px-1 py-1">ERR</th>
+              <th className="border px-1 py-1">RB</th>
+              <th className="border px-1 py-1">T</th>
+              <th className="border px-1 py-1">TR</th>
+              <th className="border px-1 py-1">FP</th>
+              <th className="border px-1 py-1">FR</th>
+              <th className="border px-1 py-1">+/- PTS</th>
+              <th className="border px-1 py-1">EF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(activeTab === 'Geral' ? jogadorasStats : getStatsByQuarter(activeTab as number)).map((j, idx) => (
+              <tr key={j.id || idx}>
+                <td className="border px-1 py-1 text-center">{j.numero || '-'}</td>
+                <td className="border px-1 py-1">{j.nome || '-'}</td>
+                <td className="border px-1 py-1">{j.posicao || '-'}</td>
+                <td className="border px-1 py-1 text-center">-</td> {/* MIN não disponível */}
+                <td className="border px-1 py-1 text-center">{j.total_pontos ?? j.pontos ?? 0}</td>
+                <td className="border px-1 py-1 text-center">-</td> {/* AQ não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* AC não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* 2P não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* 2P2TS não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* 3P não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* 3P3PTS não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* LL não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* PLL não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* REBO não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* REBD não disponível */}
+                <td className="border px-1 py-1 text-center">{j.total_rebotes ?? j.rebotes ?? 0}</td>
+                <td className="border px-1 py-1 text-center">{j.total_assistencias ?? j.assistencias ?? 0}</td>
+                <td className="border px-1 py-1 text-center">-</td> {/* ERR não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* RB não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* T não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* TR não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* FP não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* FR não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* +/- PTS não disponível */}
+                <td className="border px-1 py-1 text-center">-</td> {/* EF não disponível */}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Estatísticas da equipe */}
+      <div className="bg-red-700 text-white font-bold p-2 mt-4 rounded">ESTATÍSTICAS DA EQUIPE:</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-white p-2 rounded shadow mb-4">
+        <div>Pontos de Erros: ...</div>
+        <div>Pontos no Garrafão: ...</div>
+        <div>Pontos de Segunda Chance: ...</div>
+        <div>Pontos de Contra Ataque: ...</div>
+        <div>Pontos do Banco: ...</div>
+        <div>Maior Liderança: ...</div>
+        <div>Maior Sequência de Pontos: ...</div>
+      </div>
+
+      {/* Legenda */}
+      <div className="bg-white p-4 rounded shadow mt-4">
+        <div className="font-bold mb-2">Legenda</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div><b>POS:</b> Posição</div>
+          <div><b>MIN:</b> Minutos</div>
+          <div><b>AQ:</b> Arremessos de quadra</div>
+          <div><b>AC:</b> Percentual de Arremessos</div>
+          <div><b>2P:</b> 2 Pontos Convertidos</div>
+          <div><b>2P2TS:</b> Percentual de 2 Pontos</div>
+          <div><b>3P:</b> Arremessos de 3 pontos</div>
+          <div><b>3P3PTS:</b> Percentual de 3 Pontos</div>
+          <div><b>LL:</b> Lance Livre</div>
+          <div><b>PLL:</b> Percentual de Lances Livres</div>
+          <div><b>PTS:</b> Pontos</div>
+          <div><b>REBO:</b> Rebotes Ofensivos</div>
+          <div><b>REBD:</b> Rebotes Defensivos</div>
+          <div><b>TREB:</b> Total de Rebotes</div>
+          <div><b>ASS:</b> Assistências</div>
+          <div><b>ERR:</b> Erros</div>
+          <div><b>RB:</b> Roubos de Bola</div>
+          <div><b>T:</b> Tocos</div>
+          <div><b>TR:</b> Tocos Recebidos</div>
+          <div><b>FP:</b> Faltas Pessoais</div>
+          <div><b>FR:</b> Faltas Recebidas</div>
+          <div><b>+/- PTS:</b> Saldo de Pontos</div>
+          <div><b>EF:</b> Eficiência</div>
+        </div>
+      </div>
     </div>
   );
 } 
