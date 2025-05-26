@@ -6,13 +6,14 @@ import RegisterPage from "./pages/RegisterPage";
 import GameRegisterPage from "./pages/GameRegisterPage";
 import { Dashboard } from './pages/Dashboard';
 import Painel from './pages/Painel';
+import { Home } from './pages/Home';
 
 const App: React.FC = () => {
   return (
     <Router>
       <Toaster position="top-right" />
       <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
