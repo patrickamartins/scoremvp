@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, validator, root_validator, EmailStr
 
 
 # backend/app/schemas.py
@@ -19,7 +19,7 @@ class UserOut(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
@@ -52,7 +52,6 @@ class PlayerOut(PlayerBase):
 class GameCreate(BaseModel):
     opponent: str = Field(..., min_length=2, max_length=100)
     date: datetime = Field(default_factory=datetime.now)
-    time: Optional[str] = Field(None)
     location: Optional[str] = Field(None, max_length=100)
     categoria: Optional[str] = Field(None)
     status: str = Field(default="pendente")
@@ -60,7 +59,11 @@ class GameCreate(BaseModel):
 
     @validator("date")
     def validate_date(cls, v):
-        if v < datetime.now():
+        # Se v não tiver timezone, assume UTC
+        if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
+            v = v.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        if v < now:
             raise ValueError("Data do jogo não pode ser no passado")
         return v
 
@@ -85,6 +88,7 @@ class GameOut(BaseModel):
     status: str
     created_at: datetime
     estatisticas: List["EstatisticaOut"] = []
+    jogadoras: List[PlayerOut] = []
 
     class Config:
         from_attributes = True
@@ -97,6 +101,7 @@ class EstatisticaCreate(BaseModel):
     rebotes: int = Field(default=0, ge=0)
     roubos: int = Field(default=0, ge=0)
     faltas: int = Field(default=0, ge=0)
+    interferencia: int = Field(default=0, ge=0)
     quarto: int = Field(..., ge=1, le=4)
 
 class EstatisticaUpdate(BaseModel):
@@ -105,15 +110,42 @@ class EstatisticaUpdate(BaseModel):
     rebotes: Optional[int] = Field(None, ge=0)
     roubos: Optional[int] = Field(None, ge=0)
     faltas: Optional[int] = Field(None, ge=0)
+    interferencia: Optional[int] = Field(None, ge=0)
     quarto: Optional[int] = Field(None, ge=1, le=4)
+
+class JogoSimples(BaseModel):
+    id: int
+    opponent: str
+    date: datetime
+    location: Optional[str] = None
+    status: str
+    categoria: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class EstatisticaOut(EstatisticaCreate):
     id: int
     jogadora: PlayerOut
-    jogo: GameOut
+    jogo: JogoSimples
 
     class Config:
         from_attributes = True
+
+class LeadCreate(BaseModel):
+    nome: str
+    email: EmailStr
+    whatsapp: str
+
+class LeadOut(BaseModel):
+    id: int
+    nome: str
+    email: EmailStr
+    whatsapp: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
 
 PlayerOut.update_forward_refs()
 GameOut.update_forward_refs()

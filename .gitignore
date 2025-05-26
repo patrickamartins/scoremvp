@@ -43,4 +43,11 @@ Thumbs.db
 .env.local
 .env.development
 .env.test
-.env.production 
+.env.production
+
+# Alembic
+alembic/versions/*
+!alembic/versions/293f72152a82_add_leads_table.py
+
+# Outros
+.DS_Store 

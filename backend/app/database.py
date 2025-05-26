@@ -10,6 +10,13 @@ engine = create_engine(DATABASE_URL, echo=True)  # echo=True para debug de SQL
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+def init_db():
+    # Importar todos os modelos aqui para garantir que eles sejam registrados no Base.metadata
+    from app.models import User, Jogadora, Jogo, Estatistica
+    
+    # Criar todas as tabelas
+    Base.metadata.create_all(bind=engine)
+
 def get_db():
     db = SessionLocal()
     try:
