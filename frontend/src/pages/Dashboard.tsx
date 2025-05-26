@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import Card from "../components/ui/Card";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { addDays, subDays, subMonths, subYears, startOfYear } from 'date-fns';
+import { addDays, subDays, subMonths, startOfYear } from 'date-fns';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
@@ -40,19 +40,12 @@ interface OverviewData {
 interface JogadoraStats {
   id: number;
   nome: string;
-  numero: number;
-  posicao: string;
-  media_pontos: number;
-  media_assistencias: number;
-  media_rebotes: number;
-  media_roubos: number;
-  media_faltas: number;
-  total_jogos: number;
   total_pontos: number;
   total_assistencias: number;
   total_rebotes: number;
   total_roubos: number;
   total_faltas: number;
+  total_jogos?: number;
 }
 
 interface JogoStats {
@@ -74,6 +67,14 @@ interface JogoStats {
     total_roubos: number;
     total_faltas: number;
   }>;
+}
+
+interface PreviousStats {
+  total_pontos: number;
+  total_assistencias: number;
+  total_rebotes: number;
+  total_roubos: number;
+  total_faltas: number;
 }
 
 export default function DashboardPage() {
@@ -137,14 +138,6 @@ export default function DashboardPage() {
       ...Array.from({ length: 10 }).map((_, i) => ({
         id: i + 1,
         nome: `Jogadora ${i + 1}`,
-        numero: i + 4,
-        posicao: ["Ala", "Pivô", "Armadora"][i % 3],
-        media_pontos: Math.round(Math.random() * 20),
-        media_assistencias: Math.round(Math.random() * 5),
-        media_rebotes: Math.round(Math.random() * 10),
-        media_roubos: Math.round(Math.random() * 3),
-        media_faltas: Math.round(Math.random() * 2),
-        total_jogos: 6,
         total_pontos: Math.round(Math.random() * 100 + 20),
         total_assistencias: Math.round(Math.random() * 30 + 5),
         total_rebotes: Math.round(Math.random() * 50 + 10),
@@ -251,67 +244,57 @@ export default function DashboardPage() {
       }
     },
     {
-      label: 'Semestre',
-      onClick: () => {
-        const today = new Date();
-        const semesterAgo = subMonths(today, 6);
-        setLocalFrom(format(semesterAgo, 'yyyy-MM-dd'));
-        setLocalTo(format(today, 'yyyy-MM-dd'));
-        setDateRange({ from: semesterAgo, to: today });
-        setActiveQuickFilter('Semestre');
-      }
-    },
-    {
-      label: 'Ano',
+      label: 'Este ano',
       onClick: () => {
         const today = new Date();
         const yearStart = startOfYear(today);
         setLocalFrom(format(yearStart, 'yyyy-MM-dd'));
         setLocalTo(format(today, 'yyyy-MM-dd'));
         setDateRange({ from: yearStart, to: today });
-        setActiveQuickFilter('Ano');
+        setActiveQuickFilter('Este ano');
       }
-    },
+    }
   ];
 
-  // Função para extrair todos os quartos presentes nos jogos
-  const allQuarters = Array.from(new Set(jogosStats.flatMap(j => (j.por_quarto || []).map(q => q.quarto)))).sort();
+  const getStatsByQuarter = (_quarto: number): JogadoraStats[] => {
+    // Implementação da função
+    return [];
+  };
 
-  // Função para filtrar estatísticas por quarto
-  function getStatsByQuarter(quarto: number) {
-    return jogosStats.map(jogo => {
-      const q = (jogo.por_quarto || []).find(q => q.quarto === quarto);
-      return q ? {
-        ...jogo,
-        total_pontos: q.total_pontos,
-        total_assistencias: q.total_assistencias,
-        total_rebotes: q.total_rebotes,
-        total_roubos: q.total_roubos,
-        total_faltas: q.total_faltas,
-      } : null;
-    }).filter(Boolean);
-  }
-
-  // Função para calcular percentual de crescimento/queda
   function getPercentChange(current: number, previous: number) {
-    if (!previous || previous === 0) return 0;
-    return ((current - previous) / previous) * 100;
+    if (previous === 0) return current > 0 ? '+100%' : '0%';
+    const percent = ((current - previous) / previous) * 100;
+    return `${percent > 0 ? '+' : ''}${Math.round(percent)}%`;
   }
 
-  // Função para obter estatísticas do último jogo (para aba Geral)
-  function getLastGameStats() {
-    if (jogosStats.length < 2) return null;
-    return jogosStats[jogosStats.length - 2]; // penúltimo jogo
+  function getLastGameStats(): JogoStats {
+    return jogosStats[0] || {
+      total_pontos: 0,
+      total_assistencias: 0,
+      total_rebotes: 0,
+      total_roubos: 0,
+      total_faltas: 0,
+      total_jogadoras: 0
+    };
   }
 
-  // Função para obter estatísticas do quarto anterior (para abas de quarto)
-  function getPreviousQuarterStats(quarto: number) {
-    if (typeof quarto !== 'number' || quarto <= 1) return null;
-    // Busca o mesmo jogo e o quarto anterior
-    return jogosStats.map(jogo => {
-      const prevQ = (jogo.por_quarto || []).find(q => q.quarto === (quarto - 1));
-      return prevQ || null;
-    }).filter(Boolean);
+  function getPreviousQuarterStats(quarto: number): PreviousStats[] {
+    const prevStats: PreviousStats[] = [];
+    const prevStatsArr = jogosStats.slice(1).map(jogo => jogo.por_quarto?.find(q => q.quarto === quarto));
+    let prevAst = 0;
+    let prevReb = 0;
+    let prevRoubo = 0;
+    let prevFalta = 0;
+
+    if (prevStatsArr && prevStatsArr.length > 0) {
+      prevAst = prevStatsArr.reduce((a, b) => a + (b?.total_assistencias || 0), 0);
+      prevReb = prevStatsArr.reduce((a, b) => a + (b?.total_rebotes || 0), 0);
+      prevRoubo = prevStatsArr.reduce((a, b) => a + (b?.total_roubos || 0), 0);
+      prevFalta = prevStatsArr.reduce((a, b) => a + (b?.total_faltas || 0), 0);
+    }
+
+    prevStats.push({ total_pontos: prevAst, total_assistencias: prevReb, total_rebotes: prevReb, total_roubos: prevRoubo, total_faltas: prevFalta });
+    return prevStats;
   }
 
   return (
@@ -375,7 +358,7 @@ export default function DashboardPage() {
           className={`px-4 py-2 rounded-t font-bold border-b-2 ${activeTab === 'Geral' ? 'border-blue-600 bg-white' : 'border-transparent bg-gray-100'}`}
           onClick={() => setActiveTab('Geral')}
         >Geral</button>
-        {allQuarters.map(q => (
+        {Array.from(new Set(jogosStats.flatMap(j => (j.por_quarto || []).map(q => q.quarto)))).sort().map(q => (
           <button
             key={q}
             className={`px-4 py-2 rounded-t font-bold border-b-2 ${activeTab === q ? 'border-blue-600 bg-white' : 'border-transparent bg-gray-100'}`}
@@ -390,7 +373,7 @@ export default function DashboardPage() {
         {(() => {
           const lastGame = getLastGameStats();
           const curr = overview?.estatisticas_gerais;
-          const prev = lastGame ? lastGame : {};
+          const prev: JogoStats = lastGame;
           const percentPontos = getPercentChange(curr?.total_pontos || 0, prev.total_pontos || 0);
           const percentAst = getPercentChange(curr?.total_assistencias || 0, prev.total_assistencias || 0);
           const percentReb = getPercentChange(curr?.total_rebotes || 0, prev.total_rebotes || 0);
@@ -399,32 +382,32 @@ export default function DashboardPage() {
             <StatCard
               title="Total de Pontos"
               value={curr?.total_pontos || 0}
-              percent={`${percentPontos > 0 ? '↑' : percentPontos < 0 ? '↓' : ''} ${Math.abs(percentPontos).toFixed(1)}%`}
-              trend={percentPontos > 0 ? 'up' : percentPontos < 0 ? 'down' : undefined}
+              percent={percentPontos}
+              trend={percentPontos.startsWith('+') ? 'up' : percentPontos.startsWith('-') ? 'down' : undefined}
               color="#2563eb"
               progress={curr?.total_pontos ? Math.min(100, curr.total_pontos) : 0}
             />
             <StatCard
               title="Total de Assistências"
               value={curr?.total_assistencias || 0}
-              percent={`${percentAst > 0 ? '↑' : percentAst < 0 ? '↓' : ''} ${Math.abs(percentAst).toFixed(1)}%`}
-              trend={percentAst > 0 ? 'up' : percentAst < 0 ? 'down' : undefined}
+              percent={percentAst}
+              trend={percentAst.startsWith('+') ? 'up' : percentAst.startsWith('-') ? 'down' : undefined}
               color="#ef4444"
               progress={curr?.total_assistencias ? Math.min(100, curr.total_assistencias) : 0}
             />
             <StatCard
               title="Total de Rebotes"
               value={curr?.total_rebotes || 0}
-              percent={`${percentReb > 0 ? '↑' : percentReb < 0 ? '↓' : ''} ${Math.abs(percentReb).toFixed(1)}%`}
-              trend={percentReb > 0 ? 'up' : percentReb < 0 ? 'down' : undefined}
+              percent={percentReb}
+              trend={percentReb.startsWith('+') ? 'up' : percentReb.startsWith('-') ? 'down' : undefined}
               color="#fbbf24"
               progress={curr?.total_rebotes ? Math.min(100, curr.total_rebotes) : 0}
             />
             <StatCard
               title="Total de Faltas"
               value={curr?.total_faltas || 0}
-              percent={`${percentFaltas > 0 ? '↑' : percentFaltas < 0 ? '↓' : ''} ${Math.abs(percentFaltas).toFixed(1)}%`}
-              trend={percentFaltas > 0 ? 'up' : percentFaltas < 0 ? 'down' : undefined}
+              percent={percentFaltas}
+              trend={percentFaltas.startsWith('+') ? 'up' : percentFaltas.startsWith('-') ? 'down' : undefined}
               color="#22c55e"
               progress={curr?.total_faltas ? Math.min(100, curr.total_faltas) : 0}
             />
@@ -511,32 +494,32 @@ export default function DashboardPage() {
               <StatCard
                 title="Assistências"
                 value={curr?.total_assistencias || 0}
-                percent={`${percentAst > 0 ? '↑' : percentAst < 0 ? '↓' : ''} ${Math.abs(percentAst).toFixed(1)}%`}
-                trend={percentAst > 0 ? 'up' : percentAst < 0 ? 'down' : undefined}
+                percent={percentAst}
+                trend={percentAst.startsWith('+') ? 'up' : percentAst.startsWith('-') ? 'down' : undefined}
                 color="#2563eb"
                 progress={curr?.total_assistencias ? Math.min(100, curr.total_assistencias * 10) : 0}
               />
               <StatCard
                 title="Rebotes"
                 value={curr?.total_rebotes || 0}
-                percent={`${percentReb > 0 ? '↑' : percentReb < 0 ? '↓' : ''} ${Math.abs(percentReb).toFixed(1)}%`}
-                trend={percentReb > 0 ? 'up' : percentReb < 0 ? 'down' : undefined}
+                percent={percentReb}
+                trend={percentReb.startsWith('+') ? 'up' : percentReb.startsWith('-') ? 'down' : undefined}
                 color="#fbbf24"
                 progress={curr?.total_rebotes ? Math.min(100, curr.total_rebotes * 10) : 0}
               />
               <StatCard
                 title="Roubos"
                 value={curr?.total_roubos || 0}
-                percent={`${percentRoubo > 0 ? '↑' : percentRoubo < 0 ? '↓' : ''} ${Math.abs(percentRoubo).toFixed(1)}%`}
-                trend={percentRoubo > 0 ? 'up' : percentRoubo < 0 ? 'down' : undefined}
+                percent={percentRoubo}
+                trend={percentRoubo.startsWith('+') ? 'up' : percentRoubo.startsWith('-') ? 'down' : undefined}
                 color="#22c55e"
                 progress={curr?.total_roubos ? Math.min(100, curr.total_roubos * 10) : 0}
               />
               <StatCard
                 title="Faltas"
                 value={curr?.total_faltas || 0}
-                percent={`${percentFaltas > 0 ? '↑' : percentFaltas < 0 ? '↓' : ''} ${Math.abs(percentFaltas).toFixed(1)}%`}
-                trend={percentFaltas > 0 ? 'up' : percentFaltas < 0 ? 'down' : undefined}
+                percent={percentFaltas}
+                trend={percentFaltas.startsWith('+') ? 'up' : percentFaltas.startsWith('-') ? 'down' : undefined}
                 color="#ef4444"
                 progress={curr?.total_faltas ? Math.min(100, curr.total_faltas * 10) : 0}
               />
@@ -554,8 +537,6 @@ export default function DashboardPage() {
               <thead className="bg-gray-200">
                 <tr>
                   <th className="border px-1 py-1">Nome</th>
-                  <th className="border px-1 py-1">Número</th>
-                  <th className="border px-1 py-1">Posição</th>
                   <th className="border px-1 py-1">Total PTS</th>
                   <th className="border px-1 py-1">Total AST</th>
                   <th className="border px-1 py-1">Total REB</th>
@@ -568,8 +549,6 @@ export default function DashboardPage() {
                 {jogadorasStats.map((jogadora) => (
                   <tr key={jogadora.id}>
                     <td className="border px-1 py-1">{jogadora.nome}</td>
-                    <td className="border px-1 py-1">{jogadora.numero}</td>
-                    <td className="border px-1 py-1">{jogadora.posicao}</td>
                     <td className="border px-1 py-1">{jogadora.total_pontos}</td>
                     <td className="border px-1 py-1">{jogadora.total_assistencias}</td>
                     <td className="border px-1 py-1">{jogadora.total_rebotes}</td>
@@ -638,8 +617,6 @@ export default function DashboardPage() {
             <tr>
               <th className="border px-1 py-1">NO.</th>
               <th className="border px-1 py-1">JOGADOR</th>
-              <th className="border px-1 py-1">POS</th>
-              <th className="border px-1 py-1">MIN</th>
               <th className="border px-1 py-1">PTS</th>
               <th className="border px-1 py-1">AQ</th>
               <th className="border px-1 py-1">AC</th>
@@ -664,33 +641,31 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {(activeTab === 'Geral' ? jogadorasStats : getStatsByQuarter(activeTab as number)).map((j, idx) => (
+            {(activeTab === 'Geral' ? jogadorasStats : getStatsByQuarter(activeTab as number)).map((j: JogadoraStats, idx: number) => (
               <tr key={j.id || idx}>
-                <td className="border px-1 py-1 text-center">{j.numero || '-'}</td>
+                <td className="border px-1 py-1 text-center">{j.id || '-'}</td>
                 <td className="border px-1 py-1">{j.nome || '-'}</td>
-                <td className="border px-1 py-1">{j.posicao || '-'}</td>
-                <td className="border px-1 py-1 text-center">-</td> {/* MIN não disponível */}
-                <td className="border px-1 py-1 text-center">{j.total_pontos ?? j.pontos ?? 0}</td>
-                <td className="border px-1 py-1 text-center">-</td> {/* AQ não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* AC não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* 2P não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* 2P2TS não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* 3P não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* 3P3PTS não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* LL não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* PLL não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* REBO não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* REBD não disponível */}
-                <td className="border px-1 py-1 text-center">{j.total_rebotes ?? j.rebotes ?? 0}</td>
-                <td className="border px-1 py-1 text-center">{j.total_assistencias ?? j.assistencias ?? 0}</td>
-                <td className="border px-1 py-1 text-center">-</td> {/* ERR não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* RB não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* T não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* TR não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* FP não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* FR não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* +/- PTS não disponível */}
-                <td className="border px-1 py-1 text-center">-</td> {/* EF não disponível */}
+                <td className="border px-1 py-1 text-center">{j.total_pontos || 0}</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">{j.total_rebotes || 0}</td>
+                <td className="border px-1 py-1 text-center">{j.total_assistencias || 0}</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
+                <td className="border px-1 py-1 text-center">-</td>
               </tr>
             ))}
           </tbody>
@@ -713,16 +688,6 @@ export default function DashboardPage() {
       <div className="bg-white p-4 rounded shadow mt-4">
         <div className="font-bold mb-2">Legenda</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          <div><b>POS:</b> Posição</div>
-          <div><b>MIN:</b> Minutos</div>
-          <div><b>AQ:</b> Arremessos de quadra</div>
-          <div><b>AC:</b> Percentual de Arremessos</div>
-          <div><b>2P:</b> 2 Pontos Convertidos</div>
-          <div><b>2P2TS:</b> Percentual de 2 Pontos</div>
-          <div><b>3P:</b> Arremessos de 3 pontos</div>
-          <div><b>3P3PTS:</b> Percentual de 3 Pontos</div>
-          <div><b>LL:</b> Lance Livre</div>
-          <div><b>PLL:</b> Percentual de Lances Livres</div>
           <div><b>PTS:</b> Pontos</div>
           <div><b>REBO:</b> Rebotes Ofensivos</div>
           <div><b>REBD:</b> Rebotes Defensivos</div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Checkbox, Input, Label } from "../components/ui";
+import { Card, Checkbox, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "sonner";
 import { getPlayers, createGame } from "../services/api";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, Button, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui';
 import type { Game, GameCategory } from '../types/game';
 import { Link } from "react-router-dom";

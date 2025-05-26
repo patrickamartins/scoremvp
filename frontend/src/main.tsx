@@ -1,17 +1,14 @@
 // src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { RouterProvider } from 'react-router-dom';
-import { router } from './routes';
-import { AuthProvider } from './contexts/AuthContext';
-import { Toaster } from 'react-hot-toast';
+import App from './App';
 import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
-      <Toaster position="top-right" />
+      <App />
     </AuthProvider>
   </React.StrictMode>
 );

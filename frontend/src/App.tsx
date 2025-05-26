@@ -1,26 +1,15 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from "sonner";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import GameRegisterPage from "./pages/GameRegisterPage";
-import { Dashboard } from './pages/Dashboard';
-import Painel from './pages/Painel';
+import { BrowserRouter } from 'react-router-dom'
+import { AppRoutes } from './routes'
+import { AuthProvider } from './contexts/AuthContext'
 
-const App: React.FC = () => {
+function App() {
   return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/painel" element={<Painel />} />
-        <Route path="/game/register" element={<GameRegisterPage />} />
-      </Routes>
-    </Router>
-  );
-};
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
 
-export default App;
+export default App

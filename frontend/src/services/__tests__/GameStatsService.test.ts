@@ -96,10 +96,10 @@ describe('GameStatsService', () => {
         jogadora_id: 1,
         quarto: 1,
         pontos: 10,
-        assistencias: 5,
-        rebotes: 8,
-        roubos: 2,
-        faltas: 3,
+        assistencias: 2,
+        rebotes: 5,
+        roubos: 1,
+        faltas: 2,
         dois_tentativas: 5,
         dois_acertos: 3,
         tres_tentativas: 2,
@@ -129,7 +129,18 @@ describe('GameStatsService', () => {
       const mockNewStats = {
         jogadora_id: 1,
         quarto: 1,
-        pontos: 10
+        pontos: 10,
+        assistencias: 2,
+        rebotes: 5,
+        roubos: 1,
+        faltas: 2,
+        dois_tentativas: 5,
+        dois_acertos: 3,
+        tres_tentativas: 2,
+        tres_acertos: 1,
+        lance_tentativas: 3,
+        lance_acertos: 2,
+        interferencia: 1
       };
 
       await expect(GameStatsService.addPlayerStats(1, mockNewStats)).rejects.toThrow('Network error');

@@ -1,4 +1,3 @@
-import React from "react";
 import '../components/ui';
 import { Card, Button } from '../components/ui';
 import { usePageTitle } from "../hooks/usePageTitle";

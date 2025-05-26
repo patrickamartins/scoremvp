@@ -1,17 +1,16 @@
 import React, { useState } from "react";
 import { Card, Button, Input } from "../components/ui";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { login, setAuthToken } from "../services/api";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "sonner";
 
-const LoginPage: React.FC = () => {
+export default function LoginPage() {
   usePageTitle("Login");
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +89,4 @@ const LoginPage: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default LoginPage; 
+} 

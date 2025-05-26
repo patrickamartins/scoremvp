@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { getPlayers, createGame, createEstatistica } from "../services/api";
+import Card from './ui/Card';
 
 interface Player {
   id: number;
   nome: string;
   numero: number;
-  posicao?: string;
+  posicao: string;
 }
 
 interface EstatisticasJogadora {
@@ -21,55 +22,60 @@ interface EstatisticasJogadora {
   interferencia: number;
 }
 
-type Acao = {
-  playerId: number;
-  stat: keyof EstatisticasJogadora;
-  valor: number;
-  tipo: 'tentativa' | 'acerto';
-};
-
-const ESTATS: { key: keyof EstatisticasJogadora; label: string; color: string; pontos: number }[] = [
-  { key: "dois", label: "+2", color: "bg-blue-600", pontos: 2 },
-  { key: "tres", label: "+3", color: "bg-indigo-700", pontos: 3 },
-  { key: "lance", label: "LANCE", color: "bg-yellow-500", pontos: 1 },
-  { key: "rebotes", label: "REBOTE", color: "bg-green-600", pontos: 0 },
-  { key: "assistencias", label: "ASSIST", color: "bg-cyan-600", pontos: 0 },
-  { key: "faltas", label: "FALTA", color: "bg-red-600", pontos: 0 },
-  { key: "tocos", label: "TOCO", color: "bg-purple-700", pontos: 0 },
-  { key: "turnovers", label: "TURN", color: "bg-gray-700", pontos: 0 },
-  { key: "roubos", label: "ROUBO", color: "bg-pink-600", pontos: 0 },
-  { key: "interferencia", label: "INTERF", color: "bg-orange-600", pontos: 0 },
-];
-
-const ARREMESSOS: (keyof EstatisticasJogadora)[] = ["dois", "tres", "lance"];
+interface Game {
+  id: number;
+  opponent: string;
+  date: string;
+  location: string;
+  categoria: string;
+  status: string;
+  jogadoras?: Player[];
+}
 
 interface GamePanelProps {
-  game?: any;
+  game: Game | null;
 }
 
 export default function GamePanel({ game }: GamePanelProps) {
   // Formulário do jogo
-  const [opponent, setOpponent] = useState(game?.opponent || "");
-  const [date, setDate] = useState(game?.date ? game.date.split('T')[0] : "");
-  const [time, setTime] = useState(game?.date ? (game.date.split('T')[1] || "") : "");
-  const [location, setLocation] = useState(game?.location || "");
-  const [categoria, setCategoria] = useState(game?.categoria || "");
+  const [opponent] = useState(game?.opponent || "");
+  const [date] = useState(game?.date ? game.date.split('T')[0] : "");
+  const [time] = useState(game?.date ? (game.date.split('T')[1] || "") : "");
+  const [location] = useState(game?.location || "");
+  const [categoria] = useState(game?.categoria || "");
   const [quarto, setQuarto] = useState<number>(1);
 
-  // Jogadoras
-  const [players, setPlayers] = useState<Player[]>(game?.jogadoras || []);
-  // Estatísticas locais
-  const [stats, setStats] = useState<{ [id: number]: EstatisticasJogadora }>({});
-  // Histórico para desfazer
-  const [history, setHistory] = useState<Acao[]>([]);
+  // Formulário da jogadora
+  const [jogadoraId, setJogadoraId] = useState<number | null>(null);
+  const [pontos, setPontos] = useState<number>(0);
+  const [assistencias, setAssistencias] = useState<number>(0);
+  const [rebotes, setRebotes] = useState<number>(0);
+  const [roubos, setRoubos] = useState<number>(0);
+  const [faltas, setFaltas] = useState<number>(0);
 
-  // Estado para controlar o botão que está aguardando confirmação
-  const [waitingButton, setWaitingButton] = useState<{ playerId: number; stat: keyof EstatisticasJogadora } | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Lista de jogadoras
+  const [jogadoras, setJogadoras] = useState<Player[]>([]);
+
+  // Estatísticas do jogo
+  const [stats, setStats] = useState<{
+    total_pontos: number;
+    total_assistencias: number;
+    total_rebotes: number;
+    total_roubos: number;
+    total_faltas: number;
+  }>({
+    total_pontos: 0,
+    total_assistencias: 0,
+    total_rebotes: 0,
+    total_roubos: 0,
+    total_faltas: 0
+  });
+
+  // Estatísticas locais
+  const [localStats, setLocalStats] = useState<{ [id: number]: EstatisticasJogadora }>({});
 
   useEffect(() => {
     if (game && game.jogadoras) {
-      setPlayers(game.jogadoras);
       // Inicializa stats para as jogadoras do jogo
       const initialStats: { [id: number]: EstatisticasJogadora } = {};
       game.jogadoras.forEach((p: Player) => {
@@ -86,13 +92,17 @@ export default function GamePanel({ game }: GamePanelProps) {
           interferencia: 0,
         };
       });
-      setStats(initialStats);
+      setLocalStats(initialStats);
     } else {
       // Comportamento antigo: busca todas as jogadoras
       getPlayers().then(res => {
-        setPlayers(res.data);
+        const players = res.data.map((p: any) => ({
+          ...p,
+          posicao: p.posicao || 'Não definida'
+        }));
+        setJogadoras(players);
         const initialStats: { [id: number]: EstatisticasJogadora } = {};
-        res.data.forEach((p: Player) => {
+        players.forEach((p: Player) => {
           initialStats[p.id] = {
             dois: { tentativas: 0, acertos: 0 },
             tres: { tentativas: 0, acertos: 0 },
@@ -106,97 +116,109 @@ export default function GamePanel({ game }: GamePanelProps) {
             interferencia: 0,
           };
         });
-        setStats(initialStats);
+        setLocalStats(initialStats);
       }).catch(err => {
         console.error('Erro ao buscar players:', err);
       });
     }
-    // eslint-disable-next-line
   }, [game]);
 
-  function handleStatClick(playerId: number, stat: keyof EstatisticasJogadora) {
-    // Se o botão já está aguardando confirmação
-    if (waitingButton && waitingButton.playerId === playerId && waitingButton.stat === stat) {
-      // Registra o acerto
-      setStats(prev => {
-        const newStats = { ...prev };
-        const currentStat = newStats[playerId][stat] as { tentativas: number; acertos: number };
-        newStats[playerId] = {
-          ...newStats[playerId],
-          [stat]: {
-            ...currentStat,
-            acertos: currentStat.acertos + 1
-          }
-        };
-        return newStats;
-      });
-      setHistory(prev => [{ playerId, stat, valor: 1, tipo: 'acerto' }, ...prev.slice(0, 4)]);
-      setWaitingButton(null);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    } else {
-      // Registra a tentativa
-      setStats(prev => {
-        const newStats = { ...prev };
-        const currentStat = newStats[playerId][stat] as { tentativas: number; acertos: number };
-        newStats[playerId] = {
-          ...newStats[playerId],
-          [stat]: {
-            ...currentStat,
-            tentativas: currentStat.tentativas + 1
-          }
-        };
-        return newStats;
-      });
-      setHistory(prev => [{ playerId, stat, valor: 1, tipo: 'tentativa' }, ...prev.slice(0, 4)]);
-      setWaitingButton({ playerId, stat });
-
-      // Limpa o timeout anterior se existir
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // Define um novo timeout
-      timeoutRef.current = setTimeout(() => {
-        setWaitingButton(null);
-      }, 3000);
-    }
-  }
-
-  function undoAction() {
-    if (history.length === 0) return;
-    const [last, ...rest] = history;
-    setStats(prev => {
-      const newStats = { ...prev };
-      const currentStat = newStats[last.playerId][last.stat] as { tentativas: number; acertos: number };
-      if (last.tipo === 'tentativa') {
-        newStats[last.playerId] = {
-          ...newStats[last.playerId],
-          [last.stat]: {
-            ...currentStat,
-            tentativas: Math.max(0, currentStat.tentativas - 1)
-          }
-        };
-      } else {
-        newStats[last.playerId] = {
-          ...newStats[last.playerId],
-          [last.stat]: {
-            ...currentStat,
-            acertos: Math.max(0, currentStat.acertos - 1)
-          }
-        };
-      }
-      return newStats;
+  // Carregar jogadoras
+  useEffect(() => {
+    getPlayers().then(({ data }) => {
+      const players = data.map((p: any) => ({
+        ...p,
+        posicao: p.posicao || 'Não definida'
+      }));
+      setJogadoras(players);
     });
-    setHistory(rest);
-  }
+  }, []);
 
-  function resetStats() {
-    setStats(prev => {
-      const novo = { ...prev };
-      Object.keys(novo).forEach(id => {
-        novo[Number(id)] = {
+  // Carregar estatísticas do jogo
+  useEffect(() => {
+    if (game?.id) {
+      getPlayers().then(({ data }) => {
+        const players = data.map((p: any) => ({
+          ...p,
+          posicao: p.posicao || 'Não definida'
+        }));
+        const total_pontos = players.reduce((total: number, player: Player) => {
+          const s = localStats[player.id];
+          return total + (s?.dois?.acertos || 0) * 2 + (s?.tres?.acertos || 0) * 3 + (s?.lance?.acertos || 0);
+        }, 0);
+        const total_assistencias = players.reduce((total: number, player: Player) => {
+          const s = localStats[player.id];
+          return total + (s?.assistencias || 0);
+        }, 0);
+        const total_rebotes = players.reduce((total: number, player: Player) => {
+          const s = localStats[player.id];
+          return total + (s?.rebotes || 0);
+        }, 0);
+        const total_roubos = players.reduce((total: number, player: Player) => {
+          const s = localStats[player.id];
+          return total + (s?.roubos || 0);
+        }, 0);
+        const total_faltas = players.reduce((total: number, player: Player) => {
+          const s = localStats[player.id];
+          return total + (s?.faltas || 0);
+        }, 0);
+        setStats({
+          total_pontos,
+          total_assistencias,
+          total_rebotes,
+          total_roubos,
+          total_faltas
+        });
+      });
+    }
+  }, [game, localStats]);
+
+  // Salvar estatísticas
+  const handleSave = async () => {
+    if (!game?.id || !jogadoraId) return;
+
+    try {
+      await createGame({
+        opponent,
+        date: date + 'T' + (time || '00:00'),
+        location,
+        categoria
+      });
+
+      await createEstatistica({
+        jogadora_id: jogadoraId,
+        jogo_id: game.id,
+        pontos,
+        assistencias,
+        rebotes,
+        roubos,
+        faltas,
+        quarto,
+        dois_tentativas: localStats[jogadoraId]?.dois?.tentativas || 0,
+        dois_acertos: localStats[jogadoraId]?.dois?.acertos || 0,
+        tres_tentativas: localStats[jogadoraId]?.tres?.tentativas || 0,
+        tres_acertos: localStats[jogadoraId]?.tres?.acertos || 0,
+        lance_tentativas: localStats[jogadoraId]?.lance?.tentativas || 0,
+        lance_acertos: localStats[jogadoraId]?.lance?.acertos || 0,
+        interferencia: localStats[jogadoraId]?.interferencia || 0,
+      } as any);
+
+      // Limpar formulário
+      setJogadoraId(null);
+      setPontos(0);
+      setAssistencias(0);
+      setRebotes(0);
+      setRoubos(0);
+      setFaltas(0);
+
+      // Recarregar estatísticas
+      const { data } = await getPlayers();
+      const players = data.map((p: any) => ({
+        ...p,
+        posicao: p.posicao || 'Não definida'
+      }));
+      setLocalStats(players.reduce((acc: { [id: number]: EstatisticasJogadora }, player: Player) => {
+        acc[player.id] = {
           dois: { tentativas: 0, acertos: 0 },
           tres: { tentativas: 0, acertos: 0 },
           lance: { tentativas: 0, acertos: 0 },
@@ -208,187 +230,182 @@ export default function GamePanel({ game }: GamePanelProps) {
           roubos: 0,
           interferencia: 0,
         };
-      });
-      return novo;
-    });
-    setHistory([]);
-  }
-
-  async function saveStats() {
-    if (!opponent || !date) {
-      alert("Preencha o adversário e a data do jogo.");
-      return;
+        return acc;
+      }, {}));
+    } catch (error) {
+      console.error('Erro ao salvar estatísticas:', error);
     }
-
-    try {
-      // 1. Criar o jogo
-      const gamePayload = {
-        opponent,
-        date: date + 'T' + (time || '00:00'),
-        location,
-        categoria
-      };
-      console.log('Payload do jogo:', gamePayload);
-      
-      const gameRes = await createGame(gamePayload);
-      if (!gameRes.data?.id) {
-        throw new Error('Erro ao criar jogo: ID não retornado');
-      }
-      const jogo_id = gameRes.data.id;
-
-      // 2. Criar estatísticas para cada jogadora
-      const estatisticasPromises = players.map(player => {
-        const s = stats[player.id];
-        // Só envia se houver alguma estatística
-        const total = (s?.dois?.tentativas || 0) + (s?.tres?.tentativas || 0) + (s?.lance?.tentativas || 0) + 
-                     (s?.assistencias || 0) + (s?.rebotes || 0) + (s?.roubos || 0) + 
-                     (s?.faltas || 0) + (s?.tocos || 0) + (s?.turnovers || 0) + (s?.interferencia || 0);
-        
-        if (!total) return null;
-
-        const estatisticaPayload = {
-          jogadora_id: player.id,
-          jogo_id,
-          pontos: (s?.dois?.acertos || 0) * 2 + (s?.tres?.acertos || 0) * 3 + (s?.lance?.acertos || 0),
-          assistencias: s?.assistencias || 0,
-          rebotes: s?.rebotes || 0,
-          roubos: s?.roubos || 0,
-          faltas: s?.faltas || 0,
-          quarto: quarto,
-          dois_tentativas: s?.dois?.tentativas || 0,
-          dois_acertos: s?.dois?.acertos || 0,
-          tres_tentativas: s?.tres?.tentativas || 0,
-          tres_acertos: s?.tres?.acertos || 0,
-          lance_tentativas: s?.lance?.tentativas || 0,
-          lance_acertos: s?.lance?.acertos || 0,
-          interferencia: s?.interferencia || 0,
-        };
-
-        console.log('Payload da estatística:', estatisticaPayload);
-        return createEstatistica(estatisticaPayload);
-      }).filter(Boolean);
-
-      if (estatisticasPromises.length === 0) {
-        throw new Error('Nenhuma estatística para salvar');
-      }
-
-      await Promise.all(estatisticasPromises);
-      alert("Jogo e estatísticas salvos com sucesso!");
-      resetStats();
-    } catch (error: any) {
-      console.error('Erro detalhado:', error);
-      if (error.response) {
-        console.error('Resposta do servidor:', error.response.data);
-        alert(`Erro ao salvar: ${error.response.data.detail || 'Erro desconhecido'}`);
-      } else if (error.request) {
-        console.error('Sem resposta do servidor:', error.request);
-        alert('Erro de conexão com o servidor. Verifique sua conexão.');
-      } else {
-        console.error('Erro:', error.message);
-        alert(`Erro: ${error.message}`);
-      }
-    }
-  }
+  };
 
   return (
-    <>
-      <div className="p-2 md:p-6">
-        {/* Botões de ação e seletor de quarto centralizados */}
-        <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-4 md:mb-8 bg-white p-2 md:p-4 rounded shadow justify-center items-center">
-          <div className="flex items-center gap-2 mt-2 mb-4">
-            <label className="font-semibold text-sm">Quarto:</label>
-            <select
-              className="border rounded px-2 py-1"
-              value={quarto}
-              onChange={e => setQuarto(Number(e.target.value))}
-            >
-              <option value={1}>1º Quarto</option>
-              <option value={2}>2º Quarto</option>
-              <option value={3}>3º Quarto</option>
-              <option value={4}>4º Quarto</option>
-            </select>
+    <div className="p-4">
+      <Card title="Informações do Jogo">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Adversário</label>
+            <input
+              type="text"
+              value={opponent}
+              readOnly
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
           </div>
-          {/* Botões de ação ao lado do seletor */}
-          <div className="flex flex-row gap-2 md:gap-4 mt-2 md:mt-0">
-            <button onClick={saveStats} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded font-bold shadow">Salvar</button>
-            <button onClick={resetStats} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded font-bold shadow">Zerar estatísticas</button>
-            <button onClick={undoAction} className="bg-gray-700 hover:bg-gray-800 text-white px-6 py-2 rounded font-bold shadow">Desfazer</button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Data</label>
+            <input
+              type="date"
+              value={date}
+              readOnly
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Horário</label>
+            <input
+              type="time"
+              value={time}
+              readOnly
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Local</label>
+            <input
+              type="text"
+              value={location}
+              readOnly
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Categoria</label>
+            <input
+              type="text"
+              value={categoria}
+              readOnly
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
           </div>
         </div>
-        {/* Tabela de estatísticas */}
-        <div className="w-full max-w-full overflow-x-auto md:overflow-x-visible">
-          <table className="min-w-full border-separate border-spacing-y-1">
-            <thead className="sticky top-0 z-10 bg-gray-100">
-              <tr>
-                <th className="px-2 py-2 text-xs md:text-sm font-bold text-gray-700 text-center border-b">#</th>
-                <th className="px-2 py-2 text-xs md:text-sm font-bold text-gray-700 text-center border-b">Nome</th>
-                {ESTATS.map(stat => (
-                  <th key={stat.key} className="px-2 py-2 text-xs md:text-sm font-bold text-gray-700 text-center border-b">
-                    {stat.label}
-                  </th>
+      </Card>
+
+      <Card title="Estatísticas do Jogo" className="mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-blue-900">Pontos</h3>
+            <p className="text-3xl font-bold text-blue-700">{stats.total_pontos}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-green-900">Assistências</h3>
+            <p className="text-3xl font-bold text-green-700">{stats.total_assistencias}</p>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-yellow-900">Rebotes</h3>
+            <p className="text-3xl font-bold text-yellow-700">{stats.total_rebotes}</p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-purple-900">Roubos</h3>
+            <p className="text-3xl font-bold text-purple-700">{stats.total_roubos}</p>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-red-900">Faltas</h3>
+            <p className="text-3xl font-bold text-red-700">{stats.total_faltas}</p>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-medium mb-4">Adicionar Estatísticas</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Jogadora</label>
+              <select
+                value={jogadoraId || ""}
+                onChange={(e) => setJogadoraId(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Selecione uma jogadora</option>
+                {jogadoras.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.numero} - {j.nome} ({j.posicao})
+                  </option>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((player) => {
-                const faltas = stats[player.id]?.faltas || 0;
-                let alertClass = '';
-                if (faltas === 3) alertClass = 'bg-yellow-200';
-                if (faltas >= 4) alertClass = 'bg-red-300';
-                return (
-                  <tr key={player.id} className="bg-white even:bg-gray-50 hover:bg-yellow-50">
-                    <td className="text-center font-bold text-xs md:text-sm text-gray-700 align-middle border-b">{player.numero}</td>
-                    <td className={`text-left font-semibold text-xs md:text-sm text-gray-900 align-middle border-b transition-colors duration-200 ${alertClass}`}>
-                      {player.nome}
-                      {faltas === 3 && <span className="ml-1 text-yellow-700" title="3 faltas">⚠️</span>}
-                      {faltas >= 4 && <span className="ml-1 text-red-700" title="4 ou mais faltas">⛔</span>}
-                    </td>
-                    {ESTATS.map(stat => {
-                      const isArremesso = ARREMESSOS.includes(stat.key);
-                      const isWaiting = isArremesso && waitingButton?.playerId === player.id && waitingButton?.stat === stat.key;
-                      const statValue = stats[player.id]?.[stat.key];
-                      let displayValue;
-                      if (isArremesso) {
-                        displayValue = typeof statValue === 'object' ? `${statValue.tentativas}/${statValue.acertos}` : statValue;
-                      } else {
-                        displayValue = statValue ?? 0;
-                      }
-                      return (
-                        <td key={stat.key} className="text-center border-b">
-                          <button
-                            onClick={() => {
-                              if (isArremesso) {
-                                handleStatClick(player.id, stat.key);
-                              } else {
-                                // Incrementa +1 para stats simples
-                                setStats(prev => ({
-                                  ...prev,
-                                  [player.id]: {
-                                    ...prev[player.id],
-                                    [stat.key]: (prev[player.id]?.[stat.key] || 0) + 1
-                                  }
-                                }));
-                              }
-                            }}
-                            className={`w-full min-w-[48px] py-2 px-2 text-white font-bold rounded transition-all duration-200 ${
-                              stat.color
-                            } ${
-                              isWaiting ? 'ring-2 ring-offset-2 ring-white animate-pulse' : ''
-                            }`}
-                            style={{fontSize: '0.95rem'}}
-                          >
-                            {displayValue}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Quarto</label>
+              <select
+                value={quarto}
+                onChange={(e) => setQuarto(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value={1}>1º Quarto</option>
+                <option value={2}>2º Quarto</option>
+                <option value={3}>3º Quarto</option>
+                <option value={4}>4º Quarto</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Pontos</label>
+              <input
+                type="number"
+                min="0"
+                value={pontos}
+                onChange={(e) => setPontos(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Assistências</label>
+              <input
+                type="number"
+                min="0"
+                value={assistencias}
+                onChange={(e) => setAssistencias(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Rebotes</label>
+              <input
+                type="number"
+                min="0"
+                value={rebotes}
+                onChange={(e) => setRebotes(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Roubos</label>
+              <input
+                type="number"
+                min="0"
+                value={roubos}
+                onChange={(e) => setRoubos(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Faltas</label>
+              <input
+                type="number"
+                min="0"
+                value={faltas}
+                onChange={(e) => setFaltas(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={handleSave}
+              disabled={!jogadoraId}
+              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              Salvar Estatísticas
+            </button>
+          </div>
         </div>
-      </div>
-    </>
+      </Card>
+    </div>
   );
 } 
