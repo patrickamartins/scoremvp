@@ -57,13 +57,6 @@ export default function Home() {
               Cadastro realizado com sucesso! Você será avisado no lançamento.<br />
               <span className="text-white font-normal text-sm block mt-2">Enquanto isso, siga a gente nas redes sociais: <span className="font-bold">@scoremvp</span></span>
             </div>
-            <button
-              className="text-green-700 underline font-medium"
-              onClick={() => setSuccess(false)}
-              type="button"
-            >
-              Cadastrar outro email
-            </button>
           </div>
         ) : (
           <form className="flex flex-col md:flex-row gap-3 w-full max-w-md mb-8 justify-center items-center" onSubmit={handleSubmit} style={{maxWidth: 400}}>
@@ -106,8 +99,8 @@ export default function Home() {
         </div>
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
-      <div className="w-screen h-[500px] md:h-[600px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 fixed left-0 bottom-0 z-20 flex items-end justify-center" style={{marginBottom: '-70px', margin: 0, padding: 0}}>
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full h-full object-contain rounded-t-[10px] mx-auto max-w-6xl" style={{margin: 0, padding: 0}} />
+      <div className="fixed left-0 bottom-0 w-full z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
+        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto'}} />
       </div>
     </div>
   );
