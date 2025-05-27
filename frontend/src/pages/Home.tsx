@@ -99,8 +99,8 @@ export default function Home() {
         </div>
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
-      <div className="fixed left-0 bottom-0 w-full z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto'}} />
+      <div className="w-full flex justify-center fixed left-0 bottom-0 z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
+        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto', width: '40%'}} />
       </div>
     </div>
   );
