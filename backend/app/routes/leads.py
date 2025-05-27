@@ -4,17 +4,19 @@ from app.database import get_db
 from app.models import Lead
 from app.schemas import LeadCreate, LeadOut
 from typing import List
+import logging
 
 router = APIRouter(prefix="/leads", tags=["leads"])
+logger = logging.getLogger("uvicorn")
 
 @router.post("/", response_model=LeadOut)
 def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
-    print("Recebido:", lead)
+    logger.info(f"Recebido: {lead}")
     db_lead = Lead(**lead.dict())
     db.add(db_lead)
     db.commit()
     db.refresh(db_lead)
-    print("Salvo:", db_lead)
+    logger.info(f"Salvo: {db_lead}")
     return db_lead
 
 # Endpoint futuro para listar leads (admin)
