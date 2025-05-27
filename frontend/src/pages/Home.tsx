@@ -14,7 +14,7 @@ export default function Home() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Adiciona
+  // Adiciona api form
   const API_URL = import.meta.env.VITE_API_URL;
 
 const handleSubmit = async (e: React.FormEvent) => {
