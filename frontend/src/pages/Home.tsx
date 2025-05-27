@@ -41,8 +41,8 @@ export default function Home() {
         {/* Logo centralizado */}
         <img src="/images/logo-score.png" alt="ScoreMVP Logo" className="w-20 md:w-28 mx-auto mb-6 mt-2" />
         {/* Título e descrição */}
-        <h1 className="text-[18px] font-extrabold text-white text-center mb-4 drop-shadow">Controle seu jogo!</h1>
-        <h2 className="text-[16px] text-white text-center max-w-xl mb-8 font-medium drop-shadow">
+        <h1 className="text-[28px] font-extrabold text-white text-center mb-4 drop-shadow">Controle seu jogo!</h1>
+        <h2 className="text-[18px] text-white text-center max-w-xl mb-8 font-medium drop-shadow">
           Com o ScoreMVP você registra suas estatísticas de forma simples
           com apenas um clique e ainda pode fazer acompanhamento de
           evolução com gráficos, além de baixar seus dados para um PDF
@@ -50,7 +50,7 @@ export default function Home() {
         </h2>
         {/* Formulário de lead */}
         <h3 className="text-white text-base md:text-lg font-bold mb-3 text-center">Seja avisado quando fizermos o lançamento</h3>
-        <div style={{ marginTop: 25, width: '100%' }}>
+        <div style={{ marginTop: 25, width: '100%' }} className="flex justify-center w-full">
         {success ? (
           <div className="flex flex-col items-center w-full max-w-md mb-8">
             <div className="bg-green-500 text-white font-bold rounded-[10px] px-6 py-4 text-base text-center shadow-lg mb-4">
@@ -106,8 +106,8 @@ export default function Home() {
         </div>
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
-      <div className="w-screen h-[416px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 backdrop-blur-sm fixed left-0 bottom-0 z-20 flex items-center justify-center">
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full h-full object-contain rounded-t-[10px] mx-auto max-w-4xl" />
+      <div className="w-screen h-[500px] md:h-[600px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 backdrop-blur-sm fixed left-0 bottom-0 z-20 flex items-center justify-center" style={{margin: 0}}>
+        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full h-full object-contain rounded-t-[10px] mx-auto max-w-6xl" style={{margin: 0}} />
       </div>
     </div>
   );
