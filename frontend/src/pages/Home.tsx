@@ -53,7 +53,7 @@ export default function Home() {
         <div style={{ marginTop: 25, width: '100%' }} className="flex justify-center w-full">
         {success ? (
           <div className="flex flex-col items-center w-full max-w-md mb-8">
-            <div className="bg-green-500 text-white font-bold rounded-[10px] px-6 py-4 text-base text-center shadow-lg mb-4">
+            <div className="bg-green-500 text-white font-bold rounded-[5px] px-6 py-4 text-base text-center shadow-lg mb-4">
               Cadastro realizado com sucesso! Você será avisado no lançamento.<br />
               <span className="text-white font-normal text-sm block mt-2">Enquanto isso, siga a gente nas redes sociais: <span className="font-bold">@scoremvp</span></span>
             </div>
@@ -66,7 +66,7 @@ export default function Home() {
               placeholder="Seu nome"
               value={form.nome}
               onChange={handleChange}
-              className="flex-1 min-w-[120px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
+              className="flex-1 min-w-[200px] rounded-[7px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
               required
             />
             <input
@@ -75,7 +75,7 @@ export default function Home() {
               placeholder="Seu email"
               value={form.email}
               onChange={handleChange}
-              className="flex-1 min-w-[140px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
+              className="flex-1 min-w-[220px] rounded-[7px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
               required
             />
             <input
@@ -84,7 +84,7 @@ export default function Home() {
               placeholder="Whatsapp"
               value={form.whatsapp}
               onChange={handleChange}
-              className="flex-1 min-w-[100px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
+              className="flex-1 min-w-[180px] rounded-[7px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
               required
             />
             <button
@@ -101,7 +101,7 @@ export default function Home() {
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
       <div className="w-full flex justify-center fixed left-0 bottom-0 z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto', width: '50%'}} />
+        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto', width: '62.5%'}} />
       </div>
     </div>
   );
