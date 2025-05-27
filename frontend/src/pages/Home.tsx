@@ -106,7 +106,7 @@ export default function Home() {
         </div>
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
-      <div className="w-screen h-[500px] md:h-[600px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 fixed left-0 bottom-0 z-20 flex items-end justify-center" style={{margin: 0, padding: 0}}>
+      <div className="w-screen h-[500px] md:h-[600px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 fixed left-0 bottom-0 z-20 flex items-end justify-center" style={{marginBottom: '-70px', margin: 0, padding: 0}}>
         <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full h-full object-contain rounded-t-[10px] mx-auto max-w-6xl" style={{margin: 0, padding: 0}} />
       </div>
     </div>
