@@ -89,7 +89,8 @@ export default function Home() {
             />
             <button
               type="submit"
-              className="rounded-[10px] px-6 py-2 bg-green-500 text-white font-bold text-base whitespace-nowrap hover:bg-green-600 transition"
+              className="rounded-[10px] px-6 py-2 text-white font-bold text-base whitespace-nowrap transition"
+              style={{ backgroundColor: 'rgb(208, 87, 41)' }}
               disabled={loading}
             >
               {loading ? 'Enviando...' : 'QUERO SER AVISADO'}
@@ -100,7 +101,7 @@ export default function Home() {
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
       <div className="w-full flex justify-center fixed left-0 bottom-0 z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto', width: '40%'}} />
+        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto', width: '50%'}} />
       </div>
     </div>
   );
