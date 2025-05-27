@@ -2,8 +2,14 @@ import { useState } from 'react';
 import axios from 'axios';
 
 // Configuração do Axios
-axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
-axios.defaults.headers.common['Content-Type'] = 'application/json';
+const api = axios.create({
+  baseURL: 'https://scoremvp-backend.onrender.com/api',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  withCredentials: false
+});
 
 // Adiciona Jakarta Sans globalmente via classe ou style inline
 const jakartaFont = { fontFamily: 'Jakarta Sans, sans-serif' };
@@ -17,28 +23,16 @@ export default function Home() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Adiciona api form
-  const API_URL = 'https://scoremvp-backend.onrender.com/api';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/leads/`, form, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        },
-        withCredentials: false
-      });
+      await api.post('/leads/', form);
       setSuccess(true);
       setForm({ nome: '', email: '', whatsapp: '' });
     } catch (err) {
-      alert('Erro ao enviar. Tente novamente.');
       console.error('Erro ao enviar lead:', err);
+      alert('Erro ao enviar. Tente novamente.');
     } finally {
       setLoading(false);
     }
