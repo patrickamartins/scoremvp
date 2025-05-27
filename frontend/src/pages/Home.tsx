@@ -39,22 +39,22 @@ export default function Home() {
       </div>
       <div className="relative z-10 flex flex-col items-center pt-10 pb-8 px-4 h-full w-full">
         {/* Logo centralizado */}
-        <img src="/images/logo-score.png" alt="ScoreMVP Logo" className="w-32 md:w-40 mx-auto mb-10 mt-2" />
+        <img src="/images/logo-score.png" alt="ScoreMVP Logo" className="w-20 md:w-28 mx-auto mb-6 mt-2" />
         {/* Título e descrição */}
-        <h1 className="text-4xl md:text-5xl font-extrabold text-white text-center mb-8 drop-shadow">Controle seu jogo!</h1>
-        <h2 className="text-lg md:text-2xl text-white text-center max-w-2xl mb-12 font-medium drop-shadow">
+        <h1 className="text-[18px] font-extrabold text-white text-center mb-4 drop-shadow">Controle seu jogo!</h1>
+        <h2 className="text-[16px] text-white text-center max-w-xl mb-8 font-medium drop-shadow">
           Com o ScoreMVP você registra suas estatísticas de forma simples
           com apenas um clique e ainda pode fazer acompanhamento de
           evolução com gráficos, além de baixar seus dados para um PDF
           e utilizar onde e como quiser.
         </h2>
         {/* Formulário de lead */}
-        <h3 className="text-white text-lg md:text-xl font-bold mb-3 text-center">Seja avisado quando fizermos o lançamento</h3>
+        <h3 className="text-white text-base md:text-lg font-bold mb-3 text-center">Seja avisado quando fizermos o lançamento</h3>
         {success ? (
-          <div className="flex flex-col items-center w-full max-w-2xl mb-10">
-            <div className="bg-green-500 text-white font-bold rounded-[10px] px-6 py-4 text-lg text-center shadow-lg mb-4">
+          <div className="flex flex-col items-center w-full max-w-md mb-8">
+            <div className="bg-green-500 text-white font-bold rounded-[10px] px-6 py-4 text-base text-center shadow-lg mb-4">
               Cadastro realizado com sucesso! Você será avisado no lançamento.<br />
-              <span className="text-white font-normal text-base block mt-2">Enquanto isso, siga a gente nas redes sociais: <span className="font-bold">@scoremvp</span></span>
+              <span className="text-white font-normal text-sm block mt-2">Enquanto isso, siga a gente nas redes sociais: <span className="font-bold">@scoremvp</span></span>
             </div>
             <button
               className="text-green-700 underline font-medium"
@@ -65,14 +65,14 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <form className="flex flex-row gap-3 w-full max-w-2xl mb-10 justify-center items-center" onSubmit={handleSubmit} style={{maxWidth: 900}}>
+          <form className="flex flex-col md:flex-row gap-3 w-full max-w-md mb-8 justify-center items-center" onSubmit={handleSubmit} style={{maxWidth: 400}}>
             <input
               type="text"
               name="nome"
               placeholder="Seu nome"
               value={form.nome}
               onChange={handleChange}
-              className="flex-1 min-w-[160px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex-1 min-w-[120px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
             <input
@@ -81,7 +81,7 @@ export default function Home() {
               placeholder="Seu email"
               value={form.email}
               onChange={handleChange}
-              className="flex-1 min-w-[180px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex-1 min-w-[140px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
             <input
@@ -90,12 +90,12 @@ export default function Home() {
               placeholder="Whatsapp"
               value={form.whatsapp}
               onChange={handleChange}
-              className="flex-1 min-w-[140px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex-1 min-w-[100px] rounded-[10px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
             <button
               type="submit"
-              className="rounded-[10px] px-8 py-2 bg-green-500 text-white font-bold text-base whitespace-nowrap hover:bg-green-600 transition"
+              className="rounded-[10px] px-6 py-2 bg-green-500 text-white font-bold text-base whitespace-nowrap hover:bg-green-600 transition"
               disabled={loading}
             >
               {loading ? 'Enviando...' : 'QUERO SER AVISADO'}
@@ -104,8 +104,8 @@ export default function Home() {
         )}
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
-      <div className="w-screen h-[500px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 backdrop-blur-sm fixed left-0 bottom-0 z-20 flex items-center justify-center">
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full h-full object-contain rounded-t-[10px] mx-auto" />
+      <div className="w-screen h-[320px] rounded-t-[10px] overflow-hidden shadow-xl bg-white/0 backdrop-blur-sm fixed left-0 bottom-0 z-20 flex items-center justify-center">
+        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="w-full h-full object-contain rounded-t-[10px] mx-auto max-w-3xl" />
       </div>
     </div>
   );
