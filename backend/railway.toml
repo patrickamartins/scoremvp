@@ -1,0 +1,7 @@
+[deploy]
+# escolha ON_FAILURE, ALWAYS ou NEVER (tudo em maiúsculas)
+restartPolicyType     = "on-failure"
+restartPolicyMaxRetries = 5    # opcional
+healthcheckPath       = "/health"
+healthcheckTimeout    = 60
+# startCommand          = "./start.sh"

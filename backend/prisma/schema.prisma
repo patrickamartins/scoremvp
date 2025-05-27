@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Jogadora {
+  id        Int         @id @default(autoincrement())
+  nome      String
+  numero    Int
+  posicao   String
+  stats     GameStats[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Jogo {
+  id               Int         @id @default(autoincrement())
+  data             DateTime
+  adversario       String
+  local            String
+  placar_casa      Int
+  placar_visitante Int
+  stats            GameStats[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model GameStats {
+  id               Int      @id @default(autoincrement())
+  jogo_id          Int
+  jogadora_id      Int
+  quarto           Int
+  pontos           Int
+  assistencias     Int
+  rebotes          Int
+  roubos           Int
+  faltas           Int
+  dois_tentativas  Int
+  dois_acertos     Int
+  tres_tentativas  Int
+  tres_acertos     Int
+  lance_tentativas Int
+  lance_acertos    Int
+  interferencia    Int
+  jogo             Jogo     @relation(fields: [jogo_id], references: [id])
+  jogadora         Jogadora @relation(fields: [jogadora_id], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([jogo_id, jogadora_id, quarto])
+} 
