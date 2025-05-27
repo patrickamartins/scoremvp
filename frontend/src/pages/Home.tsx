@@ -14,13 +14,17 @@ export default function Home() {
   };
 
   // Adiciona api form
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = 'https://scoremvp-backend.onrender.com/api';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/leads/`, form);  // <- use o URL completo
+      await axios.post(`${API_URL}/leads/`, form, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       setSuccess(true);
       setForm({ nome: '', email: '', whatsapp: '' });
     } catch (err) {
