@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-
 // Adiciona Jakarta Sans globalmente via classe ou style inline
 const jakartaFont = { fontFamily: 'Jakarta Sans, sans-serif' };
 
@@ -17,20 +16,20 @@ export default function Home() {
   // Adiciona api form
   const API_URL = import.meta.env.VITE_API_URL;
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    await axios.post(`${API_URL}/leads/`, form);  // <- use o URL completo
-    setSuccess(true);
-    setForm({ nome: '', email: '', whatsapp: '' });
-  } catch (err) {
-    alert('Erro ao enviar. Tente novamente.');
-    console.error('Erro ao enviar lead:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await axios.post(`${API_URL}/leads/`, form);  // <- use o URL completo
+      setSuccess(true);
+      setForm({ nome: '', email: '', whatsapp: '' });
+    } catch (err) {
+      alert('Erro ao enviar. Tente novamente.');
+      console.error('Erro ao enviar lead:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen h-screen bg-[#0D121F] relative overflow-hidden flex flex-col" style={jakartaFont}>
