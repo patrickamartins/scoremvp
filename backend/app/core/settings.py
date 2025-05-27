@@ -23,8 +23,15 @@ class Settings(BaseSettings):
     )
     # CORS
     CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:5173", "https://score-mvp.vercel.app"],
-        description="Origins permitidas no CORS"
+        default=[
+            # Desenvolvimento
+            "http://localhost:5173",
+            "http://localhost:3000",
+            # Produção
+            "https://scoremvp.com.br",
+            "https://score-mvp.vercel.app"
+        ],
+        description="Origins permitidas no CORS (desenvolvimento e produção)"
     )
     # Environment
     ENVIRONMENT: str = Field(
