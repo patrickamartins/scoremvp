@@ -51,6 +51,10 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
+@app.get("/api/debug-db-url")
+def debug_db_url():
+    return {"database_url": settings.database_url}
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     logger.info(f"Starting server on port {port}")
