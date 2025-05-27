@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+// Configuração do Axios
+axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
 // Adiciona Jakarta Sans globalmente via classe ou style inline
 const jakartaFont = { fontFamily: 'Jakarta Sans, sans-serif' };
 
@@ -23,7 +27,12 @@ export default function Home() {
       await axios.post(`${API_URL}/leads/`, form, {
         headers: {
           'Content-Type': 'application/json',
-        }
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        },
+        withCredentials: false
       });
       setSuccess(true);
       setForm({ nome: '', email: '', whatsapp: '' });
@@ -109,7 +118,20 @@ export default function Home() {
       </div>
       {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
       <div className="w-full flex justify-center fixed left-0 bottom-0 z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
-        <img src="/images/dash-exemplo.png" alt="Dashboard exemplo" className="object-contain" style={{display: 'block', margin: 0, padding: 0, borderRadius: 0, height: 'auto', width: '62.5%'}} />
+        <img 
+          src="/images/dash-exemplo.png" 
+          alt="Dashboard exemplo" 
+          className="object-contain hidden md:block" 
+          style={{
+            display: 'block', 
+            margin: 0, 
+            padding: 0, 
+            borderRadius: 0, 
+            height: 'auto', 
+            width: '62.5%',
+            maxHeight: '40vh'
+          }} 
+        />
       </div>
     </div>
   );

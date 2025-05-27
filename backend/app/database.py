@@ -6,7 +6,15 @@ from app.core.settings import settings
 # Configuração do banco de dados para PostgreSQL
 DATABASE_URL = settings.database_url
 
-engine = create_engine(DATABASE_URL, echo=True)  # echo=True para debug de SQL
+# Configuração do engine com timezone do Brasil
+engine = create_engine(
+    DATABASE_URL,
+    echo=True,  # echo=True para debug de SQL
+    connect_args={
+        "options": "-c timezone=America/Sao_Paulo"
+    }
+)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
