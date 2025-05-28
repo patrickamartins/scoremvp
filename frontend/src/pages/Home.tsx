@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 export default function Home() {
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-start bg-white" style={{ fontFamily: 'Roboto, sans-serif', minHeight: '100vh' }}>

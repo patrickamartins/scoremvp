@@ -20,14 +20,14 @@ export default function LoginPage() {
       form.append('username', username);
       form.append('password', password);
 
-      const response = await login(form.email, form.password);
-      if (response.token) {
-        localStorage.setItem("token", response.token);
-        setAuthToken(response.token);
+      const response = await login(form);
+      if (response.data && response.data.access_token) {
+        localStorage.setItem("token", response.data.access_token);
+        setAuthToken(response.data.access_token);
         toast.success("Login realizado com sucesso!");
         navigate('/dashboard');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       const detail = error.response?.data?.detail;
       setError(

@@ -26,12 +26,18 @@ const plans = [
 
 export default function ConfiguracoesPessoaisPage() {
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    profileImage: "",
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    name: mockUser.name,
+    email: mockUser.email,
+    phone: mockUser.phone,
+    cpf: mockUser.cpf,
+    favoriteTeam: mockUser.favoriteTeam,
+    playingTeam: mockUser.playingTeam,
+    plan: mockUser.plan,
+    avatar: mockUser.avatar,
+    profileImage: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(mockUser.avatar);
@@ -57,7 +63,20 @@ export default function ConfiguracoesPessoaisPage() {
   };
 
   const handleCancel = () => {
-    setForm(mockUser);
+    setForm({
+      name: mockUser.name,
+      email: mockUser.email,
+      phone: mockUser.phone,
+      cpf: mockUser.cpf,
+      favoriteTeam: mockUser.favoriteTeam,
+      playingTeam: mockUser.playingTeam,
+      plan: mockUser.plan,
+      avatar: mockUser.avatar,
+      profileImage: '',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
     setAvatarPreview(mockUser.avatar);
   };
 

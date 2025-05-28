@@ -2,6 +2,22 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Input, Label, Button } from '../components/ui';
 
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  type: string;
+  plan: string;
+  status: string;
+  lastCharge?: string;
+  nextCharge?: string;
+  card?: string;
+  cardBrand?: string;
+  favoriteTeam?: string;
+  team?: string;
+  document?: string;
+};
+
 const tiposUsuario = [
   { value: 'player', label: 'Atleta' },
   { value: 'coach', label: 'Técnico' },
