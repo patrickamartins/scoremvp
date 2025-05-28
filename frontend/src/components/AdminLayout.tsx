@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,9 +11,8 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { api } from '../services/api';
-import { format, isSameDay, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from './ui/Button';
 
 interface Notification {
   id: number;
@@ -37,66 +36,17 @@ interface MenuItem {
 }
 
 interface AdminLayoutProps {
-  children?: ReactNode;
   user?: { name: string; avatarUrl?: string; email: string; plan?: string; role?: string };
 }
 
-export function AdminLayout({ children, user = { name: 'Admin', avatarUrl: '', email: '', plan: 'Free', role: 'admin' } }: AdminLayoutProps) {
+export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', plan: 'Free', role: 'admin' } }: AdminLayoutProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
 
-  // MOCK: jogos convocados do usuário
-  const [invitedGames, setInvitedGames] = useState([
-    { id: 1, date: new Date(), opponent: 'Time A', accepted: true },
-    { id: 2, date: addDays(new Date(), 2), opponent: 'Time B', accepted: true },
-    { id: 3, date: addDays(new Date(), 5), opponent: 'Time C', accepted: false },
-  ]);
-  const [calendarMonth, setCalendarMonth] = useState(new Date());
-
   // Verifica se é admin ou plano Team
   const isAdminOrTeam = (user?.role ?? '') === 'admin' || (user?.role ?? '') === 'team';
-
-  // Gera os dias do mês atual
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(calendarMonth),
-    end: endOfMonth(calendarMonth),
-  });
-
-  // Função para renderizar o calendário
-  function Calendar() {
-    return (
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-bold text-[#2563eb] flex items-center gap-2"><CalendarIcon size={18}/> Calendário</span>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(addDays(startOfMonth(calendarMonth), -1))}>{'<'}</Button>
-            <span className="text-xs font-semibold">{format(calendarMonth, 'MMMM yyyy', { locale: ptBR })}</span>
-            <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(addDays(endOfMonth(calendarMonth), 1))}>{'>'}</Button>
-          </div>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-xs text-center">
-          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => <div key={i} className="font-bold text-[#7B8BB2]">{d}</div>)}
-          {daysInMonth.map((day, i) => {
-            const game = invitedGames.find(g => isSameDay(g.date, day) && g.accepted);
-            return (
-              <div key={i} className={`rounded-full w-7 h-7 flex items-center justify-center mx-auto ${game ? 'bg-blue-600 text-white font-bold cursor-pointer' : 'bg-gray-100 text-gray-500'}`}
-                title={game ? `Jogo: ${game.opponent}` : ''}
-              >
-                {format(day, 'd')}
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-2 text-xs text-[#7B8BB2]">
-          {invitedGames.filter(g => g.accepted && g.date.getMonth() === calendarMonth.getMonth()).length === 0
-            ? 'Nenhum jogo convocado para este mês.'
-            : 'Clique nos dias em azul para ver detalhes do jogo.'}
-        </div>
-      </div>
-    );
-  }
 
   const mainMenuItems: MenuItem[] = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -146,8 +96,8 @@ export function AdminLayout({ children, user = { name: 'Admin', avatarUrl: '', e
     try {
       await Promise.all(
         notifications
-          .filter(n => !n.is_read)
-          .map(n => api.post(`/notifications/${n.id}/read`))
+          .filter((n: Notification) => !n.is_read)
+          .map((n: Notification) => api.post(`/notifications/${n.id}/read`))
       );
       loadNotifications();
       loadUnreadCount();
@@ -238,7 +188,7 @@ export function AdminLayout({ children, user = { name: 'Admin', avatarUrl: '', e
             <div className="relative">
               <button
                 className="relative focus:outline-none hover:bg-[#e7edff] p-2 rounded-lg transition-colors"
-                onClick={() => setShowNotifications(v => !v)}
+                onClick={() => setShowNotifications((v: boolean) => !v)}
               >
                 <Bell size={22} className="text-[#2563eb]" />
                 {unreadCount > 0 && (
@@ -262,7 +212,7 @@ export function AdminLayout({ children, user = { name: 'Admin', avatarUrl: '', e
                     {notifications.length === 0 ? (
                       <div className="p-4 text-center text-[#7B8BB2]">você não possui nenhuma notificação no momento</div>
                     ) : (
-                      notifications.slice(0, 5).map((n) => (
+                      notifications.slice(0, 5).map((n: Notification) => (
                         <div
                           key={n.id}
                           className="flex items-center gap-2 px-4 py-3 border-b border-[#F3F3F3] cursor-pointer hover:bg-[#f7f8fa]"

@@ -17,7 +17,7 @@ export default function Profile() {
     team: user?.team || '',
     favoriteTeam: user?.favoriteTeam || '',
     document: user?.document || '',
-    profileImage: user?.profileImage || '',
+    profileImage: (user?.profileImage as string | File) || '',
     password: '',
     confirmPassword: '',
     plan: user?.plan || 'free',
@@ -28,7 +28,6 @@ export default function Profile() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isAdmin = user?.role === 'admin';
   const isTeam = user?.role === 'team';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -200,7 +199,6 @@ export default function Profile() {
               readOnly
               className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
             />
-            <span className="text-xs text-gray-500">Somente administradores podem alterar este campo.</span>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
