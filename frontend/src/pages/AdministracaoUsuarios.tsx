@@ -5,7 +5,7 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
 import { toast } from 'sonner';
-import debounce from 'lodash/debounce';
+import debounce from 'lodash';
 
 // Mock de usuários
 const mockUsers = [
