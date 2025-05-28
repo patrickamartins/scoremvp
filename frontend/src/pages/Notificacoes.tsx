@@ -123,7 +123,7 @@ export default function NotificacoesPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="public">Público-alvo</Label>
-                <Select name="public" value={form.public} onValueChange={(value) => setForm(prev => ({ ...prev, public: value }))}>
+                <Select name="public" value={form.public} onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, public: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o público-alvo" />
                   </SelectTrigger>

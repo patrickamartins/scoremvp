@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getPlayers, createGame, createEstatistica } from "../services/api";
-import Card from './ui/Card';
+import { Card } from "./ui/Card";
 
 interface Player {
   id: number;

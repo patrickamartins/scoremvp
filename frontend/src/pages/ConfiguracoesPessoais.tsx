@@ -25,9 +25,15 @@ const plans = [
 ];
 
 export default function ConfiguracoesPessoaisPage() {
-  const [form, setForm] = useState(mockUser);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    profileImage: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [saving, setSaving] = useState(false);
-  const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(mockUser.avatar);
 
   const handleFormChange = (e: any) => {
@@ -38,7 +44,6 @@ export default function ConfiguracoesPessoaisPage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatar(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
@@ -53,7 +58,6 @@ export default function ConfiguracoesPessoaisPage() {
 
   const handleCancel = () => {
     setForm(mockUser);
-    setAvatar(null);
     setAvatarPreview(mockUser.avatar);
   };
 
@@ -177,7 +181,7 @@ export default function ConfiguracoesPessoaisPage() {
               <Select
                 name="plan"
                 value={form.plan}
-                onValueChange={(value) => setForm(prev => ({ ...prev, plan: value }))}
+                onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, plan: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o plano" />

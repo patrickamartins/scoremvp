@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import Card from './ui/Card';
+import { Card } from "./ui/Card";
 
 interface GameStats {
   total_pontos: number;

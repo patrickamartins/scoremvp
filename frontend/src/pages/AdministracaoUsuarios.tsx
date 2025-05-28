@@ -102,7 +102,7 @@ export default function AdministracaoUsuariosPage() {
 
   const handleFormChange = (e: any) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm((prev: any) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = () => {
@@ -303,7 +303,7 @@ export default function AdministracaoUsuariosPage() {
                   <Select
                     name="plan"
                     value={form.plan}
-                    onValueChange={(value) => setForm(prev => ({ ...prev, plan: value }))}
+                    onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, plan: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o plano" />
@@ -323,7 +323,7 @@ export default function AdministracaoUsuariosPage() {
                   <Select
                     name="status"
                     value={form.status}
-                    onValueChange={(value) => setForm(prev => ({ ...prev, status: value }))}
+                    onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o status" />
@@ -343,7 +343,7 @@ export default function AdministracaoUsuariosPage() {
                   <Select
                     name="type"
                     value={form.type}
-                    onValueChange={(value) => setForm(prev => ({ ...prev, type: value }))}
+                    onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, type: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />

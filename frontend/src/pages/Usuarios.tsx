@@ -24,10 +24,9 @@ function debounce(fn: any, delay: number) {
 }
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'create'>('edit');
   const [form, setForm] = useState<any>({});
@@ -66,7 +65,6 @@ export default function UsuariosPage() {
   const handleSearch = debounce((val: string) => setSearch(val), 400);
 
   const openEditModal = (user: any) => {
-    setSelectedUser(user);
     setForm({ ...user });
     setModalMode('edit');
     setShowModal(true);
@@ -78,7 +76,6 @@ export default function UsuariosPage() {
   };
   const closeModal = () => {
     setShowModal(false);
-    setSelectedUser(null);
   };
   const handleFormChange = (e: any) => {
     const { name, value } = e.target;

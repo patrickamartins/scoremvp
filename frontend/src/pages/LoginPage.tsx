@@ -20,19 +20,16 @@ export default function LoginPage() {
       form.append('username', username);
       form.append('password', password);
 
-      const res = await login(form, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-      
-      const token = res.data.access_token;
-      localStorage.setItem('token', token);
-      setAuthToken(token);
-      toast.success("Login realizado com sucesso!");
-      navigate('/dashboard');
-    } catch (err: any) {
-      const detail = err.response?.data?.detail;
+      const response = await login(form.email, form.password);
+      if (response.token) {
+        localStorage.setItem("token", response.token);
+        setAuthToken(response.token);
+        toast.success("Login realizado com sucesso!");
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+      const detail = error.response?.data?.detail;
       setError(
         Array.isArray(detail)
           ? detail.map((d: any) => d.msg).join('; ')
