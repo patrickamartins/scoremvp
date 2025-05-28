@@ -1,132 +1,72 @@
-import { useState } from 'react';
-import axios from 'axios';
-
-// Configuração do Axios
-const api = axios.create({
-  baseURL: 'https://scoremvp-backend.onrender.com/api',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  },
-  withCredentials: false
-});
-
-// Adiciona Jakarta Sans globalmente via classe ou style inline
-const jakartaFont = { fontFamily: 'Jakarta Sans, sans-serif' };
+import React from 'react';
 
 export default function Home() {
-  const [form, setForm] = useState({ nome: '', email: '', whatsapp: '' });
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await api.post('/leads/', form);
-      setSuccess(true);
-      setForm({ nome: '', email: '', whatsapp: '' });
-    } catch (err) {
-      console.error('Erro ao enviar lead:', err);
-      alert('Erro ao enviar. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen h-screen bg-[#0D121F] relative overflow-hidden flex flex-col" style={jakartaFont}>
-      {/* BG header-home com opacidade */}
-      <div className="absolute inset-0 z-0">
-        <img src="/images/header-home.png" alt="header" className="w-full h-full object-cover opacity-15" style={{background: '#0D121F'}} />
-        {/* Elipse superior direita */}
-        <div style={{position: 'absolute', top: '-20%', right: '-20%', width: '60vw', height: '60vw', border: '36px solid rgba(255,255,255,0.05)', borderRadius: '50%', zIndex: 1}} />
-        {/* Elipse inferior esquerda */}
-        <div style={{position: 'absolute', bottom: '-25%', left: '-15%', width: '80vw', height: '40vw', border: '36px solid rgba(255,255,255,0.05)', borderRadius: '50%', zIndex: 1}} />
-      </div>
-      <div className="relative z-10 flex flex-col items-center pt-10 pb-8 px-4 h-full w-full">
-        {/* Logo centralizado */}
-        <img src="/images/logo-score.png" alt="ScoreMVP Logo" className="w-20 md:w-28 mx-auto mb-6 mt-2" />
-        {/* Título e descrição */}
-        <h1 className="text-[28px] font-extrabold text-white text-center mb-4 drop-shadow">Controle seu jogo!</h1>
-        <h2 className="text-[18px] text-white text-center max-w-xl mb-8 font-medium drop-shadow">
-          Com o ScoreMVP você registra suas estatísticas de forma simples
-          com apenas um clique e ainda pode fazer acompanhamento de
-          evolução com gráficos, além de baixar seus dados para um PDF
-          e utilizar onde e como quiser.
-        </h2>
-        {/* Formulário de lead */}
-        <h3 className="text-white text-base md:text-lg font-bold mb-3 text-center">Seja avisado quando fizermos o lançamento</h3>
-        <div style={{ marginTop: 25, width: '100%' }} className="flex justify-center w-full">
-        {success ? (
-          <div className="flex flex-col items-center w-full max-w-md mb-8">
-            <div className="bg-green-500 text-white font-bold rounded-[5px] px-6 py-4 text-base text-center shadow-lg mb-4">
-              Cadastro realizado com sucesso! Você será avisado no lançamento.<br />
-              <span className="text-white font-normal text-sm block mt-2">Enquanto isso, siga a gente nas redes sociais: <span className="font-bold">@scoremvp</span></span>
-            </div>
-          </div>
-        ) : (
-          <form className="flex flex-col md:flex-row gap-3 w-full max-w-md mb-8 justify-center items-center" onSubmit={handleSubmit} style={{maxWidth: 400}}>
+    <div className="relative min-h-screen flex flex-col items-center justify-start bg-white" style={{ fontFamily: 'Roboto, sans-serif', minHeight: '100vh' }}>
+      {/* Radial background */}
+      <img
+        src="/images/radial.svg"
+        alt="Radial BG"
+        className="pointer-events-none select-none absolute z-0"
+        style={{
+          left: 'calc(50% - 120px)',
+          top: '120px',
+          width: '900px',
+          maxWidth: 'none',
+          transform: 'translateX(-50%)',
+        }}
+        aria-hidden
+      />
+      <main className="relative z-10 flex flex-col items-center w-full" style={{ maxWidth: 1440, margin: '0 auto' }}>
+        <h1 className="mt-24 text-5xl md:text-6xl font-bold text-[#1D2130] text-center mb-6">Controle seu jogo!</h1>
+        <h3 className="text-lg md:text-1xl text-[#1D2130] text-center font-normal max-w-2xl mb-12">
+          Com o <b>ScoreMVP</b>, você registra suas estatísticas de forma simples, com apenas um clique. Acompanhe sua evolução por meio de gráficos interativos e baixe seus dados em PDF para usar quando e como quiser.
+        </h3>
+        {/* Formulário */}
+        <form
+          className="relative flex flex-col md:flex-row items-center bg-white rounded-[8px] shadow-md w-full max-w-[1000px] px-0 py-0 mb-12 border border-[#F4F4F4] md:h-[72px]"
+          style={{ boxShadow: '0 4px 32px 0 rgba(0,0,0,0.04)' }}
+          onSubmit={e => e.preventDefault()}
+        >
+          <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center w-full h-full">
             <input
               type="text"
-              name="nome"
-              placeholder="Seu nome"
-              value={form.nome}
-              onChange={handleChange}
-              className="flex-1 min-w-[200px] rounded-[7px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
-              required
+              placeholder="Nome"
+              className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none rounded-t-[8px] md:rounded-t-none md:rounded-l-[8px] text-base"
+              style={{ minWidth: 0 }}
             />
+            {/* Diagonal divider */}
+            <div className="hidden md:block w-[1px] h-10 bg-[#F4F4F4] rotate-12 mx-0" style={{ transform: 'skew(-20deg)' }} />
             <input
               type="email"
-              name="email"
-              placeholder="Seu email"
-              value={form.email}
-              onChange={handleChange}
-              className="flex-1 min-w-[220px] rounded-[7px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
-              required
+              placeholder="Email"
+              className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none text-base"
+              style={{ minWidth: 0 }}
             />
+            <div className="hidden md:block w-[1px] h-10 bg-[#F4F4F4] rotate-12 mx-0" style={{ transform: 'skew(-20deg)' }} />
             <input
               type="text"
-              name="whatsapp"
               placeholder="Whatsapp"
-              value={form.whatsapp}
-              onChange={handleChange}
-              className="flex-1 min-w-[180px] rounded-[7px] px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-sm"
-              required
+              className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none rounded-b-[8px] md:rounded-b-none md:rounded-r-[8px] text-base"
+              style={{ minWidth: 0 }}
             />
-            <button
-              type="submit"
-              className="rounded-[10px] px-6 py-2 text-white font-bold text-base whitespace-nowrap transition"
-              style={{ backgroundColor: 'rgb(208, 87, 41)' }}
-              disabled={loading}
-            >
-              {loading ? 'Enviando...' : 'QUERO SER AVISADO'}
-            </button>
-          </form>
-        )}
-        </div>
-      </div>
-      {/* Imagem do dashboard exemplo fixa no rodapé, ocupando 100vw */}
-      <div className="w-full flex justify-center fixed left-0 bottom-0 z-20" style={{margin: 0, padding: 0, height: 'auto'}}>
-        <img 
-          src="/images/dash-exemplo.png" 
-          alt="Dashboard exemplo" 
-          className="object-contain hidden md:block" 
-          style={{
-            display: 'block', 
-            margin: 0, 
-            padding: 0, 
-            borderRadius: 0, 
-            height: 'auto', 
-            width: '62.5%',
-            maxHeight: '40vh'
-          }} 
+          </div>
+          <button
+            type="submit"
+            className="w-full md:w-auto h-[48px] mt-4 md:mt-0 md:ml-4 md:mr-4 px-8 bg-[#1D2130] text-white font-bold rounded-[8px] transition hover:bg-[#23263a] text-base whitespace-nowrap shadow"
+            style={{ alignSelf: 'center' }}
+          >
+            QUERO SER AVISADO
+          </button>
+        </form>
+        {/* Dashboard image */}
+        <img
+          src="/images/dashboard.png"
+          alt="Dashboard Preview"
+          className="w-full max-w-4xl rounded-xl shadow-lg border border-[#F4F4F4]"
+          style={{ marginBottom: 48 }}
         />
-      </div>
+      </main>
     </div>
   );
 } 

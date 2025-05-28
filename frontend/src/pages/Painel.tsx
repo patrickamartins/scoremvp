@@ -126,7 +126,7 @@ const Painel: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="p-8 mt-16 space-y-8">
       <h1 className="text-3xl font-bold text-eerieblack">Novo Jogo</h1>
 
       {/* Formulário do Jogo */}

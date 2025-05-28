@@ -11,7 +11,7 @@ export const api = axios.create({
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('@ScoreMVP:token');
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -47,11 +47,7 @@ export interface SignupResponse {
 /**
  * Faz login usando OAuth2PasswordRequestForm (x-www-form-urlencoded)
  */
-export const login = async (credentials: { username: string; password: string }) => {
-  const form = new URLSearchParams();
-  form.append('username', credentials.username);
-  form.append('password', credentials.password);
-
+export const login = async (form: URLSearchParams) => {
   return api.post<LoginResponse>('/auth/login', form, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

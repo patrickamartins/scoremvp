@@ -71,7 +71,7 @@ const PlayersPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="p-8 mt-16 min-h-screen bg-background">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-eerieblack">Gerenciar Jogadores</h1>
 

@@ -31,8 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('@ScoreMVP:token')
-    const storedUser = localStorage.getItem('@ScoreMVP:user')
+    const token = localStorage.getItem('token')
+    const storedUser = localStorage.getItem('user')
     
     if (token && storedUser) {
       try {
@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.post('/auth/login', { username });
       const { token, user } = response.data;
-      localStorage.setItem('@ScoreMVP:token', token);
-      localStorage.setItem('@ScoreMVP:user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(user);
     } catch (error) {
@@ -59,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
-    localStorage.removeItem('@ScoreMVP:token')
-    localStorage.removeItem('@ScoreMVP:user')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
     setUser(null)
   }
 

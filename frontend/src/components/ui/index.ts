@@ -3,7 +3,7 @@
 export { Button, buttonVariants } from "./Button"
 export { Input } from "./Input"
 export { Label } from "./Label"
-export { default as Card } from "./Card"
+export { Card } from "./Card"
 export { default as Checkbox } from "./Checkbox"
 export { default as Select } from "./Select"
 export { default as SelectTrigger } from "./SelectTrigger"

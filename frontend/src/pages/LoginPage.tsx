@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Card, Button, Input } from "../components/ui";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login, setAuthToken } from "../services/api";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "sonner";
 
 export default function LoginPage() {
   usePageTitle("Login");
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
@@ -15,15 +16,21 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await login({ username, password });
-      console.log('Resposta do login:', res);
+      const form = new URLSearchParams();
+      form.append('username', username);
+      form.append('password', password);
+
+      const res = await login(form, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+      
       const token = res.data.access_token;
       localStorage.setItem('token', token);
       setAuthToken(token);
-      console.log('Token salvo no localStorage:', localStorage.getItem('token'));
       toast.success("Login realizado com sucesso!");
-      window.location.href = '/players';
-      console.log('Redirecionando para /players');
+      navigate('/dashboard');
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(

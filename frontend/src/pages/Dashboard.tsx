@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import Card from "../components/ui/Card";
+import { Card } from "../components/ui/Card";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { addDays, subDays, subMonths, startOfYear } from 'date-fns';
@@ -298,7 +298,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="p-8 mt-16">
       {/* Filtros rápidos de data */}
       <div className="flex flex-wrap gap-2 mb-2">
         {quickFilters.map(f => (
