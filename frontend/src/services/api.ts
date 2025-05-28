@@ -3,7 +3,7 @@ import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://scoremvp.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://scoremvp-backend.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
