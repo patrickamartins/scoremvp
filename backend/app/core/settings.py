@@ -4,13 +4,14 @@ from typing import List
 import os
 
 class Settings(BaseSettings):
+    # Database
     database_url: str = Field(
-        default=os.getenv("DATABASE_URL"),
+        default=os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/scoremvp"),
         description="URL do banco de dados"
     )
     # JWT
     SECRET_KEY: str = Field(
-        default="09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7",
+        default=os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"),
         description="Chave secreta para assinatura do JWT"
     )
     ALGORITHM: str = Field(
@@ -35,12 +36,13 @@ class Settings(BaseSettings):
     )
     # Environment
     ENVIRONMENT: str = Field(
-        default="development",
+        default=os.getenv("ENVIRONMENT", "development"),
         description="Ambiente de execução (development/production)"
     )
 
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"  # Permite campos extras
 
 settings = Settings()

@@ -1,4 +1,39 @@
+import React, { useState } from "react";
+import { api } from "../services/api";
+import { toast } from "sonner";
+
 export default function Home() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    whatsapp: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await api.post('/leads', formData);
+      toast.success("Cadastro realizado com sucesso! Entraremos em contato em breve.");
+      setFormData({ name: '', email: '', whatsapp: '' });
+    } catch (error: any) {
+      console.error("Erro ao cadastrar:", error);
+      toast.error(error.response?.data?.detail || "Erro ao realizar cadastro");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-start bg-white" style={{ fontFamily: 'Roboto, sans-serif', minHeight: '100vh' }}>
       {/* Radial background */}
@@ -24,37 +59,50 @@ export default function Home() {
         <form
           className="relative flex flex-col md:flex-row items-center bg-white rounded-[8px] shadow-md w-full max-w-[1000px] px-0 py-0 mb-12 border border-[#F4F4F4] md:h-[72px]"
           style={{ boxShadow: '0 4px 32px 0 rgba(0,0,0,0.04)' }}
-          onSubmit={e => e.preventDefault()}
+          onSubmit={handleSubmit}
         >
           <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center w-full h-full">
             <input
               type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
               placeholder="Nome"
               className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none rounded-t-[8px] md:rounded-t-none md:rounded-l-[8px] text-base"
               style={{ minWidth: 0 }}
+              required
             />
             {/* Diagonal divider */}
             <div className="hidden md:block w-[1px] h-10 bg-[#F4F4F4] rotate-12 mx-0" style={{ transform: 'skew(-20deg)' }} />
             <input
               type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="Email"
               className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none text-base"
               style={{ minWidth: 0 }}
+              required
             />
             <div className="hidden md:block w-[1px] h-10 bg-[#F4F4F4] rotate-12 mx-0" style={{ transform: 'skew(-20deg)' }} />
             <input
               type="text"
+              name="whatsapp"
+              value={formData.whatsapp}
+              onChange={handleChange}
               placeholder="Whatsapp"
               className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none rounded-b-[8px] md:rounded-b-none md:rounded-r-[8px] text-base"
               style={{ minWidth: 0 }}
+              required
             />
           </div>
           <button
             type="submit"
-            className="w-full md:w-auto h-[48px] mt-4 md:mt-0 md:ml-4 md:mr-4 px-8 bg-[#1D2130] text-white font-bold rounded-[8px] transition hover:bg-[#23263a] text-base whitespace-nowrap shadow"
+            disabled={loading}
+            className="w-full md:w-auto h-[48px] mt-4 md:mt-0 md:ml-4 md:mr-4 px-8 bg-[#1D2130] text-white font-bold rounded-[8px] transition hover:bg-[#23263a] text-base whitespace-nowrap shadow disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ alignSelf: 'center' }}
           >
-            QUERO SER AVISADO
+            {loading ? "ENVIANDO..." : "QUERO SER AVISADO"}
           </button>
         </form>
         {/* Dashboard image */}

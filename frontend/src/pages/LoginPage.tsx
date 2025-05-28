@@ -12,9 +12,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+    
     try {
       const form = new URLSearchParams();
       form.append('username', username);
@@ -36,6 +40,8 @@ export default function LoginPage() {
           : detail || 'Erro no login'
       );
       toast.error("Erro ao realizar login");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,7 +84,9 @@ export default function LoginPage() {
                 </label>
                 <Link to="/forgot-password" className="text-persimoon hover:underline">Esqueceu a senha?</Link>
               </div>
-              <Button type="submit" className="w-full">Entrar</Button>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
             </form>
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">

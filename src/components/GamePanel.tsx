@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Card } from './ui/Card';
 
 const GamePanel = () => {
   const [game, setGame] = useState(null);

@@ -1,18 +1,17 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.core.settings import settings
+import os
 
-# Configuração do banco de dados para PostgreSQL
-DATABASE_URL = settings.database_url
+# Configuração do banco de dados para SQLite
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'scoremvp.db')}"
 
-# Configuração do engine com timezone do Brasil
+# Configuração do engine
 engine = create_engine(
     DATABASE_URL,
     echo=True,  # echo=True para debug de SQL
-    connect_args={
-        "options": "-c timezone=America/Sao_Paulo"
-    }
+    connect_args={"check_same_thread": False}  # Necessário para SQLite
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
