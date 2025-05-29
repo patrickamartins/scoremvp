@@ -34,6 +34,7 @@ const Painel: React.FC = () => {
   const [gameFormError, setGameFormError] = useState("");
   const [gameSaved, setGameSaved] = useState(false);
   const [gameId, setGameId] = useState<number | null>(null);
+  const [savingGame, setSavingGame] = useState(false);
 
   // Jogadores
   const [players, setPlayers] = useState<Player[]>([]);
@@ -85,20 +86,29 @@ const Painel: React.FC = () => {
       return;
     }
     setGameFormError("");
+    setSavingGame(true);
     try {
       const payload = {
         opponent: gameForm.adversario,
         date: gameForm.data + 'T' + (gameForm.horario || '00:00'),
         location: gameForm.local,
         categoria: gameForm.categoria,
-        jogadoras: [], // Jogadoras serão cadastradas depois
+        jogadoras: [],
       };
       const res = await createGame(payload);
       setGameId(res.data.id);
       setGameSaved(true);
       toast.success("Jogo salvo com sucesso!");
-    } catch (err) {
+    } catch (err: any) {
+      setGameSaved(false);
+      if (err?.response?.status === 503) {
+        setGameFormError("Backend indisponível. Tente novamente em instantes.");
+      } else {
+        setGameFormError("Erro ao salvar o jogo. Verifique sua conexão ou tente novamente.");
+      }
       toast.error("Erro ao salvar o jogo");
+    } finally {
+      setSavingGame(false);
     }
   };
 
@@ -224,9 +234,10 @@ const Painel: React.FC = () => {
           <div className="md:col-span-2">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2 disabled:opacity-50"
+              disabled={savingGame}
             >
-              Salvar Jogo
+              {savingGame ? "Salvando..." : "Salvar Jogo"}
             </button>
           </div>
         </form>
@@ -336,6 +347,11 @@ const Painel: React.FC = () => {
         >
           +
         </button>
+      )}
+      {!gameSaved && (
+        <div className="fixed bottom-8 right-8 bg-red-100 text-red-700 px-4 py-2 rounded shadow-lg z-50">
+          Salve o jogo para liberar o cadastro de jogadores.
+        </div>
       )}
 
       {/* Modal de cadastro de jogador */}
