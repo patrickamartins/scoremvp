@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
+import { api } from '../services/api';
 
 const planos = [
   { value: 'free', label: 'Free' },
@@ -9,7 +10,7 @@ const planos = [
 ];
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -49,13 +50,43 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    // Aqui você faria a chamada para o backend para salvar as alterações
-    setTimeout(() => {
+    try {
+      setIsSaving(true);
+      
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('email', form.email);
+      formData.append('phone', form.phone);
+      formData.append('team', form.team);
+      formData.append('favoriteTeam', form.favoriteTeam);
+      formData.append('document', form.document);
+      formData.append('plan', form.plan);
+      
+      if (form.profileImage instanceof File) {
+        formData.append('profileImage', form.profileImage);
+      }
+      
+      if (form.password) {
+        formData.append('password', form.password);
+      }
+
+      const response = await api.put(`/users/${user?.id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data) {
+        updateUser(response.data);
+        setIsEditing(false);
+        toast.success('Alterações salvas com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error);
+      toast.error('Erro ao salvar alterações. Tente novamente.');
+    } finally {
       setIsSaving(false);
-      setIsEditing(false);
-      toast.success('Alterações salvas com sucesso!');
-    }, 1000);
+    }
   };
 
   const handleCancel = () => {
