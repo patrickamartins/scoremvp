@@ -19,6 +19,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "types": ["react", "react-dom", "node"],
     "allowJs": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
