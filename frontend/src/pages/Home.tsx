@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../services/api";
 import { toast } from "sonner";
+import { PatternFormat } from 'react-number-format';
 
 export default function Home() {
   const [formData, setFormData] = useState({
@@ -9,15 +10,28 @@ export default function Home() {
     whatsapp: ''
   });
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateEmail(formData.email)) {
+      setEmailError('Email inválido');
+      return;
+    }
+    
     setLoading(true);
 
     try {
       await api.post('/leads', formData);
       toast.success("Cadastro realizado com sucesso! Entraremos em contato em breve.");
       setFormData({ nome: '', email: '', whatsapp: '' });
+      setEmailError('');
     } catch (error: any) {
       console.error("Erro ao cadastrar:", error);
       toast.error(error.response?.data?.detail || "Erro ao realizar cadastro");
@@ -32,6 +46,10 @@ export default function Home() {
       ...prev,
       [name]: value
     }));
+    
+    if (name === 'email') {
+      setEmailError(validateEmail(value) ? '' : 'Email inválido');
+    }
   };
 
   return (
@@ -74,18 +92,25 @@ export default function Home() {
             />
             {/* Diagonal divider */}
             <div className="hidden md:block w-[1px] h-10 bg-[#F4F4F4] rotate-12 mx-0" style={{ transform: 'skew(-20deg)' }} />
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email"
-              className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none text-base"
-              style={{ minWidth: 0 }}
-              required
-            />
+            <div className="relative w-full md:flex-1">
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email"
+                className={`w-full px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none text-base ${emailError ? 'border-red-500' : ''}`}
+                style={{ minWidth: 0 }}
+                required
+              />
+              {emailError && (
+                <span className="absolute -bottom-6 left-0 text-red-500 text-sm">{emailError}</span>
+              )}
+            </div>
             <div className="hidden md:block w-[1px] h-10 bg-[#F4F4F4] rotate-12 mx-0" style={{ transform: 'skew(-20deg)' }} />
-            <input
+            <PatternFormat
+              format="(##) #####-####"
+              mask="_"
               type="text"
               name="whatsapp"
               value={formData.whatsapp}
@@ -98,7 +123,7 @@ export default function Home() {
           </div>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !!emailError}
             className="w-full md:w-auto h-[48px] mt-4 md:mt-0 md:ml-4 md:mr-4 px-8 bg-[#1D2130] text-white font-bold rounded-[8px] transition hover:bg-[#23263a] text-base whitespace-nowrap shadow disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ alignSelf: 'center' }}
           >
