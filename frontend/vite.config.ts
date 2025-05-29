@@ -9,8 +9,8 @@ export default defineConfig({
     postcss: './postcss.config.cjs',
   },
   server: {
-    proxy: {
-      '/api': 'http://localhost:8000',
-    },
+    proxy: process.env.NODE_ENV === 'development'
+      ? { '/api': 'http://localhost:8000' }
+      : undefined,
   },
 })
