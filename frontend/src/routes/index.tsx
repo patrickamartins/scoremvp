@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Home from '../pages/Home'
 import LoginPage from '../pages/LoginPage'
 import Dashboard from '../pages/Dashboard'
-import PlayersPage from '../pages/PlayersPage'
+// import PlayersPage from '../pages/PlayersPage' // Desativado
 import Painel from '../pages/Painel'
 import { NotFound } from '../pages/NotFound'
 import { AdminLayout } from '../components/AdminLayout'
@@ -17,7 +17,7 @@ export function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<AdminLayout />}>
-        <Route path="/players" element={<PlayersPage />} />
+        {/* <Route path="/players" element={<PlayersPage />} /> */}
         <Route path="/painel" element={<Painel />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/usuarios" element={<UsuariosPage />} />

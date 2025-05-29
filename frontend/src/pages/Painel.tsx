@@ -1,227 +1,160 @@
-import React, { useState, useEffect } from "react";
-import { Card, Checkbox, Input, Label } from "../components/ui";
+import React, { useState } from "react";
+import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { toast } from "sonner";
-import { getPlayers, createGame } from "../services/api";
-import { useNavigate } from 'react-router-dom';
 
 interface Player {
-  id: number;
   nome: string;
-  numero: number;
-  posicao?: string;
-}
-
-interface GameForm {
-  opponent: string;
-  date: string;
-  time: string;
-  location: string;
+  numero: string;
+  posicao: string;
   categoria: string;
 }
+
+const categorias = ["sub-13", "sub-15", "sub-17", "sub-19"];
 
 const Painel: React.FC = () => {
   usePageTitle("Painel");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
-  const [gameForm, setGameForm] = useState<GameForm>({
-    opponent: "",
-    date: "",
-    time: "",
-    location: "",
-    categoria: "sub-13"
+  const [showModal, setShowModal] = useState(false);
+  const [playerForm, setPlayerForm] = useState<Player>({
+    nome: "",
+    numero: "",
+    posicao: "",
+    categoria: categorias[0],
   });
-  const navigate = useNavigate();
+  const [formError, setFormError] = useState("");
 
-  useEffect(() => {
-    console.log('Painel montado');
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Token não encontrado. Faça login novamente.');
-      return;
-    }
-    getPlayers()
-      .then(res => {
-        console.log('Jogadoras recebidas:', res.data);
-        setPlayers(res.data);
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar jogadoras:', err);
-        toast.error("Erro ao carregar jogadoras");
-      });
-  }, []);
-
-  const handlePlayerSelection = (playerId: number) => {
-    console.log('Selecionando jogadora:', playerId);
-    setSelectedPlayers(prev => {
-      if (prev.includes(playerId)) {
-        return prev.filter(id => id !== playerId);
-      } else {
-        return [...prev, playerId];
-      }
-    });
-  };
-
-  const handleGameFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handlePlayerFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setGameForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setPlayerForm((prev) => ({ ...prev, [name]: value }));
+    setFormError("");
   };
 
-  const handleSaveGame = async () => {
-    console.log('Botão Criar Jogo clicado');
-    if (selectedPlayers.length === 0) {
-      toast.error("Selecione pelo menos uma jogadora");
+  const handleAddPlayer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!playerForm.nome || !playerForm.numero || !playerForm.posicao || !playerForm.categoria) {
+      setFormError("Preencha todos os campos");
       return;
     }
-
-    if (!gameForm.opponent || !gameForm.date || !gameForm.time || !gameForm.location) {
-      toast.error("Preencha todos os campos do jogo");
+    if (players.some((p) => p.numero === playerForm.numero)) {
+      setFormError("Já existe um jogador com esse número");
       return;
     }
-
-    try {
-      // Monta a data no formato ISO completo (com segundos) e converte para UTC
-      let dateIso = gameForm.date;
-      let dateObj;
-      if (gameForm.time) {
-        // Garante que sempre tenha segundos
-        const timeParts = gameForm.time.split(":");
-        let hour = timeParts[0] || "00";
-        let minute = timeParts[1] || "00";
-        // Cria objeto Date local
-        dateObj = new Date(`${gameForm.date}T${hour}:${minute}:00`);
-      } else {
-        dateObj = new Date(`${gameForm.date}T00:00:00`);
-      }
-      // Converte para string ISO em UTC
-      dateIso = dateObj.toISOString();
-      const gameData = {
-        opponent: gameForm.opponent,
-        date: dateIso,
-        location: gameForm.location,
-        categoria: gameForm.categoria,
-        jogadoras: selectedPlayers
-      };
-
-      const response = await createGame(gameData);
-      toast.success("Jogo criado com sucesso!");
-      setGameForm({
-        opponent: "",
-        date: "",
-        time: "",
-        location: "",
-        categoria: "sub-13"
-      });
-      setSelectedPlayers([]);
-      if (response?.data?.id) {
-        navigate(`/painel/jogo/${response.data.id}`);
-      }
-    } catch (error) {
-      console.error('Erro ao criar jogo:', error);
-      toast.error("Erro ao criar jogo");
-    }
+    setPlayers((prev) => [...prev, playerForm]);
+    setPlayerForm({ nome: "", numero: "", posicao: "", categoria: categorias[0] });
+    setShowModal(false);
   };
 
   return (
-    <div className="p-8 mt-16 space-y-8">
-      <h1 className="text-3xl font-bold text-eerieblack">Novo Jogo</h1>
+    <div className="p-8 mt-16 space-y-8 relative">
+      <h1 className="text-3xl font-bold text-eerieblack">Painel da Partida</h1>
 
-      {/* Formulário do Jogo */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Informações do Jogo</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="opponent">Adversário</Label>
-            <Input
-              id="opponent"
-              name="opponent"
-              value={gameForm.opponent}
-              onChange={handleGameFormChange}
-              placeholder="Nome do adversário"
-            />
-          </div>
-          <div>
-            <Label htmlFor="categoria">Categoria</Label>
-            <select
-              id="categoria"
-              name="categoria"
-              value={gameForm.categoria}
-              onChange={handleGameFormChange}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+      {/* Lista de jogadores cadastrados */}
+      <Card className="p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Jogadores da Partida</h2>
+        {players.length === 0 ? (
+          <div className="text-gray-400">Nenhum jogador cadastrado ainda.</div>
+        ) : (
+          <table className="min-w-full text-sm border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border px-2 py-1">Nome</th>
+                <th className="border px-2 py-1">Número</th>
+                <th className="border px-2 py-1">Posição</th>
+                <th className="border px-2 py-1">Categoria</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((p, idx) => (
+                <tr key={idx}>
+                  <td className="border px-2 py-1">{p.nome}</td>
+                  <td className="border px-2 py-1">{p.numero}</td>
+                  <td className="border px-2 py-1">{p.posicao}</td>
+                  <td className="border px-2 py-1">{p.categoria}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+
+      {/* Botão flutuante */}
+      <button
+        className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl z-50"
+        onClick={() => setShowModal(true)}
+        title="Adicionar Jogador"
+      >
+        +
+      </button>
+
+      {/* Modal de cadastro de jogador */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => setShowModal(false)}
+              title="Fechar"
             >
-              <option value="sub-13">Sub-13</option>
-              <option value="sub-15">Sub-15</option>
-              <option value="sub-17">Sub-17</option>
-              <option value="sub-19">Sub-19</option>
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="date">Data</Label>
-            <Input
-              id="date"
-              name="date"
-              type="date"
-              value={gameForm.date}
-              onChange={handleGameFormChange}
-            />
-          </div>
-          <div>
-            <Label htmlFor="time">Horário</Label>
-            <Input
-              id="time"
-              name="time"
-              type="time"
-              value={gameForm.time}
-              onChange={handleGameFormChange}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Label htmlFor="location">Local</Label>
-            <Input
-              id="location"
-              name="location"
-              value={gameForm.location}
-              onChange={handleGameFormChange}
-              placeholder="Local do jogo"
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Seleção de Jogadoras */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Selecionar Jogadoras</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {players.map((player) => (
-            <div key={player.id} className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-4">
-                <Checkbox
-                  id={String(player.id)}
-                  checked={selectedPlayers.includes(player.id)}
-                  onChange={() => handlePlayerSelection(player.id)}
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4">Adicionar Jogador</h2>
+            <form onSubmit={handleAddPlayer} className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  name="nome"
+                  value={playerForm.nome}
+                  onChange={handlePlayerFormChange}
+                  placeholder="Nome do jogador"
                 />
-                <div>
-                  <h3 className="font-semibold">{player.nome}</h3>
-                  <p className="text-sm text-gray-600">#{player.numero}</p>
-                  <p className="text-sm text-gray-600">{player.posicao}</p>
-                </div>
               </div>
-            </div>
-          ))}
+              <div>
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                  id="numero"
+                  name="numero"
+                  value={playerForm.numero}
+                  onChange={handlePlayerFormChange}
+                  placeholder="Número"
+                  type="number"
+                />
+              </div>
+              <div>
+                <Label htmlFor="posicao">Posição</Label>
+                <Input
+                  id="posicao"
+                  name="posicao"
+                  value={playerForm.posicao}
+                  onChange={handlePlayerFormChange}
+                  placeholder="Posição"
+                />
+              </div>
+              <div>
+                <Label htmlFor="categoria">Categoria</Label>
+                <select
+                  id="categoria"
+                  name="categoria"
+                  value={playerForm.categoria}
+                  onChange={handlePlayerFormChange}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                >
+                  {categorias.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              {formError && <div className="text-red-500 text-sm">{formError}</div>}
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold mt-2"
+              >
+                Adicionar Jogador
+              </button>
+            </form>
+          </div>
         </div>
-        <div className="mt-6">
-          <button 
-            type="button" 
-            onClick={handleSaveGame} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors"
-          >
-            Criar Jogo
-          </button>
-        </div>
-      </Card>
+      )}
     </div>
   );
 };
