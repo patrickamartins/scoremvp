@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 export default function Home() {
   const [formData, setFormData] = useState({
-    name: '',
+    nome: '',
     email: '',
     whatsapp: ''
   });
@@ -17,7 +17,7 @@ export default function Home() {
     try {
       await api.post('/leads', formData);
       toast.success("Cadastro realizado com sucesso! Entraremos em contato em breve.");
-      setFormData({ name: '', email: '', whatsapp: '' });
+      setFormData({ nome: '', email: '', whatsapp: '' });
     } catch (error: any) {
       console.error("Erro ao cadastrar:", error);
       toast.error(error.response?.data?.detail || "Erro ao realizar cadastro");
@@ -64,8 +64,8 @@ export default function Home() {
           <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center w-full h-full">
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="nome"
+              value={formData.nome}
               onChange={handleChange}
               placeholder="Nome"
               className="w-full md:flex-1 px-6 h-[48px] md:h-[48px] bg-transparent text-[#1D2130] placeholder-[#B0B0B0] font-medium outline-none border-none rounded-t-[8px] md:rounded-t-none md:rounded-l-[8px] text-base"
