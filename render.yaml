@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: scoremvp
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm run preview
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+    healthCheckPath: /
+    autoDeploy: true
+    plan: free
+    disk:
+      name: npm-cache
+      mountPath: /opt/render/project/src/frontend/node_modules
+      sizeGB: 1 

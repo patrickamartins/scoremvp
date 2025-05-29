@@ -9,9 +9,12 @@ export default defineConfig({
     postcss: './postcss.config.cjs',
   },
   server: {
-    proxy: process.env.NODE_ENV === 'development'
-      ? { '/api': 'http://localhost:8000' }
-      : undefined,
+    host: true,
+    port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+  },
+  preview: {
+    host: true,
+    port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
   },
   resolve: {
     alias: {
@@ -19,6 +22,14 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
 })
