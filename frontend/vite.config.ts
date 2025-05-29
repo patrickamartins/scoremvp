@@ -13,4 +13,12 @@ export default defineConfig({
       ? { '/api': 'http://localhost:8000' }
       : undefined,
   },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
+  build: {
+    sourcemap: true,
+  },
 })

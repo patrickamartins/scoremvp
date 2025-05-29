@@ -13,8 +13,8 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set: (fn: (state: AuthState) => Partial<AuthState>) => void) => ({
   user: null,
-  setUser: (user) => set({ user }),
-  logout: () => set({ user: null }),
+  setUser: (user: User | null) => set(() => ({ user })),
+  logout: () => set(() => ({ user: null })),
 })); 

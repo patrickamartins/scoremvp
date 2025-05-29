@@ -1,6 +1,5 @@
 // src/services/api.ts
-import axios from 'axios';
-import type { AxiosResponse } from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://scoremvp-backend.onrender.com/api',
@@ -10,9 +9,9 @@ export const api = axios.create({
 });
 
 // Interceptor para adicionar o token em todas as requisições
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('token');
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -20,8 +19,8 @@ api.interceptors.request.use((config) => {
 
 // Interceptor para tratamento de erros
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  (response: AxiosResponse) => response,
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Se o token expirou, limpa o localStorage e redireciona para o login
       localStorage.removeItem('token');

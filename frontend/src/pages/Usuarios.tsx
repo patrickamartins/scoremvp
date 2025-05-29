@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ChangeEvent } from 'react';
 import { toast } from 'sonner';
 import { Input, Label, Button } from '../components/ui';
 
@@ -18,6 +18,22 @@ type User = {
   document?: string;
 };
 
+type FormData = {
+  name: string;
+  email: string;
+  type: string;
+  plan: string;
+  status: string;
+  favoriteTeam: string;
+  team: string;
+  document: string;
+  lastCharge?: string;
+  nextCharge?: string;
+  card?: string;
+  cardBrand?: string;
+  password?: string;
+};
+
 const tiposUsuario = [
   { value: 'player', label: 'Atleta' },
   { value: 'coach', label: 'Técnico' },
@@ -31,9 +47,9 @@ const planos = [
   { value: 'team', label: 'Time' },
 ];
 
-function debounce(fn: any, delay: number) {
-  let timer: any;
-  return (...args: any[]) => {
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timer: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
     clearTimeout(timer);
     timer = setTimeout(() => fn(...args), delay);
   };
@@ -45,7 +61,16 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'create'>('edit');
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<FormData>({
+    name: '',
+    email: '',
+    type: 'player',
+    plan: 'free',
+    status: 'ativo',
+    favoriteTeam: '',
+    team: '',
+    document: ''
+  });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -93,9 +118,9 @@ export default function UsuariosPage() {
   const closeModal = () => {
     setShowModal(false);
   };
-  const handleFormChange = (e: any) => {
+  const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm((prev: any) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
   const handleSave = () => {
     toast.success('Usuário salvo!');
