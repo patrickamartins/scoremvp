@@ -24,7 +24,6 @@ router = APIRouter(
 def criar_jogo(
     game_in: schemas.GameCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
 ):
     data = game_in.dict()
     novo = models.Jogo(
@@ -32,8 +31,7 @@ def criar_jogo(
         date=data['date'],
         location=data.get('location'),
         categoria=data.get('categoria'),
-        status="PENDENTE",
-        owner_id=current_user.id
+        status="PENDENTE"
     )
     db.add(novo)
     db.commit()
