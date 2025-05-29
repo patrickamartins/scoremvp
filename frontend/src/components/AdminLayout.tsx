@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -10,23 +10,6 @@ import {
   Calendar as CalendarIcon,
   LucideIcon
 } from 'lucide-react';
-import { api } from '../services/api';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-
-interface Notification {
-  id: number;
-  notification: {
-    id: number;
-    content: string;
-    url?: string;
-    target: 'all' | 'players' | 'mvp' | 'team';
-    created_at: string;
-    created_by: number;
-  };
-  is_read: boolean;
-  created_at: string;
-}
 
 interface MenuItem {
   path: string;
@@ -41,8 +24,6 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', plan: 'Free', role: 'admin' } }: AdminLayoutProps) {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
 
   // Verifica se é admin ou plano Team
@@ -62,64 +43,6 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
   ];
 
   const isActive = (path: string) => location.pathname === path;
-
-  useEffect(() => {
-    loadNotifications();
-    loadUnreadCount();
-    // Atualizar a cada 30 segundos
-    const interval = setInterval(() => {
-      loadNotifications();
-      loadUnreadCount();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadNotifications = async () => {
-    try {
-      const response = await api.get('/notifications/me');
-      setNotifications(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar notificações:', error);
-    }
-  };
-
-  const loadUnreadCount = async () => {
-    try {
-      const response = await api.get('/notifications/me/unread/count');
-      setUnreadCount(response.data.count);
-    } catch (error) {
-      console.error('Erro ao carregar contagem de notificações:', error);
-    }
-  };
-
-  const handleReadAll = async () => {
-    try {
-      await Promise.all(
-        notifications
-          .filter((n: Notification) => !n.is_read)
-          .map((n: Notification) => api.post(`/notifications/${n.id}/read`))
-      );
-      loadNotifications();
-      loadUnreadCount();
-      setShowNotifications(false);
-    } catch (error) {
-      console.error('Erro ao marcar todas como lidas:', error);
-    }
-  };
-
-  const handleNotificationClick = async (notificationId: number) => {
-    try {
-      await api.post(`/notifications/${notificationId}/read`);
-      loadNotifications();
-      loadUnreadCount();
-    } catch (error) {
-      console.error('Erro ao marcar notificação como lida:', error);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR });
-  };
 
   return (
     <div className="flex" style={{ fontFamily: 'Jakarta Sans, sans-serif' }}>
@@ -191,55 +114,14 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
                 onClick={() => setShowNotifications((v: boolean) => !v)}
               >
                 <Bell size={22} className="text-[#2563eb]" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
-                )}
               </button>
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E3E3E3] rounded-lg shadow-lg z-50">
                   <div className="p-4 border-b border-[#E3E3E3] flex justify-between items-center">
                     <span className="font-semibold text-[#2563eb]">Notificações</span>
-                    {notifications.length > 0 && (
-                      <button
-                        className="text-xs text-blue-600 hover:underline"
-                        onClick={handleReadAll}
-                      >
-                        Ler todas
-                      </button>
-                    )}
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="p-4 text-center text-[#7B8BB2]">você não possui nenhuma notificação no momento</div>
-                    ) : (
-                      notifications.slice(0, 5).map((n: Notification) => (
-                        <div
-                          key={n.id}
-                          className="flex items-center gap-2 px-4 py-3 border-b border-[#F3F3F3] cursor-pointer hover:bg-[#f7f8fa]"
-                          onClick={() => handleNotificationClick(n.id)}
-                        >
-                          <span className={`w-2 h-2 rounded-full ${n.is_read ? '' : 'bg-blue-500'}`}></span>
-                          <div className="flex-1">
-                            <span className={`text-[#7B8BB2] ${n.is_read ? '' : 'font-semibold'}`}>
-                              {n.notification.content}
-                            </span>
-                            {n.notification.url && (
-                              <a
-                                href={n.notification.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline text-sm mt-1 block"
-                              >
-                                {n.notification.url}
-                              </a>
-                            )}
-                            <p className="text-xs text-gray-400 mt-1">
-                              {formatDate(n.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                  <div className="p-4 text-center text-[#7B8BB2]">
+                    Você não possui nenhuma notificação no momento
                   </div>
                 </div>
               )}
