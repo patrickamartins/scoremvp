@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 import os
 import uvicorn
 import logging
+from fastapi.staticfiles import StaticFiles
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +50,8 @@ app.include_router(games_router, prefix="/api")
 app.include_router(estatisticas_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(leads_router, prefix="/api")
+
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 @app.get("/")
 def read_root():

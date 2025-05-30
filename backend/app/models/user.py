@@ -35,6 +35,7 @@ class User(Base):
     next_payment_date = Column(DateTime, nullable=True)
     card_last4 = Column(String, nullable=True)
     card_brand = Column(String, nullable=True)
+    profile_image = Column(String, nullable=True)  # URL da imagem de perfil
     
     # Relacionamentos
     sent_notifications = relationship("Notification", back_populates="creator")

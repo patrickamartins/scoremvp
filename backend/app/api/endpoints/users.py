@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.api import deps
@@ -11,6 +11,8 @@ from app.schemas.user import (
     UserSearchParams
 )
 from app.models.user import User, UserRole, UserPlan
+import os
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -74,15 +76,38 @@ def get_user(
     return db_user
 
 @router.put("/{user_id}", response_model=UserResponse)
-def update_user(
+async def update_user(
     user_id: int,
-    user_update: UserUpdate,
+    name: str = Form(...),
+    email: str = Form(...),
+    role: str = Form(...),
+    is_active: bool = Form(...),
+    plan: str = Form(...),
+    profileImage: UploadFile = File(None),
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_admin_user)
 ):
     """
-    Atualizar usuário (apenas admin).
+    Atualizar usuário (apenas admin), incluindo upload de foto de perfil.
     """
+    image_url = None
+    if profileImage:
+        os.makedirs("media/avatars", exist_ok=True)
+        file_location = f"media/avatars/{user_id}_{profileImage.filename}"
+        with open(file_location, "wb") as f:
+            f.write(await profileImage.read())
+        image_url = f"/media/avatars/{user_id}_{profileImage.filename}"
+
+    user_update = {
+        "name": name,
+        "email": email,
+        "role": role,
+        "is_active": is_active,
+        "plan": plan,
+    }
+    if image_url:
+        user_update["profile_image"] = image_url
+
     db_user = crud.update_user(db, user_id=user_id, user_update=user_update)
     if not db_user:
         raise HTTPException(

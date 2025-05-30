@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     role: UserRole
     is_active: bool = True
     plan: UserPlan = UserPlan.FREE
+    profile_image: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -20,6 +21,7 @@ class UserUpdate(BaseModel):
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
     plan: Optional[UserPlan] = None
+    profile_image: Optional[str] = None
 
 class UserResponse(UserBase):
     id: int
@@ -40,6 +42,7 @@ class UserListResponse(BaseModel):
     plan: UserPlan
     is_active: bool
     created_at: datetime
+    profile_image: Optional[str] = None
 
     class Config:
         from_attributes = True
