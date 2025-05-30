@@ -97,7 +97,10 @@ export function Users() {
 
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
+    if (!selectedUser?.id) {
+      toast.error('ID do usuário não encontrado.');
+      return;
+    }
 
     setLoading(true);
     try {

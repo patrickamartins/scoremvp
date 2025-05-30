@@ -50,6 +50,10 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
+    if (!user?.id) {
+      toast.error('ID do usuário não encontrado. Faça login novamente.');
+      return;
+    }
     try {
       setIsSaving(true);
       
@@ -70,7 +74,7 @@ export default function Profile() {
         formData.append('password', form.password);
       }
 
-      const response = await api.put(`/users/${user?.id}`, formData, {
+      const response = await api.put(`/users/${user.id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -130,6 +134,11 @@ export default function Profile() {
     form.profileImage !== user?.profileImage ||
     (form.password && form.password === form.confirmPassword)
   );
+
+  // Proteção: só renderiza o formulário se user?.id existir
+  if (!user?.id) {
+    return <div>Usuário não autenticado. Faça login novamente.</div>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-8 mt-16 bg-white rounded shadow">
@@ -264,7 +273,7 @@ export default function Profile() {
             type="button"
             className={`px-6 py-2 rounded font-bold text-white ${canSave ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
             onClick={handleSave}
-            disabled={!canSave || isSaving}
+            disabled={!canSave || isSaving || !user?.id}
           >
             {isSaving ? 'Salvando...' : 'Salvar alterações'}
           </button>
