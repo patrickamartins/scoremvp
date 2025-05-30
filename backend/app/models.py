@@ -52,7 +52,6 @@ class Jogo(Base):
     status = Column(Enum('PENDENTE', 'EM_ANDAMENTO', 'FINALIZADO', name='gamestatus'), nullable=False, default='PENDENTE')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    time = Column(String(100), nullable=True)
 
     owner = relationship("User", back_populates="jogos")
     estatisticas = relationship("Estatistica", back_populates="jogo")
