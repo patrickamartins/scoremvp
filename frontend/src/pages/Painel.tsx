@@ -1,22 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { createGame, createEstatistica } from "../services/api";
+import { createGame, createEstatistica, getPlayers } from "../services/api";
 import { toast } from "sonner";
 
 interface Player {
+  id: number;
   nome: string;
-  numero: string;
+  numero: number;
   posicao: string;
-  categoria: string;
 }
 
-interface PlayerStats {
-  pontos: number;
-  assistencias: number;
+interface EstatisticasJogadora {
+  dois: { tentativas: number; acertos: number };
+  tres: { tentativas: number; acertos: number };
+  lance: { tentativas: number; acertos: number };
   rebotes: number;
-  roubos: number;
+  assistencias: number;
   faltas: number;
+  tocos: number;
+  turnovers: number;
+  roubos: number;
+  interferencia: number;
 }
 
 const categorias = ["sub-13", "sub-15", "sub-17", "sub-19"];
@@ -40,16 +45,42 @@ const Painel: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [playerForm, setPlayerForm] = useState<Player>({
+    id: 0,
     nome: "",
-    numero: "",
+    numero: 0,
     posicao: "",
-    categoria: categorias[0],
   });
   const [formError, setFormError] = useState("");
 
   // Estatísticas
-  const [stats, setStats] = useState<{ [numero: string]: PlayerStats }>({});
+  const [stats, setStats] = useState<{ [id: number]: EstatisticasJogadora }>({});
   const [history, setHistory] = useState<any[]>([]); // Para desfazer
+
+  useEffect(() => {
+    getPlayers().then(({ data }) => {
+      const players = data.map((p: any) => ({
+        ...p,
+        posicao: p.posicao || 'Não definida'
+      }));
+      setPlayers(players);
+      const initialStats: { [id: number]: EstatisticasJogadora } = {};
+      players.forEach((p: Player) => {
+        initialStats[p.id] = {
+          dois: { tentativas: 0, acertos: 0 },
+          tres: { tentativas: 0, acertos: 0 },
+          lance: { tentativas: 0, acertos: 0 },
+          rebotes: 0,
+          assistencias: 0,
+          faltas: 0,
+          tocos: 0,
+          turnovers: 0,
+          roubos: 0,
+          interferencia: 0,
+        };
+      });
+      setStats(initialStats);
+    });
+  }, []);
 
   const handleGameFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -65,7 +96,7 @@ const Painel: React.FC = () => {
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!playerForm.nome || !playerForm.numero || !playerForm.posicao || !playerForm.categoria) {
+    if (!playerForm.nome || !playerForm.numero || !playerForm.posicao) {
       setFormError("Preencha todos os campos");
       return;
     }
@@ -74,8 +105,22 @@ const Painel: React.FC = () => {
       return;
     }
     setPlayers((prev) => [...prev, playerForm]);
-    setStats((prev) => ({ ...prev, [playerForm.numero]: { pontos: 0, assistencias: 0, rebotes: 0, roubos: 0, faltas: 0 } }));
-    setPlayerForm({ nome: "", numero: "", posicao: "", categoria: categorias[0] });
+    setStats((prev) => ({
+      ...prev,
+      [playerForm.id]: {
+        dois: { tentativas: 0, acertos: 0 },
+        tres: { tentativas: 0, acertos: 0 },
+        lance: { tentativas: 0, acertos: 0 },
+        rebotes: 0,
+        assistencias: 0,
+        faltas: 0,
+        tocos: 0,
+        turnovers: 0,
+        roubos: 0,
+        interferencia: 0,
+      },
+    }));
+    setPlayerForm({ id: 0, nome: "", numero: 0, posicao: "" });
     setShowModal(false);
   };
 
@@ -114,13 +159,13 @@ const Painel: React.FC = () => {
   };
 
   // Estatísticas
-  const handleStat = (numero: string, stat: keyof PlayerStats, delta: number) => {
+  const handleStat = (id: number, stat: keyof EstatisticasJogadora, delta: number) => {
     setHistory((prev) => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
     setStats((prev) => ({
       ...prev,
-      [numero]: {
-        ...prev[numero],
-        [stat]: Math.max(0, (prev[numero]?.[stat] || 0) + delta),
+      [id]: {
+        ...prev[id],
+        [stat]: Math.max(0, (prev[id]?.[stat] || 0) + delta),
       },
     }));
   };
@@ -136,8 +181,19 @@ const Painel: React.FC = () => {
     setHistory((prev) => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
     setStats((prev) => {
       const reseted: any = {};
-      Object.keys(prev).forEach((numero) => {
-        reseted[numero] = { pontos: 0, assistencias: 0, rebotes: 0, roubos: 0, faltas: 0 };
+      Object.keys(prev).forEach((id) => {
+        reseted[id] = {
+          dois: { tentativas: 0, acertos: 0 },
+          tres: { tentativas: 0, acertos: 0 },
+          lance: { tentativas: 0, acertos: 0 },
+          rebotes: 0,
+          assistencias: 0,
+          faltas: 0,
+          tocos: 0,
+          turnovers: 0,
+          roubos: 0,
+          interferencia: 0,
+        };
       });
       return reseted;
     });
@@ -150,12 +206,12 @@ const Painel: React.FC = () => {
     }
     try {
       for (const player of players) {
-        const playerStats = stats[player.numero];
+        const playerStats = stats[player.id];
         if (!playerStats) continue;
         await createEstatistica({
-          jogadora_id: Number(player.numero), // Aqui pode ser necessário mapear para o id real da jogadora
+          jogadora_id: player.id,
           jogo_id: gameId,
-          pontos: playerStats.pontos,
+          pontos: Number(playerStats.dois?.acertos || 0) * 2 + Number(playerStats.tres?.acertos || 0) * 3 + Number(playerStats.lance?.acertos || 0) as unknown as number,
           assistencias: playerStats.assistencias,
           rebotes: playerStats.rebotes,
           roubos: playerStats.roubos,
@@ -266,33 +322,33 @@ const Painel: React.FC = () => {
               </thead>
               <tbody>
                 {players.map((p) => (
-                  <tr key={p.numero}>
+                  <tr key={p.id}>
                     <td className="border px-2 py-1">{p.nome}</td>
                     <td className="border px-2 py-1">{p.numero}</td>
                     <td className="border px-2 py-1">
-                      <button className="px-2 py-1 bg-blue-100 rounded mr-1" onClick={() => handleStat(p.numero, 'pontos', 1)}>+</button>
-                      {stats[p.numero]?.pontos || 0}
-                      <button className="px-2 py-1 bg-blue-100 rounded ml-1" onClick={() => handleStat(p.numero, 'pontos', -1)}>-</button>
+                      <button className="px-2 py-1 bg-blue-100 rounded mr-1" onClick={() => handleStat(p.id, 'dois', 1)}>+</button>
+                      {stats[p.id]?.dois?.acertos || 0}
+                      <button className="px-2 py-1 bg-blue-100 rounded ml-1" onClick={() => handleStat(p.id, 'dois', -1)}>-</button>
                     </td>
                     <td className="border px-2 py-1">
-                      <button className="px-2 py-1 bg-green-100 rounded mr-1" onClick={() => handleStat(p.numero, 'assistencias', 1)}>+</button>
-                      {stats[p.numero]?.assistencias || 0}
-                      <button className="px-2 py-1 bg-green-100 rounded ml-1" onClick={() => handleStat(p.numero, 'assistencias', -1)}>-</button>
+                      <button className="px-2 py-1 bg-green-100 rounded mr-1" onClick={() => handleStat(p.id, 'assistencias', 1)}>+</button>
+                      {stats[p.id]?.assistencias || 0}
+                      <button className="px-2 py-1 bg-green-100 rounded ml-1" onClick={() => handleStat(p.id, 'assistencias', -1)}>-</button>
                     </td>
                     <td className="border px-2 py-1">
-                      <button className="px-2 py-1 bg-yellow-100 rounded mr-1" onClick={() => handleStat(p.numero, 'rebotes', 1)}>+</button>
-                      {stats[p.numero]?.rebotes || 0}
-                      <button className="px-2 py-1 bg-yellow-100 rounded ml-1" onClick={() => handleStat(p.numero, 'rebotes', -1)}>-</button>
+                      <button className="px-2 py-1 bg-yellow-100 rounded mr-1" onClick={() => handleStat(p.id, 'rebotes', 1)}>+</button>
+                      {stats[p.id]?.rebotes || 0}
+                      <button className="px-2 py-1 bg-yellow-100 rounded ml-1" onClick={() => handleStat(p.id, 'rebotes', -1)}>-</button>
                     </td>
                     <td className="border px-2 py-1">
-                      <button className="px-2 py-1 bg-purple-100 rounded mr-1" onClick={() => handleStat(p.numero, 'roubos', 1)}>+</button>
-                      {stats[p.numero]?.roubos || 0}
-                      <button className="px-2 py-1 bg-purple-100 rounded ml-1" onClick={() => handleStat(p.numero, 'roubos', -1)}>-</button>
+                      <button className="px-2 py-1 bg-purple-100 rounded mr-1" onClick={() => handleStat(p.id, 'roubos', 1)}>+</button>
+                      {stats[p.id]?.roubos || 0}
+                      <button className="px-2 py-1 bg-purple-100 rounded ml-1" onClick={() => handleStat(p.id, 'roubos', -1)}>-</button>
                     </td>
                     <td className="border px-2 py-1">
-                      <button className="px-2 py-1 bg-red-100 rounded mr-1" onClick={() => handleStat(p.numero, 'faltas', 1)}>+</button>
-                      {stats[p.numero]?.faltas || 0}
-                      <button className="px-2 py-1 bg-red-100 rounded ml-1" onClick={() => handleStat(p.numero, 'faltas', -1)}>-</button>
+                      <button className="px-2 py-1 bg-red-100 rounded mr-1" onClick={() => handleStat(p.id, 'faltas', 1)}>+</button>
+                      {stats[p.id]?.faltas || 0}
+                      <button className="px-2 py-1 bg-red-100 rounded ml-1" onClick={() => handleStat(p.id, 'faltas', -1)}>-</button>
                     </td>
                     <td className="border px-2 py-1">
                       <button className="px-2 py-1 bg-gray-200 rounded" onClick={handleReset}>Zerar</button>
@@ -322,7 +378,6 @@ const Painel: React.FC = () => {
                 <th className="border px-2 py-1">Nome</th>
                 <th className="border px-2 py-1">Número</th>
                 <th className="border px-2 py-1">Posição</th>
-                <th className="border px-2 py-1">Categoria</th>
               </tr>
             </thead>
             <tbody>
@@ -331,7 +386,6 @@ const Painel: React.FC = () => {
                   <td className="border px-2 py-1">{p.nome}</td>
                   <td className="border px-2 py-1">{p.numero}</td>
                   <td className="border px-2 py-1">{p.posicao}</td>
-                  <td className="border px-2 py-1">{p.categoria}</td>
                 </tr>
               ))}
             </tbody>
@@ -398,20 +452,6 @@ const Painel: React.FC = () => {
                   onChange={handlePlayerFormChange}
                   placeholder="Posição"
                 />
-              </div>
-              <div>
-                <Label htmlFor="categoria">Categoria</Label>
-                <select
-                  id="categoria"
-                  name="categoria"
-                  value={playerForm.categoria}
-                  onChange={handlePlayerFormChange}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                >
-                  {categorias.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
               </div>
               {formError && <div className="text-red-500 text-sm">{formError}</div>}
               <button
