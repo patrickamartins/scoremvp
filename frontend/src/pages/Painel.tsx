@@ -90,9 +90,10 @@ const Painel: React.FC = () => {
     try {
       const payload = {
         opponent: gameForm.adversario,
-        date: gameForm.data + 'T' + (gameForm.horario || '00:00'),
+        date: new Date(gameForm.data + 'T' + (gameForm.horario || '00:00')).toISOString(),
         location: gameForm.local,
         categoria: gameForm.categoria,
+        status: 'PENDENTE',
         jogadoras: [],
       };
       const res = await createGame(payload);
