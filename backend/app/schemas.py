@@ -62,17 +62,19 @@ class GameCreate(BaseModel):
         # Se v não tiver timezone, assume UTC
         if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
             v = v.replace(tzinfo=timezone.utc)
-        now = datetime.now(timezone.utc)
-        if v < now:
-            raise ValueError("Data do jogo não pode ser no passado")
+        # Aceita qualquer data
         return v
 
     @root_validator(pre=True)
     def ensure_status_upper(cls, values):
-        status = values.get("status", "pendente")
-        print("STATUS RECEBIDO NO Pydantic:", status)
-        values["status"] = status.upper()
-        return values
+        try:
+            status = values.get("status", "pendente")
+            print("STATUS RECEBIDO NO Pydantic:", status)
+            values["status"] = status.upper()
+            return values
+        except Exception as e:
+            print("ERRO NO ROOT VALIDATOR:", e)
+            raise
 
 class GameUpdate(BaseModel):
     opponent: Optional[str] = Field(None, min_length=2, max_length=100)
