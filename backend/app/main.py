@@ -29,6 +29,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "*",  # Permitir qualquer origem temporariamente para debug
         "http://localhost:5173",
         "http://localhost:3000",
         "https://scoremvp.com.br",
