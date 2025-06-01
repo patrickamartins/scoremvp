@@ -240,24 +240,6 @@ export default function DashboardPage() {
               </div>
             </Card>
           )}
-          {!selectedGame && (
-            <Card className="p-6 mb-8">
-              <h2 className="text-lg font-bold mb-4">Jogos no período selecionado</h2>
-              <div className="space-y-2">
-                {games.length === 0 && <div className="text-gray-500">Nenhum jogo encontrado</div>}
-                {games.map((game) => (
-                  <div key={game.id} className="flex flex-col md:flex-row md:items-center md:justify-between border-b last:border-b-0 py-2">
-                    <div>
-                      <span className="font-semibold">{new Date(game.date).toLocaleDateString()}</span>
-                      <span className="ml-2">vs {game.opponent}</span>
-                      <span className="ml-2 text-xs text-gray-500">({game.status})</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 md:mt-0">{game.location}</div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="p-6 text-center">
               <div className="text-4xl font-bold text-blue-600">{overview?.total_jogos ?? '-'}</div>
