@@ -192,8 +192,16 @@ export default function UsuariosPage() {
       </div>
       {/* Modal de edição/criação */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded shadow w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" tabIndex={-1} onKeyDown={(e) => { if (e.key === 'Escape') closeModal(); }}>
+          <div className="bg-white rounded shadow w-full max-w-2xl max-h-[90vh] flex flex-col relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={closeModal}
+              title="Fechar"
+              type="button"
+            >
+              ×
+            </button>
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold">{modalMode === 'edit' ? 'Editar Usuário' : 'Novo Usuário'}</h2>
             </div>

@@ -64,7 +64,7 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
       <aside className="w-64 bg-white flex flex-col justify-between py-8 px-6 border-r border-[#E3E3E3] min-h-screen fixed left-0 top-0 h-full z-40">
         <div>
           <div className="flex flex-col items-center mb-6">
-            <img src="/images/logo-score-novo.png" alt="ScoreMVP Logo" className="h-12 w-auto mb-2" />
+            <img src="/images/logo-score.png" alt="ScoreMVP Logo" className="h-12 w-auto mb-2" />
           </div>
           <div className="text-xs text-[#7B8BB2] font-semibold mb-4">Main Menu</div>
           <nav className="flex flex-col gap-2 mb-6">
@@ -133,7 +133,7 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
                 <Bell size={22} className="text-[#2563eb]" />
               </button>
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E3E3E3] rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E3E3E3] rounded-lg shadow-lg z-50 backdrop-blur-sm" style={{background: 'rgba(255,255,255,0.97)'}}>
                   <div className="p-4 border-b border-[#E3E3E3] flex justify-between items-center">
                     <span className="font-semibold text-[#2563eb]">Notificações</span>
                   </div>

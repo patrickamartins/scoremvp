@@ -317,8 +317,16 @@ export default function Profile() {
       </div>
       {/* Modal de confirmação de cancelamento de conta */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded shadow max-w-md w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" tabIndex={-1} onKeyDown={(e) => { if (e.key === 'Escape') setShowCancelModal(false); }}>
+          <div className="bg-white p-8 rounded shadow max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => setShowCancelModal(false)}
+              title="Fechar"
+              type="button"
+            >
+              ×
+            </button>
             <h3 className="text-xl font-bold mb-4">Tem certeza que deseja cancelar sua conta?</h3>
             <p className="mb-6">Esta ação é irreversível. Todos os seus dados serão removidos do sistema.</p>
             <div className="flex gap-4">
