@@ -1,60 +1,63 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { getEstatisticasResumo } from '../services/api';
 import { Card } from "./ui/Card";
-
-interface GameStats {
-  total_pontos: number;
-  total_assistencias: number;
-  total_rebotes: number;
-  total_roubos: number;
-  total_faltas: number;
-  por_quarto: Array<{
-    quarto: number;
-    total_pontos: number;
-    total_assistencias: number;
-    total_rebotes: number;
-    total_roubos: number;
-    total_faltas: number;
-  }>;
-}
+import { EstatisticasResumo } from '../services/api';
 
 interface GameStatsProps {
   gameId: number;
 }
 
 export default function GameStats({ gameId }: GameStatsProps) {
-  const [stats, setStats] = useState<GameStats | null>(null);
+  const [stats, setStats] = useState<EstatisticasResumo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get(`/jogos/${gameId}/stats`).then(({ data }) => {
-      setStats(data);
-      setLoading(false);
-    });
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const { data } = await getEstatisticasResumo(gameId);
+        setStats(data);
+        setError(null);
+      } catch (err) {
+        setError('Erro ao carregar estatísticas');
+        console.error('Erro ao carregar estatísticas:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
   }, [gameId]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="p-4">
-        <Card title="Erro">
-          <p className="text-red-600">Estatísticas não encontradas</p>
+      <div className="animate-pulse">
+        <Card className="p-6">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
         </Card>
       </div>
     );
   }
 
+  if (error || !stats) {
+    return (
+      <Card className="p-6">
+        <div className="text-red-500">{error || 'Erro ao carregar estatísticas'}</div>
+      </Card>
+    );
+  }
+
   return (
-    <div className="p-4">
-      <Card title="Estatísticas do Jogo">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+    <div className="space-y-6">
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-4">Estatísticas Gerais</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="text-lg font-medium text-blue-900">Pontos</h3>
             <p className="text-3xl font-bold text-blue-700">{stats.total_pontos}</p>
@@ -76,35 +79,38 @@ export default function GameStats({ gameId }: GameStatsProps) {
             <p className="text-3xl font-bold text-red-700">{stats.total_faltas}</p>
           </div>
         </div>
+      </Card>
 
-        <div className="border-t pt-4">
-          <h3 className="text-lg font-medium mb-4">Estatísticas por Quarto</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  <th className="border px-4 py-2">Quarto</th>
-                  <th className="border px-4 py-2">Pontos</th>
-                  <th className="border px-4 py-2">Assistências</th>
-                  <th className="border px-4 py-2">Rebotes</th>
-                  <th className="border px-4 py-2">Roubos</th>
-                  <th className="border px-4 py-2">Faltas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.por_quarto.map((quarto) => (
-                  <tr key={quarto.quarto}>
-                    <td className="border px-4 py-2 text-center">{quarto.quarto}º</td>
-                    <td className="border px-4 py-2 text-center">{quarto.total_pontos}</td>
-                    <td className="border px-4 py-2 text-center">{quarto.total_assistencias}</td>
-                    <td className="border px-4 py-2 text-center">{quarto.total_rebotes}</td>
-                    <td className="border px-4 py-2 text-center">{quarto.total_roubos}</td>
-                    <td className="border px-4 py-2 text-center">{quarto.total_faltas}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-4">Estatísticas por Quarto</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.por_quarto.map((quarto) => (
+            <div key={quarto.quarto} className="bg-white border rounded-lg p-4 shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">{quarto.quarto}º Quarto</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Pontos:</span>
+                  <span className="font-medium">{quarto.total_pontos}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Assistências:</span>
+                  <span className="font-medium">{quarto.total_assistencias}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Rebotes:</span>
+                  <span className="font-medium">{quarto.total_rebotes}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Roubos:</span>
+                  <span className="font-medium">{quarto.total_roubos}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Faltas:</span>
+                  <span className="font-medium">{quarto.total_faltas}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

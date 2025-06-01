@@ -4,10 +4,19 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { DateFilterDropdown } from "../components/ui/DateFilterDropdown";
 import { HighlightPlayerCard } from "../components/ui/HighlightPlayerCard";
 import { PlayersStatsTable } from "../components/ui/PlayersStatsTable";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from 'recharts';
 import axios from 'axios';
+import { AlertCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
+
+const categorias = [
+  { label: 'Todas', value: '' },
+  { label: 'sub-13', value: 'sub-13' },
+  { label: 'sub-15', value: 'sub-15' },
+  { label: 'sub-17', value: 'sub-17' },
+  { label: 'sub-19', value: 'sub-19' },
+];
 
 export default function DashboardPage() {
   usePageTitle("Dashboard");
@@ -20,6 +29,10 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [selectedGame, setSelectedGame] = useState<any>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [playerFilter, setPlayerFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [allPlayers, setAllPlayers] = useState<any[]>([]);
 
   // Buscar lista de jogos do período
   useEffect(() => {
@@ -31,11 +44,15 @@ export default function DashboardPage() {
         if (dateFilter.end) params.data_fim = dateFilter.end;
       }
       setLoading(true);
+      setError(null);
       try {
         const res = await axios.get(`${API_URL}/dashboard/public/jogos`, { params });
         if (!ignore) setGames(res.data);
-      } catch {
-        if (!ignore) setGames([]);
+      } catch (e: any) {
+        if (!ignore) {
+          setGames([]);
+          setError('Erro ao carregar lista de jogos. Tente novamente.');
+        }
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -49,6 +66,7 @@ export default function DashboardPage() {
     let ignore = false;
     async function fetchData() {
       setLoading(true);
+      setError(null);
       try {
         if (selectedGame) {
           // Buscar dados de um jogo específico
@@ -76,10 +94,11 @@ export default function DashboardPage() {
             setPlayersStats(playersRes.data);
           }
         }
-      } catch {
+      } catch (e: any) {
         if (!ignore) {
           setOverview(null);
           setPlayersStats([]);
+          setError('Erro ao carregar dados do dashboard. Tente novamente.');
         }
       } finally {
         if (!ignore) setLoading(false);
@@ -88,6 +107,13 @@ export default function DashboardPage() {
     fetchData();
     // eslint-disable-next-line
   }, [dateFilter, selectedGame]);
+
+  // Buscar todas as jogadoras para o filtro
+  useEffect(() => {
+    axios.get(`${API_URL}/dashboard/public/jogadoras`).then(({ data }) => {
+      setAllPlayers(data);
+    });
+  }, []);
 
   // Sugestões de jogos para autocomplete
   const filteredGames = useMemo(() => {
@@ -98,27 +124,39 @@ export default function DashboardPage() {
     );
   }, [games, search]);
 
+  // Filtrar playersStats conforme filtros
+  const filteredPlayersStats = useMemo(() => {
+    let filtered = playersStats;
+    if (playerFilter) {
+      filtered = filtered.filter((p: any) => String(p.id) === playerFilter);
+    }
+    if (categoryFilter) {
+      filtered = filtered.filter((p: any) => p.categoria === categoryFilter);
+    }
+    return filtered;
+  }, [playersStats, playerFilter, categoryFilter]);
+
   // Destaques (exemplo: maior pontuadora, reboteira, assistente, aproveitamento)
-  const highlights = overview && playersStats.length > 0 ? [
+  const highlights = overview && filteredPlayersStats.length > 0 ? [
     {
       title: "PONTOS",
-      value: overview.jogadora_mais_pontos?.total_pontos || 0,
-      playerName: overview.jogadora_mais_pontos?.nome || '-',
-      playerImage: `/images/players/${overview.jogadora_mais_pontos?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
+      value: Math.max(...filteredPlayersStats.map(p => p.total_pontos || 0)),
+      playerName: filteredPlayersStats.reduce((a, b) => (a.total_pontos > b.total_pontos ? a : b), filteredPlayersStats[0])?.nome || '-',
+      playerImage: `/images/players/${filteredPlayersStats.reduce((a, b) => (a.total_pontos > b.total_pontos ? a : b), filteredPlayersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
       legend: "AACB Brasília Basquete",
     },
     {
       title: "TOTAL DE REBOTES",
-      value: Math.max(...playersStats.map(p => p.total_rebotes || 0)),
-      playerName: playersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), playersStats[0])?.nome || '-',
-      playerImage: `/images/players/${playersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), playersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
+      value: Math.max(...filteredPlayersStats.map(p => p.total_rebotes || 0)),
+      playerName: filteredPlayersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), filteredPlayersStats[0])?.nome || '-',
+      playerImage: `/images/players/${filteredPlayersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), filteredPlayersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
       legend: "AACB Brasília Basquete",
     },
     {
       title: "ASSISTÊNCIAS",
-      value: Math.max(...playersStats.map(p => p.total_assistencias || 0)),
-      playerName: playersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), playersStats[0])?.nome || '-',
-      playerImage: `/images/players/${playersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), playersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
+      value: Math.max(...filteredPlayersStats.map(p => p.total_assistencias || 0)),
+      playerName: filteredPlayersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), filteredPlayersStats[0])?.nome || '-',
+      playerImage: `/images/players/${filteredPlayersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), filteredPlayersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
       legend: "AACB Brasília Basquete",
     },
     {
@@ -131,7 +169,7 @@ export default function DashboardPage() {
   ] : [];
 
   // Dados para o gráfico
-  const playersChart = playersStats.map((p) => ({
+  const playersChart = filteredPlayersStats.map((p) => ({
     name: p.nome,
     Pontos: p.total_pontos,
     Rebotes: p.total_rebotes,
@@ -139,7 +177,7 @@ export default function DashboardPage() {
   }));
 
   // Dados para a tabela
-  const playersTable = playersStats.map((p, idx) => ({
+  const playersTable = filteredPlayersStats.map((p, idx) => ({
     no: p.numero,
     name: p.nome,
     pos: p.posicao,
@@ -167,8 +205,37 @@ export default function DashboardPage() {
     ef: 0,
   }));
 
+  // Dados para gráfico de linha (evolução por jogo)
+  const playerEvolutionData = useMemo(() => {
+    if (!playerFilter || !games.length) return [];
+    // Buscar estatísticas da jogadora por jogo
+    return games
+      .map((game: any) => {
+        const stats = playersStats.find((p: any) => String(p.id) === playerFilter && p.jogo_id === game.id);
+        return {
+          jogo: `${game.opponent} (${new Date(game.date).toLocaleDateString()})`,
+          pontos: stats ? stats.total_pontos : 0,
+        };
+      })
+      .filter((d) => d.pontos > 0);
+  }, [playerFilter, games, playersStats]);
+
+  // Dados para gráfico radar (desempenho individual)
+  const playerRadarData = useMemo(() => {
+    if (!playerFilter) return [];
+    const player = playersStats.find((p: any) => String(p.id) === playerFilter);
+    if (!player) return [];
+    return [
+      { stat: 'Pontos', valor: player.total_pontos || 0 },
+      { stat: 'Rebotes', valor: player.total_rebotes || 0 },
+      { stat: 'Assistências', valor: player.total_assistencias || 0 },
+      { stat: 'Roubos', valor: player.total_roubos || 0 },
+      { stat: 'Faltas', valor: player.total_faltas || 0 },
+    ];
+  }, [playerFilter, playersStats]);
+
   return (
-    <div className="p-8 mt-16">
+    <div className="p-4 md:p-8 mt-16">
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
         <div className="flex-1 md:max-w-xs">
           <DateFilterDropdown value={dateFilter} onChange={(v) => { setDateFilter(v); setSelectedGame(null); }} />
@@ -176,15 +243,16 @@ export default function DashboardPage() {
         <div className="flex-1 md:max-w-md relative">
           <input
             type="text"
-            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             placeholder="Buscar jogo pelo adversário ou local..."
             value={search}
             onChange={e => { setSearch(e.target.value); setSearchFocused(true); }}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+            aria-label="Buscar jogo pelo adversário ou local"
           />
           {searchFocused && filteredGames.length > 0 && (
-            <div className="absolute left-0 right-0 bg-white border rounded shadow-lg z-10 max-h-60 overflow-y-auto mt-1">
+            <div className="absolute left-0 right-0 bg-white border rounded shadow-lg z-10 max-h-60 overflow-y-auto mt-1" role="listbox" aria-label="Sugestões de jogos">
               {filteredGames.map((game: any) => (
                 <div
                   key={game.id}
@@ -194,6 +262,10 @@ export default function DashboardPage() {
                     setSearch(`${game.opponent} (${new Date(game.date).toLocaleDateString()})`);
                     setSearchFocused(false);
                   }}
+                  tabIndex={0}
+                  role="option"
+                  aria-selected={selectedGame?.id === game.id}
+                  onKeyDown={e => { if (e.key === 'Enter') { setSelectedGame(game); setSearch(`${game.opponent} (${new Date(game.date).toLocaleDateString()})`); setSearchFocused(false); } }}
                 >
                   <span className="font-semibold">{game.opponent}</span>
                   <span className="ml-2 text-xs text-gray-500">{new Date(game.date).toLocaleDateString()}</span>
@@ -203,15 +275,64 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
-      {loading ? (
-        <div className="text-center py-12 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-4" />
-          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
-          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
-          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
-          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
+        {/* Filtro de Jogadora */}
+        <div className="flex-1 md:max-w-xs">
+          <input
+            type="text"
+            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            placeholder="Filtrar por jogadora..."
+            value={playerFilter ? (allPlayers.find(p => String(p.id) === playerFilter)?.nome || '') : ''}
+            onChange={e => {
+              const nome = e.target.value.toLowerCase();
+              const found = allPlayers.find(p => p.nome.toLowerCase().includes(nome));
+              setPlayerFilter(found ? String(found.id) : '');
+            }}
+            list="players-list"
+            aria-label="Filtrar por jogadora"
+          />
+          <datalist id="players-list">
+            {allPlayers.map((p) => (
+              <option key={p.id} value={p.nome} />
+            ))}
+          </datalist>
         </div>
+        {/* Filtro de Categoria */}
+        <div className="flex-1 md:max-w-xs">
+          <select
+            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            aria-label="Filtrar por categoria"
+          >
+            {categorias.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Feedback de erro */}
+      {error && (
+        <div className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-3 rounded mb-6" role="alert">
+          <AlertCircle className="w-5 h-5" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Skeletons durante carregamento */}
+      {loading ? (
+        <>
+          {/* Skeleton dos cards de destaque */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-200 h-32 rounded-lg"></div>
+            ))}
+          </div>
+          {/* Skeleton do gráfico */}
+          <div className="bg-gray-200 h-64 rounded-lg mb-8 animate-pulse"></div>
+          {/* Skeleton da tabela */}
+          <div className="bg-gray-200 h-48 rounded-lg animate-pulse"></div>
+        </>
       ) : (
         <>
           {selectedGame && (
@@ -271,6 +392,40 @@ export default function DashboardPage() {
               <HighlightPlayerCard key={h.title} {...h} />
             ))}
           </div>
+          {playerFilter && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              {/* Gráfico de linha: evolução dos pontos */}
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Evolução dos Pontos por Jogo</h2>
+                <div className="w-full h-64 overflow-x-auto">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={playerEvolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <XAxis dataKey="jogo" tick={{ fontSize: 12 }} angle={-20} interval={0} height={60} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="pontos" stroke="#2563eb" strokeWidth={3} dot />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              {/* Gráfico radar: desempenho individual */}
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Radar de Desempenho Individual</h2>
+                <div className="w-full h-64 overflow-x-auto">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={playerRadarData} outerRadius={90}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="stat" />
+                      <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} />
+                      <Radar name="Desempenho" dataKey="valor" stroke="#2563eb" fill="#2563eb" fillOpacity={0.6} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </div>
+          )}
           <div className="w-full bg-white rounded shadow p-6 mb-8">
             <h3 className="font-bold text-lg mb-4">Comparativo das Jogadoras em Quadra</h3>
             <ResponsiveContainer width="100%" height={320}>

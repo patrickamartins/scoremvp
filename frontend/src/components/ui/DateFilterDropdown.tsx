@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const presets = [
   { label: "Hoje", value: "today" },
@@ -13,6 +13,36 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
   const [selectedPreset, setSelectedPreset] = useState(value?.preset || "today");
   const [customStart, setCustomStart] = useState(value?.start || "");
   const [customEnd, setCustomEnd] = useState(value?.end || "");
+  const firstRadioRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && firstRadioRef.current) {
+      firstRadioRef.current.focus();
+    }
+  }, [open]);
+
+  // Fechar com ESC
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  // Fechar ao clicar fora
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", handleClick);
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, [open]);
 
   function handleApply() {
     if (selectedPreset === "custom") {
@@ -43,14 +73,23 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
       <button
         className="flex items-center gap-2 px-4 py-2 bg-white border rounded shadow hover:bg-gray-50"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="date-filter-dropdown"
       >
         <span className="font-medium">{getLabel()}</span>
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
       {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 mt-2 z-50 bg-white border rounded shadow-lg w-[480px] p-4 animate-fade-in">
+        <div
+          id="date-filter-dropdown"
+          ref={dropdownRef}
+          className="absolute left-1/2 -translate-x-1/2 mt-2 z-50 bg-white border rounded shadow-lg w-[480px] p-4 animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="flex flex-col gap-2 mb-4">
-            {presets.map((preset) => (
+            {presets.map((preset, idx) => (
               <label key={preset.value} className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -58,6 +97,8 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
                   value={preset.value}
                   checked={selectedPreset === preset.value}
                   onChange={() => setSelectedPreset(preset.value)}
+                  ref={idx === 0 ? firstRadioRef : undefined}
+                  tabIndex={0}
                 />
                 <span>{preset.label}</span>
               </label>
@@ -72,6 +113,7 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
                   className="border rounded px-2 py-1 w-full"
+                  tabIndex={0}
                 />
               </div>
               <div className="flex flex-col gap-2 flex-1">
@@ -81,6 +123,7 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
                   className="border rounded px-2 py-1 w-full"
+                  tabIndex={0}
                 />
               </div>
             </div>
@@ -89,12 +132,14 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
             <button
               className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
               onClick={() => setOpen(false)}
+              tabIndex={0}
             >
               Cancelar
             </button>
             <button
               className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
               onClick={handleApply}
+              tabIndex={0}
             >
               Aplicar
             </button>

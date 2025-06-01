@@ -142,17 +142,40 @@ export interface Estatistica {
   rebotes: number;
   roubos: number;
   faltas: number;
-  quarto?: number;
+  interferencia: number;
+  quarto: number;
 }
 
-export type EstatisticaCreatePayload = Omit<Estatistica, 'id'> & {
-  quarto?: number;
-};
+export interface EstatisticasQuarto {
+  quarto: number;
+  total_pontos: number;
+  total_assistencias: number;
+  total_rebotes: number;
+  total_roubos: number;
+  total_faltas: number;
+}
+
+export interface EstatisticasResumo {
+  total_pontos: number;
+  total_assistencias: number;
+  total_rebotes: number;
+  total_roubos: number;
+  total_faltas: number;
+  por_quarto: EstatisticasQuarto[];
+}
+
+export type EstatisticaCreatePayload = Omit<Estatistica, 'id'>;
 
 export function getEstatisticasByJogo(
   jogoId: number | string
 ): Promise<AxiosResponse<Estatistica[]>> {
   return api.get<Estatistica[]>(`/estatisticas/jogo/${jogoId}`);
+}
+
+export function getEstatisticasResumo(
+  jogoId: number | string
+): Promise<AxiosResponse<EstatisticasResumo>> {
+  return api.get<EstatisticasResumo>(`/estatisticas/jogo/${jogoId}/resumo`);
 }
 
 export function createEstatistica(

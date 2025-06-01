@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { Card } from "./ui/Card";
+import { toast } from 'sonner';
 
 interface Player {
   id: number;
@@ -30,6 +31,9 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
   const [lanceTentativas, setLanceTentativas] = useState<number>(0);
   const [lanceAcertos, setLanceAcertos] = useState<number>(0);
   const [interferencia, setInterferencia] = useState<number>(0);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const playerSelectRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     api.get('/jogadoras').then(({ data }) => {
@@ -37,10 +41,20 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
     });
   }, []);
 
+  useEffect(() => {
+    if (playerSelectRef.current) {
+      playerSelectRef.current.focus();
+    }
+  }, [players]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlayer) return;
-
+    setFormError(null);
+    if (!selectedPlayer) {
+      setFormError('Selecione uma jogadora.');
+      return;
+    }
+    setSaving(true);
     try {
       await api.post(`/jogos/${gameId}/stats`, {
         jogadora_id: selectedPlayer,
@@ -58,7 +72,6 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
         lance_acertos: lanceAcertos,
         interferencia
       });
-
       // Limpar formulário
       setSelectedPlayer(null);
       setQuarto(1);
@@ -74,11 +87,13 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
       setLanceTentativas(0);
       setLanceAcertos(0);
       setInterferencia(0);
-
-      // Notificar componente pai
+      toast.success('Estatísticas salvas com sucesso!');
       onSubmit();
     } catch (error) {
-      console.error('Erro ao salvar estatísticas:', error);
+      setFormError('Erro ao salvar estatísticas. Tente novamente.');
+      toast.error('Erro ao salvar estatísticas.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -90,10 +105,14 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
             <div>
               <label className="block text-sm font-medium text-gray-700">Jogadora</label>
               <select
+                ref={playerSelectRef}
                 value={selectedPlayer || ""}
                 onChange={(e) => setSelectedPlayer(Number(e.target.value))}
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
+                autoFocus
               >
                 <option value="">Selecione uma jogadora</option>
                 {players.map((player) => (
@@ -110,6 +129,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 onChange={(e) => setQuarto(Number(e.target.value))}
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               >
                 <option value={1}>1º Quarto</option>
                 <option value={2}>2º Quarto</option>
@@ -125,6 +146,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={pontos}
                 onChange={(e) => setPontos(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -135,6 +158,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={assistencias}
                 onChange={(e) => setAssistencias(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -145,6 +170,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={rebotes}
                 onChange={(e) => setRebotes(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -155,6 +182,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={roubos}
                 onChange={(e) => setRoubos(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -165,6 +194,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={faltas}
                 onChange={(e) => setFaltas(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -175,6 +206,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={doisTentativas}
                 onChange={(e) => setDoisTentativas(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -186,6 +219,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={doisAcertos}
                 onChange={(e) => setDoisAcertos(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -196,6 +231,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={tresTentativas}
                 onChange={(e) => setTresTentativas(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -207,6 +244,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={tresAcertos}
                 onChange={(e) => setTresAcertos(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -217,6 +256,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={lanceTentativas}
                 onChange={(e) => setLanceTentativas(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -228,6 +269,8 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={lanceAcertos}
                 onChange={(e) => setLanceAcertos(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
             <div>
@@ -238,20 +281,27 @@ export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) 
                 value={interferencia}
                 onChange={(e) => setInterferencia(Number(e.target.value))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                tabIndex={0}
+                disabled={saving}
               />
             </div>
           </div>
-          <div>
-            <button
-              type="submit"
-              disabled={!selectedPlayer}
-              className="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              Salvar Estatísticas
-            </button>
-          </div>
+          {formError && <div className="text-red-500 text-sm">{formError}</div>}
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold mt-2 flex items-center justify-center disabled:opacity-50"
+            disabled={saving}
+            tabIndex={0}
+          >
+            {saving ? <span className="loader mr-2"></span> : null}
+            {saving ? 'Salvando...' : 'Salvar Estatísticas'}
+          </button>
         </form>
       </Card>
     </div>
   );
-} 
+}
+
+// Loader CSS
+// .loader { border: 2px solid #f3f3f3; border-top: 2px solid #2563eb; border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite; }
+// @keyframes spin { 100% { transform: rotate(360deg); } } 
