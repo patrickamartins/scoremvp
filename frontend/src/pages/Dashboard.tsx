@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card } from "../components/ui/Card";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { DateRangePicker } from "../components/ui/DateRangePicker";
+import { DateFilterDropdown } from "../components/ui/DateFilterDropdown";
 import { HighlightPlayerCard } from "../components/ui/HighlightPlayerCard";
 import { PlayersStatsTable } from "../components/ui/PlayersStatsTable";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -117,32 +117,15 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 mt-16">
-      <DateRangePicker onChange={setDateFilter} />
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <DateFilterDropdown value={dateFilter} onChange={setDateFilter} />
+      </div>
       {loading ? (
         <div className="text-center py-12">Carregando...</div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-4 mb-8 justify-center">
-            {highlights.map((h) => (
-              <HighlightPlayerCard key={h.title} {...h} />
-            ))}
-          </div>
-          <div className="w-full bg-white rounded shadow p-6 mb-8">
-            <h3 className="font-bold text-lg mb-4">Comparativo das Jogadoras em Quadra</h3>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={playersChart} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Pontos" fill="#2563eb" />
-                <Bar dataKey="Rebotes" fill="#f59e42" />
-                <Bar dataKey="Assistências" fill="#10b981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <PlayersStatsTable data={playersTable} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="p-6 text-center">
               <div className="text-4xl font-bold text-blue-600">{overview?.total_jogos ?? '-'}</div>
               <div className="text-gray-500 mt-2">Jogos</div>
@@ -168,6 +151,26 @@ export default function DashboardPage() {
               <div className="text-gray-500 mt-2">Faltas</div>
             </Card>
           </div>
+          <div className="flex flex-wrap gap-4 mb-8 justify-center">
+            {highlights.map((h) => (
+              <HighlightPlayerCard key={h.title} {...h} />
+            ))}
+          </div>
+          <div className="w-full bg-white rounded shadow p-6 mb-8">
+            <h3 className="font-bold text-lg mb-4">Comparativo das Jogadoras em Quadra</h3>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={playersChart} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Pontos" fill="#2563eb" />
+                <Bar dataKey="Rebotes" fill="#f59e42" />
+                <Bar dataKey="Assistências" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <PlayersStatsTable data={playersTable} />
         </>
       )}
     </div>
