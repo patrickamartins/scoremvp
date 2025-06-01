@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 from pydantic_settings import BaseSettings
 from pydantic import validator
 import secrets
+import os
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ScoreMVP"
@@ -23,7 +24,9 @@ class Settings(BaseSettings):
     
     # MailerSend
     MAILERSEND_API_KEY: str
-    MAILERSEND_SENDER_EMAIL: str
+    MAILERSEND_SMTP_USERNAME = os.getenv("MAILERSEND_SMTP_USERNAME", "MS_2OIjID@test-r83ql3pewnpgzw1j.mlsender.net")
+    MAILERSEND_SMTP_PASSWORD = os.getenv("MAILERSEND_SMTP_PASSWORD", "mssp.Rjuq8ul.v69oxl59vpkg785k.YjyLdof")
+    MAILERSEND_SENDER_EMAIL = os.getenv("MAILERSEND_SENDER_EMAIL", "no-reply@scoremvp.com.br")
     MAILERSEND_SENDER_NAME: str = "ScoreMVP"
     
     # Frontend URL

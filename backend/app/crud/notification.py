@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.models.notification import Notification, UserNotification, NotificationTarget
 from app.models.user import User
 from app.schemas.notification import NotificationCreate
+from app.core.email import email_service
 
 def create_notification(db: Session, notification: NotificationCreate, creator_id: int) -> Notification:
     db_notification = Notification(
@@ -24,6 +25,12 @@ def create_notification(db: Session, notification: NotificationCreate, creator_i
         users = users.filter(User.role == "mvp")
     elif notification.target == NotificationTarget.TEAM:
         users = users.filter(User.role == "team")
+    elif notification.target == NotificationTarget.ADMIN:
+        users = users.filter(User.role == "admin")
+    elif notification.target == NotificationTarget.COACH:
+        users = users.filter(User.role == "coach")
+    elif notification.target == NotificationTarget.ANALYST:
+        users = users.filter(User.role == "analyst")
 
     for user in users.all():
         user_notification = UserNotification(
@@ -31,6 +38,12 @@ def create_notification(db: Session, notification: NotificationCreate, creator_i
             notification_id=db_notification.id
         )
         db.add(user_notification)
+        # Enviar e-mail
+        subject = notification.content[:50] + ("..." if len(notification.content) > 50 else "")
+        body = f"<p>{notification.content}</p>"
+        if notification.url:
+            body += f'<p><a href="{notification.url}">Acessar</a></p>'
+        email_service.send_notification_email(user.email, subject, body)
 
     db.commit()
     db.refresh(db_notification)
