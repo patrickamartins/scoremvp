@@ -4,7 +4,13 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui';
 
 const publics = [
   { value: 'all', label: 'Todos os usuários' },
@@ -132,7 +138,7 @@ export default function NotificacoesPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="public">Público-alvo</Label>
-                <Select name="public" value={form.public} onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, public: value }))}>
+                <Select value={form.public} onValueChange={(value) => setForm(prev => ({ ...prev, public: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o público-alvo" />
                   </SelectTrigger>

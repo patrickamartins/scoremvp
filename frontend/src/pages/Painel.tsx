@@ -35,6 +35,7 @@ const Painel: React.FC = () => {
     horario: "",
     local: "",
     categoria: categorias[0],
+    campeonato: "",
   });
   const [gameFormError, setGameFormError] = useState("");
   const [gameSaved, setGameSaved] = useState(false);
@@ -285,6 +286,16 @@ const Painel: React.FC = () => {
               value={gameForm.local}
               onChange={handleGameFormChange}
               placeholder="Local do jogo"
+            />
+          </div>
+          <div>
+            <Label htmlFor="campeonato">Campeonato</Label>
+            <Input
+              id="campeonato"
+              name="campeonato"
+              value={gameForm.campeonato}
+              onChange={handleGameFormChange}
+              placeholder="Nome do campeonato"
             />
           </div>
           {gameFormError && <div className="text-red-500 text-sm md:col-span-2">{gameFormError}</div>}

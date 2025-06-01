@@ -192,6 +192,42 @@ export default function UsuariosPage() {
       </div>
       {/* Modal de edição/criação */}
       {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded shadow w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold">{modalMode === 'edit' ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <form className="space-y-4">
+                <div>
+                  <Label>Nome</Label>
+                  <Input type="text" name="name" value={form.name} onChange={handleFormChange} />
+                </div>
+                <div>
+                  <Label>E-mail</Label>
+                  <Input type="email" name="email" value={form.email} onChange={handleFormChange} />
+                </div>
+                <div>
+                  <Label>Tipo de usuário</Label>
+                  <select name="type" value={form.type} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
+                    {tiposUsuario.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label>Plano</Label>
+                  <select name="plan" value={form.plan} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
+                    {planos.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Time do coração</Label>
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded shadow max-w-lg w-full">
             <h2 className="text-xl font-bold mb-4">{modalMode === 'edit' ? 'Editar Usuário' : 'Novo Usuário'}</h2>
