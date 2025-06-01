@@ -228,91 +228,59 @@ export default function UsuariosPage() {
                 </div>
                 <div>
                   <Label>Time do coração</Label>
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded shadow max-w-lg w-full">
-            <h2 className="text-xl font-bold mb-4">{modalMode === 'edit' ? 'Editar Usuário' : 'Novo Usuário'}</h2>
-            <form className="space-y-4">
-              <div>
-                <Label>Nome</Label>
-                <Input type="text" name="name" value={form.name} onChange={handleFormChange} />
-              </div>
-              <div>
-                <Label>E-mail</Label>
-                <Input type="email" name="email" value={form.email} onChange={handleFormChange} />
-              </div>
-              <div>
-                <Label>Tipo de usuário</Label>
-                <select name="type" value={form.type} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
-                  {tiposUsuario.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label>Plano</Label>
-                <select name="plan" value={form.plan} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
-                  {planos.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label>Status</Label>
-                <select name="status" value={form.status} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
-              </div>
-              <div>
-                <Label>Time do coração</Label>
-                <Input type="text" name="favoriteTeam" value={form.favoriteTeam} onChange={handleFormChange} />
-              </div>
-              <div>
-                <Label>Time que joga</Label>
-                <Input type="text" name="team" value={form.team} onChange={handleFormChange} />
-              </div>
-              <div>
-                <Label>CPF/CNPJ</Label>
-                <Input type="text" name="document" value={form.document} onChange={handleFormChange} />
-              </div>
-              {modalMode === 'edit' && (
-                <>
-                  <div className="pt-4 border-t mt-4">
-                    <h3 className="font-semibold mb-2">Assinatura</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-xs text-gray-500">Plano atual:</span>
-                        <div className="font-bold">{planos.find(p => p.value === form.plan)?.label}</div>
+                  <Input type="text" name="favoriteTeam" value={form.favoriteTeam} onChange={handleFormChange} />
+                </div>
+                <div>
+                  <Label>Time que joga</Label>
+                  <Input type="text" name="team" value={form.team} onChange={handleFormChange} />
+                </div>
+                <div>
+                  <Label>CPF/CNPJ</Label>
+                  <Input type="text" name="document" value={form.document} onChange={handleFormChange} />
+                </div>
+                {modalMode === 'edit' && (
+                  <>
+                    <div className="pt-4 border-t mt-4">
+                      <h3 className="font-semibold mb-2">Assinatura</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-xs text-gray-500">Plano atual:</span>
+                          <div className="font-bold">{planos.find(p => p.value === form.plan)?.label}</div>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500">Última cobrança:</span>
+                          <div>{form.lastCharge}</div>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500">Próxima cobrança:</span>
+                          <div>{form.nextCharge}</div>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500">Cartão cadastrado:</span>
+                          <div>{form.cardBrand} {form.card}</div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-xs text-gray-500">Última cobrança:</span>
-                        <div>{form.lastCharge}</div>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-500">Próxima cobrança:</span>
-                        <div>{form.nextCharge}</div>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-500">Cartão cadastrado:</span>
-                        <div>{form.cardBrand} {form.card}</div>
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="destructive" size="sm" type="button" onClick={handleCancelSubscription}>Cancelar assinatura</Button>
+                        <Button variant="outline" size="sm" type="button" onClick={handleChangeCard}>Trocar método de pagamento</Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-2">
-                      <Button variant="destructive" size="sm" type="button" onClick={handleCancelSubscription}>Cancelar assinatura</Button>
-                      <Button variant="outline" size="sm" type="button" onClick={handleChangeCard}>Trocar método de pagamento</Button>
+                  </>
+                )}
+                {modalMode === 'create' && (
+                  <>
+                    <div>
+                      <Label>Senha inicial</Label>
+                      <Input type="password" name="password" value={form.password || ''} onChange={handleFormChange} />
                     </div>
-                  </div>
-                </>
-              )}
-              {modalMode === 'create' && (
-                <>
-                  <div>
-                    <Label>Senha inicial</Label>
-                    <Input type="password" name="password" value={form.password || ''} onChange={handleFormChange} />
-                  </div>
-                </>
-              )}
-              <div className="flex gap-4 mt-6">
-                <Button type="button" onClick={handleSave}>Salvar alterações</Button>
-                <Button type="button" variant="outline" onClick={handleCancel}>Cancelar</Button>
-              </div>
-            </form>
+                  </>
+                )}
+                <div className="flex gap-4 mt-6">
+                  <Button type="button" onClick={handleSave}>Salvar alterações</Button>
+                  <Button type="button" variant="outline" onClick={handleCancel}>Cancelar</Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
