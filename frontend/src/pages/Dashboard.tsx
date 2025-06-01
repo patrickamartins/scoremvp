@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card } from "../components/ui/Card";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { DateFilterDropdown } from "../components/ui/DateFilterDropdown";
@@ -17,35 +17,86 @@ export default function DashboardPage() {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<any>({ preset: 'today' });
+  const [search, setSearch] = useState('');
+  const [selectedGame, setSelectedGame] = useState<any>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
 
+  // Buscar lista de jogos do período
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
+    let ignore = false;
+    async function fetchGames() {
       let params: any = {};
       if (dateFilter.preset === 'custom') {
         if (dateFilter.start) params.data_inicio = dateFilter.start;
         if (dateFilter.end) params.data_fim = dateFilter.end;
       }
-      // Para presets, pode-se implementar lógica de datas aqui se necessário
+      setLoading(true);
       try {
-        const [overviewRes, playersRes, gamesRes] = await Promise.all([
-          axios.get(`${API_URL}/dashboard/public/overview`, { params }),
-          axios.get(`${API_URL}/dashboard/public/jogadoras`, { params }),
-          axios.get(`${API_URL}/dashboard/public/jogos`, { params }),
-        ]);
-        setOverview(overviewRes.data);
-        setPlayersStats(playersRes.data);
-        setGames(gamesRes.data);
-      } catch (err) {
-        setOverview(null);
-        setPlayersStats([]);
-        setGames([]);
+        const res = await axios.get(`${API_URL}/dashboard/public/jogos`, { params });
+        if (!ignore) setGames(res.data);
+      } catch {
+        if (!ignore) setGames([]);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
+      }
+    }
+    fetchGames();
+    return () => { ignore = true; };
+  }, [dateFilter]);
+
+  // Buscar dados do dashboard (overview e jogadoras)
+  useEffect(() => {
+    let ignore = false;
+    async function fetchData() {
+      setLoading(true);
+      try {
+        if (selectedGame) {
+          // Buscar dados de um jogo específico
+          const [overviewRes, playersRes] = await Promise.all([
+            axios.get(`${API_URL}/dashboard/public/overview`, { params: { jogo_id: selectedGame.id } }),
+            axios.get(`${API_URL}/dashboard/public/jogadoras`, { params: { jogo_id: selectedGame.id } }),
+          ]);
+          if (!ignore) {
+            setOverview(overviewRes.data);
+            setPlayersStats(playersRes.data);
+          }
+        } else {
+          // Buscar dados gerais do período
+          let params: any = {};
+          if (dateFilter.preset === 'custom') {
+            if (dateFilter.start) params.data_inicio = dateFilter.start;
+            if (dateFilter.end) params.data_fim = dateFilter.end;
+          }
+          const [overviewRes, playersRes] = await Promise.all([
+            axios.get(`${API_URL}/dashboard/public/overview`, { params }),
+            axios.get(`${API_URL}/dashboard/public/jogadoras`, { params }),
+          ]);
+          if (!ignore) {
+            setOverview(overviewRes.data);
+            setPlayersStats(playersRes.data);
+          }
+        }
+      } catch {
+        if (!ignore) {
+          setOverview(null);
+          setPlayersStats([]);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
       }
     }
     fetchData();
-  }, [dateFilter]);
+    // eslint-disable-next-line
+  }, [dateFilter, selectedGame]);
+
+  // Sugestões de jogos para autocomplete
+  const filteredGames = useMemo(() => {
+    if (!search) return games;
+    return games.filter((g: any) =>
+      g.opponent.toLowerCase().includes(search.toLowerCase()) ||
+      (g.location && g.location.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [games, search]);
 
   // Destaques (exemplo: maior pontuadora, reboteira, assistente, aproveitamento)
   const highlights = overview && playersStats.length > 0 ? [
@@ -72,7 +123,7 @@ export default function DashboardPage() {
     },
     {
       title: "APROVEITAMENTO",
-      value: '—', // Não há campo direto, pode ser calculado se disponível
+      value: '—',
       playerName: '-',
       playerImage: `/images/players/default.jpg`,
       legend: "AACB Brasília Basquete",
@@ -85,12 +136,9 @@ export default function DashboardPage() {
     Pontos: p.total_pontos,
     Rebotes: p.total_rebotes,
     Assistências: p.total_assistencias,
-    // Aproveitamento: p.aproveitamento || 0, // Se disponível
   }));
 
-  // Dados para a tabela (ajustar conforme estrutura real do backend)
-  // Aqui é necessário mapear os campos do backend para o formato esperado pela tabela
-  // Exemplo simplificado:
+  // Dados para a tabela
   const playersTable = playersStats.map((p, idx) => ({
     no: p.numero,
     name: p.nome,
@@ -121,30 +169,95 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 mt-16">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <DateFilterDropdown value={dateFilter} onChange={setDateFilter} />
-      </div>
-      {loading ? (
-        <div className="text-center py-12">Carregando...</div>
-      ) : (
-        <>
-          <Card className="p-6 mb-8">
-            <h2 className="text-lg font-bold mb-4">Jogos no período selecionado</h2>
-            <div className="space-y-2">
-              {games.length === 0 && <div className="text-gray-500">Nenhum jogo encontrado</div>}
-              {games.map((game) => (
-                <div key={game.id} className="flex flex-col md:flex-row md:items-center md:justify-between border-b last:border-b-0 py-2">
-                  <div>
-                    <span className="font-semibold">{new Date(game.date).toLocaleDateString()}</span>
-                    <span className="ml-2">vs {game.opponent}</span>
-                    <span className="ml-2 text-xs text-gray-500">({game.status})</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 md:mt-0">{game.location}</div>
+      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
+        <div className="flex-1 md:max-w-xs">
+          <DateFilterDropdown value={dateFilter} onChange={(v) => { setDateFilter(v); setSelectedGame(null); }} />
+        </div>
+        <div className="flex-1 md:max-w-md relative">
+          <input
+            type="text"
+            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Buscar jogo pelo adversário ou local..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setSearchFocused(true); }}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+          />
+          {searchFocused && filteredGames.length > 0 && (
+            <div className="absolute left-0 right-0 bg-white border rounded shadow-lg z-10 max-h-60 overflow-y-auto mt-1">
+              {filteredGames.map((game: any) => (
+                <div
+                  key={game.id}
+                  className="px-4 py-2 cursor-pointer hover:bg-blue-50"
+                  onClick={() => {
+                    setSelectedGame(game);
+                    setSearch(`${game.opponent} (${new Date(game.date).toLocaleDateString()})`);
+                    setSearchFocused(false);
+                  }}
+                >
+                  <span className="font-semibold">{game.opponent}</span>
+                  <span className="ml-2 text-xs text-gray-500">{new Date(game.date).toLocaleDateString()}</span>
+                  <span className="ml-2 text-xs text-gray-400">{game.location}</span>
                 </div>
               ))}
             </div>
-          </Card>
+          )}
+        </div>
+      </div>
+      {loading ? (
+        <div className="text-center py-12 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-4" />
+          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
+          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
+          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
+          <div className="h-6 bg-gray-100 rounded w-1/2 mx-auto mb-2" />
+        </div>
+      ) : (
+        <>
+          {selectedGame && (
+            <Card className="p-6 mb-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
+                <div>
+                  <div className="text-lg font-bold mb-1">
+                    {selectedGame.opponent} <span className="text-gray-500 font-normal">vs</span> AACB Brasília
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {selectedGame.location} &bull; {selectedGame.categoria || '-'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {selectedGame.campeonato || 'Campeonato não informado'}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-700 font-medium">
+                    {selectedGame.date ? new Date(selectedGame.date).toLocaleDateString() : '-'}
+                    {selectedGame.date ? ' - ' + new Date(selectedGame.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Status: {selectedGame.status}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+          {!selectedGame && (
+            <Card className="p-6 mb-8">
+              <h2 className="text-lg font-bold mb-4">Jogos no período selecionado</h2>
+              <div className="space-y-2">
+                {games.length === 0 && <div className="text-gray-500">Nenhum jogo encontrado</div>}
+                {games.map((game) => (
+                  <div key={game.id} className="flex flex-col md:flex-row md:items-center md:justify-between border-b last:border-b-0 py-2">
+                    <div>
+                      <span className="font-semibold">{new Date(game.date).toLocaleDateString()}</span>
+                      <span className="ml-2">vs {game.opponent}</span>
+                      <span className="ml-2 text-xs text-gray-500">({game.status})</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 md:mt-0">{game.location}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="p-6 text-center">
               <div className="text-4xl font-bold text-blue-600">{overview?.total_jogos ?? '-'}</div>
