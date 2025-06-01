@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { createGame, createEstatistica, getPlayers, getEstatisticasByJogo } from "../services/api";
+import { createGame, createEstatistica, getPlayers, getEstatisticasByJogo, updateGame } from "../services/api";
 import { toast } from "sonner";
 
 interface Player {
@@ -77,6 +77,9 @@ const Painel: React.FC = () => {
   const nomeInputRef = useRef<HTMLInputElement>(null);
 
   const [savingPlayer, setSavingPlayer] = useState(false);
+
+  // Adicionar status da partida
+  const [gameStatus, setGameStatus] = useState<'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA'>('PENDENTE');
 
   // Carregar jogadores e inicializar estatísticas
   useEffect(() => {
@@ -228,6 +231,7 @@ const Painel: React.FC = () => {
       const res = await createGame(payload);
       setGameId(res.data.id);
       setGameSaved(true);
+      setGameStatus('PENDENTE');
       toast.success("Jogo salvo com sucesso!");
     } catch (err: any) {
       setGameSaved(false);
@@ -242,24 +246,35 @@ const Painel: React.FC = () => {
     }
   };
 
+  // Atualizar status para EM_ANDAMENTO ao iniciar estatísticas
+  useEffect(() => {
+    if (gameSaved && gameStatus === 'PENDENTE' && Object.values(stats[selectedQuarto] || {}).some(s => s.dois.tentativas > 0 || s.tres.tentativas > 0 || s.lance.tentativas > 0 || s.rebotes > 0 || s.assistencias > 0 || s.faltas > 0 || s.tocos > 0 || s.turnovers > 0 || s.roubos > 0 || s.interferencia > 0)) {
+      setGameStatus('EM_ANDAMENTO');
+    }
+  }, [stats, gameSaved, gameStatus, selectedQuarto]);
+
+  // Função para finalizar partida
+  const handleFinalizarPartida = async () => {
+    if (!gameId) return;
+    try {
+      await updateGame(gameId, { status: 'FINALIZADA' });
+      setGameStatus('FINALIZADA');
+      toast.success('Partida finalizada!');
+    } catch {
+      toast.error('Erro ao finalizar partida.');
+    }
+  };
+
   function handleShot(playerId: number, tipo: 'dois' | 'tres' | 'lance') {
+    // Salvar estado atual no histórico antes de modificar
+    setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
+
     // Se já existe um pendingShot para esse jogador e tipo, registrar acerto
     if (pendingShot && pendingShot.playerId === playerId && pendingShot.tipo === tipo) {
       clearTimeout(pendingShot.timeout!);
       setStats((prev) => {
-        const quartoStats = prev[selectedQuarto] || {};
-        const playerStats = quartoStats[playerId] || {
-          dois: { tentativas: 0, acertos: 0 },
-          tres: { tentativas: 0, acertos: 0 },
-          lance: { tentativas: 0, acertos: 0 },
-          rebotes: 0,
-          assistencias: 0,
-          faltas: 0,
-          tocos: 0,
-          turnovers: 0,
-          roubos: 0,
-          interferencia: 0,
-        };
+        const quartoStats = { ...prev[selectedQuarto] };
+        const playerStats = { ...quartoStats[playerId] };
         return {
           ...prev,
           [selectedQuarto]: {
@@ -277,22 +292,12 @@ const Painel: React.FC = () => {
       setPendingShot(null);
       return;
     }
+
     // Se não, registrar tentativa e aguardar 3s para acerto
     const timeout = setTimeout(() => {
       setStats((prev) => {
-        const quartoStats = prev[selectedQuarto] || {};
-        const playerStats = quartoStats[playerId] || {
-          dois: { tentativas: 0, acertos: 0 },
-          tres: { tentativas: 0, acertos: 0 },
-          lance: { tentativas: 0, acertos: 0 },
-          rebotes: 0,
-          assistencias: 0,
-          faltas: 0,
-          tocos: 0,
-          turnovers: 0,
-          roubos: 0,
-          interferencia: 0,
-        };
+        const quartoStats = { ...prev[selectedQuarto] };
+        const playerStats = { ...quartoStats[playerId] };
         return {
           ...prev,
           [selectedQuarto]: {
@@ -313,24 +318,22 @@ const Painel: React.FC = () => {
   }
 
   function handleStatButton(playerId: number, stat: keyof EstatisticasJogadora, delta: number) {
+    // Salvar estado atual no histórico antes de modificar
+    setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
+
     setStats((prev) => {
-      const quartoStats = prev[selectedQuarto] || {};
-      const playerStats = quartoStats[playerId] || {
-        dois: { tentativas: 0, acertos: 0 },
-        tres: { tentativas: 0, acertos: 0 },
-        lance: { tentativas: 0, acertos: 0 },
-        rebotes: 0,
-        assistencias: 0,
-        faltas: 0,
-        tocos: 0,
-        turnovers: 0,
-        roubos: 0,
-        interferencia: 0,
-      };
+      const quartoStats = { ...prev[selectedQuarto] };
+      const playerStats = { ...quartoStats[playerId] };
       // Só incrementa/decrementa se for campo numérico
       const isNumberField = [
         'rebotes', 'assistencias', 'faltas', 'tocos', 'turnovers', 'roubos', 'interferencia'
       ].includes(stat);
+
+      // Atualizar status do jogo para EM_ANDAMENTO se ainda estiver PENDENTE
+      if (gameStatus === 'PENDENTE') {
+        setGameStatus('EM_ANDAMENTO');
+      }
+
       return {
         ...prev,
         [selectedQuarto]: {
@@ -347,16 +350,29 @@ const Painel: React.FC = () => {
   }
 
   const handleUndo = () => {
-    if (history.length === 0) return;
+    if (history.length === 0) {
+      toast.error("Não há ações para desfazer");
+      return;
+    }
     const last = history[history.length - 1];
     setStats((prev) => ({
       ...prev,
       [selectedQuarto]: last.stats[selectedQuarto],
     }));
     setHistory((prev) => prev.slice(0, -1));
+    toast.success("Ação desfeita com sucesso");
   };
 
   const handleReset = () => {
+    if (Object.values(stats[selectedQuarto] || {}).every(s => 
+      s.dois.tentativas === 0 && s.tres.tentativas === 0 && s.lance.tentativas === 0 && 
+      s.rebotes === 0 && s.assistencias === 0 && s.faltas === 0 && 
+      s.tocos === 0 && s.turnovers === 0 && s.roubos === 0 && s.interferencia === 0
+    )) {
+      toast.error("Não há estatísticas para zerar");
+      return;
+    }
+
     setHistory((prev) => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
     setStats((prev) => {
       const reseted: Record<number, Record<number, EstatisticasJogadora>> = {};
@@ -379,6 +395,7 @@ const Painel: React.FC = () => {
       });
       return reseted;
     });
+    toast.success("Estatísticas zeradas com sucesso");
   };
 
   const handleSaveStats = async () => {
@@ -569,54 +586,178 @@ const Painel: React.FC = () => {
                       <td className="border px-2 py-1">{p.nome}</td>
                       <td className="border px-2 py-1">{p.numero}</td>
                       <td className="border px-2 py-1">
-                        <button
-                          className={`px-2 py-1 rounded font-bold mr-2 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois' ? 'bg-blue-400 text-white animate-pulse' : 'bg-blue-100 text-blue-900 hover:bg-blue-200'}`}
-                          onClick={() => handleShot(p.id, 'dois')}
-                          type="button"
-                        >
-                          2PT ({s.dois.tentativas}/{s.dois.acertos})
-                        </button>
-                        <button
-                          className={`px-2 py-1 rounded font-bold mr-2 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres' ? 'bg-green-400 text-white animate-pulse' : 'bg-green-100 text-green-900 hover:bg-green-200'}`}
-                          onClick={() => handleShot(p.id, 'tres')}
-                          type="button"
-                        >
-                          3PT ({s.tres.tentativas}/{s.tres.acertos})
-                        </button>
-                        <button
-                          className={`px-2 py-1 rounded font-bold ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance' ? 'bg-yellow-400 text-white animate-pulse' : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'}`}
-                          onClick={() => handleShot(p.id, 'lance')}
-                          type="button"
-                        >
-                          LL ({s.lance.tentativas}/{s.lance.acertos})
-                        </button>
-                      </td>
-                      <td className="border px-2 py-1">
-                        <button className="px-2 py-1 bg-purple-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'assistencias', 1)} type="button">+1</button>
-                        <span className="mx-2">{s.assistencias}</span>
-                        <button className="px-2 py-1 bg-purple-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'assistencias', -1)} type="button">-1</button>
-                      </td>
-                      <td className="border px-2 py-1">
-                        <button className="px-2 py-1 bg-pink-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebotes', 1)} type="button">+1</button>
-                        <span className="mx-2">{s.rebotes}</span>
-                        <button className="px-2 py-1 bg-pink-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebotes', -1)} type="button">-1</button>
-                      </td>
-                      <td className="border px-2 py-1">
-                        <button className="px-2 py-1 bg-orange-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'roubos', 1)} type="button">+1</button>
-                        <span className="mx-2">{s.roubos}</span>
-                        <button className="px-2 py-1 bg-orange-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'roubos', -1)} type="button">-1</button>
-                      </td>
-                      <td className={`border px-2 py-1 ${faltas === 3 ? 'bg-yellow-200' : ''} ${faltas >= 4 ? 'bg-red-200' : ''}`}>
-                        <button className="px-2 py-1 bg-red-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'faltas', 1)} type="button">+1</button>
-                        <span className="mx-2">{faltas}</span>
-                        <button className="px-2 py-1 bg-red-100 rounded font-bold" onClick={() => handleStatButton(p.id, 'faltas', -1)} type="button">-1</button>
-                        {faltas === 3 && <span className="ml-2 text-yellow-700 font-bold">⚠ 3 Faltas</span>}
-                        {faltas === 4 && <span className="ml-2 text-red-700 font-bold">⚠ 4 Faltas</span>}
-                      </td>
-                      <td className="border px-2 py-1">
-                        <button className="px-2 py-1 bg-gray-200 rounded font-bold mr-1" onClick={() => handleStatButton(p.id, 'tocos', 1)} type="button">Toco +1</button>
-                        <button className="px-2 py-1 bg-gray-200 rounded font-bold mr-1" onClick={() => handleStatButton(p.id, 'turnovers', 1)} type="button">TO +1</button>
-                        <button className="px-2 py-1 bg-gray-200 rounded font-bold" onClick={() => handleStatButton(p.id, 'interferencia', 1)} type="button">Interf +1</button>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
+                                pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois'
+                                  ? 'bg-blue-500 text-white scale-105 shadow-lg'
+                                  : 'bg-blue-100 text-blue-900 hover:bg-blue-200'
+                              }`}
+                              onClick={() => handleShot(p.id, 'dois')}
+                              type="button"
+                              title="Clique para registrar tentativa de 2 pontos. Clique novamente em 3 segundos para marcar acerto."
+                              aria-label={`Registrar arremesso de 2 pontos para ${p.nome}`}
+                            >
+                              2PT ({s.dois.tentativas}/{s.dois.acertos})
+                            </button>
+                            <button
+                              className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
+                                pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres'
+                                  ? 'bg-green-500 text-white scale-105 shadow-lg'
+                                  : 'bg-green-100 text-green-900 hover:bg-green-200'
+                              }`}
+                              onClick={() => handleShot(p.id, 'tres')}
+                              type="button"
+                              title="Clique para registrar tentativa de 3 pontos. Clique novamente em 3 segundos para marcar acerto."
+                              aria-label={`Registrar arremesso de 3 pontos para ${p.nome}`}
+                            >
+                              3PT ({s.tres.tentativas}/{s.tres.acertos})
+                            </button>
+                            <button
+                              className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
+                                pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance'
+                                  ? 'bg-yellow-500 text-white scale-105 shadow-lg'
+                                  : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'
+                              }`}
+                              onClick={() => handleShot(p.id, 'lance')}
+                              type="button"
+                              title="Clique para registrar tentativa de lance livre. Clique novamente em 3 segundos para marcar acerto."
+                              aria-label={`Registrar lance livre para ${p.nome}`}
+                            >
+                              LL ({s.lance.tentativas}/{s.lance.acertos})
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'assistencias', 1)}
+                              type="button"
+                              title="Adicionar assistência"
+                              aria-label={`Adicionar assistência para ${p.nome}`}
+                            >
+                              +1
+                            </button>
+                            <span className="mx-2 font-medium">{s.assistencias}</span>
+                            <button
+                              className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'assistencias', -1)}
+                              type="button"
+                              title="Remover assistência"
+                              aria-label={`Remover assistência de ${p.nome}`}
+                            >
+                              -1
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'rebotes', 1)}
+                              type="button"
+                              title="Adicionar rebote"
+                              aria-label={`Adicionar rebote para ${p.nome}`}
+                            >
+                              +1
+                            </button>
+                            <span className="mx-2 font-medium">{s.rebotes}</span>
+                            <button
+                              className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'rebotes', -1)}
+                              type="button"
+                              title="Remover rebote"
+                              aria-label={`Remover rebote de ${p.nome}`}
+                            >
+                              -1
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'roubos', 1)}
+                              type="button"
+                              title="Adicionar roubo de bola"
+                              aria-label={`Adicionar roubo de bola para ${p.nome}`}
+                            >
+                              +1
+                            </button>
+                            <span className="mx-2 font-medium">{s.roubos}</span>
+                            <button
+                              className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'roubos', -1)}
+                              type="button"
+                              title="Remover roubo de bola"
+                              aria-label={`Remover roubo de bola de ${p.nome}`}
+                            >
+                              -1
+                            </button>
+                          </div>
+                          <div className={`flex items-center gap-2 ${faltas === 3 ? 'bg-yellow-100' : ''} ${faltas >= 4 ? 'bg-red-100' : ''} p-1 rounded`}>
+                            <button
+                              className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'faltas', 1)}
+                              type="button"
+                              title="Adicionar falta"
+                              aria-label={`Adicionar falta para ${p.nome}`}
+                            >
+                              +1
+                            </button>
+                            <span className="mx-2 font-medium">{faltas}</span>
+                            <button
+                              className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'faltas', -1)}
+                              type="button"
+                              title="Remover falta"
+                              aria-label={`Remover falta de ${p.nome}`}
+                            >
+                              -1
+                            </button>
+                            {faltas === 3 && (
+                              <span className="ml-2 text-yellow-700 font-bold flex items-center">
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                3 Faltas
+                              </span>
+                            )}
+                            {faltas === 4 && (
+                              <span className="ml-2 text-red-700 font-bold flex items-center">
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                4 Faltas
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button
+                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'tocos', 1)}
+                              type="button"
+                              title="Adicionar toco"
+                              aria-label={`Adicionar toco para ${p.nome}`}
+                            >
+                              Toco +1
+                            </button>
+                            <button
+                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'turnovers', 1)}
+                              type="button"
+                              title="Adicionar turnover"
+                              aria-label={`Adicionar turnover para ${p.nome}`}
+                            >
+                              TO +1
+                            </button>
+                            <button
+                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold transition-colors"
+                              onClick={() => handleStatButton(p.id, 'interferencia', 1)}
+                              type="button"
+                              title="Adicionar interferência"
+                              aria-label={`Adicionar interferência para ${p.nome}`}
+                            >
+                              Interf +1
+                            </button>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -770,6 +911,46 @@ const Painel: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Exibir cabeçalho não editável após salvar */}
+      {gameSaved && (
+        <Card className="p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+            <div>
+              <span className="font-bold">Adversário:</span> {gameForm.adversario}
+            </div>
+            <div>
+              <span className="font-bold">Categoria:</span> {gameForm.categoria}
+            </div>
+            <div>
+              <span className="font-bold">Data:</span> {gameForm.data}
+            </div>
+            <div>
+              <span className="font-bold">Horário:</span> {gameForm.horario}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold">Local:</span> {gameForm.local}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold">Campeonato:</span> {gameForm.campeonato}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold">Status:</span> {gameStatus === 'PENDENTE' ? 'Pendente' : gameStatus === 'EM_ANDAMENTO' ? 'Em andamento' : 'Partida Finalizada'}
+            </div>
+          </div>
+          {gameStatus !== 'FINALIZADA' && (
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2"
+              onClick={handleFinalizarPartida}
+            >
+              Finalizar Partida
+            </button>
+          )}
+          {gameStatus === 'FINALIZADA' && (
+            <div className="text-green-700 font-bold mt-2">Partida Finalizada</div>
+          )}
+        </Card>
       )}
     </div>
   );
