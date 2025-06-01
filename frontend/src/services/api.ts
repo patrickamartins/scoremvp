@@ -131,6 +131,13 @@ export function createGame(payload: NewGame): Promise<AxiosResponse<Game>> {
   return api.post<Game>('/games/', payload);
 }
 
+export function updateGame(
+  id: number,
+  payload: Partial<Omit<Game, 'id'>>
+): Promise<AxiosResponse<Game>> {
+  return api.put<Game>(`/games/${id}`, payload);
+}
+
 // —— Estatísticas —————————————————————————————
 
 export interface Estatistica {
