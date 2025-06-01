@@ -134,6 +134,22 @@ class EstatisticaOut(EstatisticaCreate):
     class Config:
         from_attributes = True
 
+class EstatisticasQuarto(BaseModel):
+    quarto: int
+    total_pontos: int
+    total_assistencias: int
+    total_rebotes: int
+    total_roubos: int
+    total_faltas: int
+
+class EstatisticasResumo(BaseModel):
+    total_pontos: int
+    total_assistencias: int
+    total_rebotes: int
+    total_roubos: int
+    total_faltas: int
+    por_quarto: List[EstatisticasQuarto]
+
 class LeadCreate(BaseModel):
     nome: str
     email: EmailStr

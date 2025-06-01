@@ -37,6 +37,22 @@ def criar_estatistica(
     if not jogadora:
         raise HTTPException(status_code=404, detail="Jogadora não encontrada")
     
+    # Verifica se já existe estatística para essa jogadora, jogo e quarto
+    estatistica_existente = db.query(models.Estatistica).filter(
+        models.Estatistica.jogo_id == estatistica_in.jogo_id,
+        models.Estatistica.jogadora_id == estatistica_in.jogadora_id,
+        models.Estatistica.quarto == estatistica_in.quarto
+    ).first()
+    
+    if estatistica_existente:
+        # Atualiza a estatística existente
+        for field, value in estatistica_in.dict().items():
+            setattr(estatistica_existente, field, value)
+        db.commit()
+        db.refresh(estatistica_existente)
+        return estatistica_existente
+    
+    # Cria nova estatística
     nova = models.Estatistica(**estatistica_in.dict())
     db.add(nova)
     db.commit()
@@ -73,6 +89,56 @@ def listar_estatisticas_jogo(
         query = query.filter(models.Estatistica.jogadora_id == jogadora_id)
     
     return query.all()
+
+@router.get(
+    "/jogo/{jogo_id}/resumo",
+    response_model=schemas.EstatisticasResumo,
+    summary="Retorna resumo das estatísticas do jogo",
+)
+def resumo_estatisticas_jogo(
+    jogo_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    # Verifica se o jogo existe e pertence ao usuário
+    jogo = db.query(models.Jogo).filter(
+        models.Jogo.id == jogo_id,
+        models.Jogo.owner_id == current_user.id
+    ).first()
+    if not jogo:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    
+    # Busca todas as estatísticas do jogo
+    estatisticas = db.query(models.Estatistica).filter(
+        models.Estatistica.jogo_id == jogo_id
+    ).all()
+    
+    # Calcula totais gerais
+    totais = {
+        "total_pontos": sum(e.pontos for e in estatisticas),
+        "total_assistencias": sum(e.assistencias for e in estatisticas),
+        "total_rebotes": sum(e.rebotes for e in estatisticas),
+        "total_roubos": sum(e.roubos for e in estatisticas),
+        "total_faltas": sum(e.faltas for e in estatisticas),
+    }
+    
+    # Calcula totais por quarto
+    por_quarto = {}
+    for quarto in range(1, 5):  # 1 a 4 quartos
+        stats_quarto = [e for e in estatisticas if e.quarto == quarto]
+        por_quarto[quarto] = {
+            "quarto": quarto,
+            "total_pontos": sum(e.pontos for e in stats_quarto),
+            "total_assistencias": sum(e.assistencias for e in stats_quarto),
+            "total_rebotes": sum(e.rebotes for e in stats_quarto),
+            "total_roubos": sum(e.roubos for e in stats_quarto),
+            "total_faltas": sum(e.faltas for e in stats_quarto),
+        }
+    
+    return {
+        **totais,
+        "por_quarto": list(por_quarto.values())
+    }
 
 @router.put(
     "/{estatistica_id}",
