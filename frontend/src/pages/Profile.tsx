@@ -1,5 +1,4 @@
-import { useState, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
 
@@ -10,26 +9,31 @@ const planos = [
 ];
 
 export default function Profile() {
-  const { user, updateUser } = useAuth();
   const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    team: user?.team || '',
-    favoriteTeam: user?.favoriteTeam || '',
-    document: user?.document || '',
-    profileImage: (user?.profileImage as string | File) || '',
+    name: '',
+    email: '',
+    phone: '',
+    team: '',
+    favoriteTeam: '',
+    document: '',
+    profileImage: '',
     password: '',
     confirmPassword: '',
-    plan: user?.plan || 'free',
+    plan: 'free',
   });
-  const [profileImagePreview, setProfileImagePreview] = useState(user?.profileImage || '');
+  const [profileImagePreview, setProfileImagePreview] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isTeam = user?.role === 'team';
+  // Histórico de notificações lidas (mock, pode ser global/localStorage)
+  const [readNotifications, setReadNotifications] = useState<any[]>(() => {
+    const saved = localStorage.getItem('readNotifications');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const isTeam = false;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -95,18 +99,18 @@ export default function Profile() {
 
   const handleCancel = () => {
     setForm({
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      team: user?.team || '',
-      favoriteTeam: user?.favoriteTeam || '',
-      document: user?.document || '',
-      profileImage: user?.profileImage || '',
+      name: '',
+      email: '',
+      phone: '',
+      team: '',
+      favoriteTeam: '',
+      document: '',
+      profileImage: '',
       password: '',
       confirmPassword: '',
-      plan: user?.plan || 'free',
+      plan: 'free',
     });
-    setProfileImagePreview(user?.profileImage || '');
+    setProfileImagePreview('');
     setIsEditing(false);
   };
 
@@ -295,6 +299,22 @@ export default function Profile() {
           </button>
         </div>
       </form>
+      <div className="mt-12">
+        <h3 className="text-lg font-bold mb-2">Histórico de Notificações Lidas</h3>
+        {readNotifications.length === 0 ? (
+          <div className="text-gray-500">Nenhuma notificação lida ainda.</div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {readNotifications.map((n, idx) => (
+              <li key={n.id || idx} className="py-2">
+                <span className="font-semibold text-primary">{n.text}</span>
+                {n.url && <a href={n.url} className="ml-2 text-primary underline" target="_blank" rel="noopener noreferrer">Acessar</a>}
+                <span className="block text-xs text-muted-foreground">{n.timestamp}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       {/* Modal de confirmação de cancelamento de conta */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">

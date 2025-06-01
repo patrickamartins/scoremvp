@@ -21,11 +21,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Se o token expirou, limpa o localStorage e redireciona para o login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    // Apenas rejeita o erro, sem redirecionar para login
     return Promise.reject(error);
   }
 );

@@ -8,8 +8,6 @@ const menu = [
 
 export function Header() {
   const location = useLocation();
-  // Checa se o usuário está autenticado (exemplo: token no localStorage)
-  const isAuthenticated = Boolean(localStorage.getItem('token'));
   return (
     <header className="w-full bg-gray-900 text-white flex items-center px-4 py-2 shadow-md sticky top-0 z-50">
       <div className="font-bold text-lg tracking-wide mr-8 select-none">Score MVP</div>
@@ -24,17 +22,6 @@ export function Header() {
           </Link>
         ))}
       </nav>
-      {isAuthenticated && (
-        <button
-          onClick={() => {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-          }}
-          className="ml-auto bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold shadow"
-        >
-          Logout
-        </button>
-      )}
     </header>
   );
 } 

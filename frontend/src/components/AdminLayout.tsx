@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -44,11 +44,28 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Simulação de notificações não lidas
+  const [notifications, setNotifications] = useState<any[]>([]);
+  useEffect(() => {
+    // Buscar notificações não lidas (mock)
+    setNotifications([
+      { id: 1, text: 'Bem-vindo ao ScoreMVP!', url: '', read: false, timestamp: '2024-06-01 10:00' },
+      { id: 2, text: 'Novo jogo disponível!', url: '/dashboard', read: false, timestamp: '2024-06-02 12:00' },
+    ]);
+  }, []);
+  function markAsRead(id: number) {
+    setNotifications(n => n.filter(notif => notif.id !== id));
+    // Aqui pode-se disparar evento global ou salvar no localStorage/histórico
+  }
+
   return (
     <div className="flex" style={{ fontFamily: 'Jakarta Sans, sans-serif' }}>
       {/* Sidebar Fixo */}
       <aside className="w-64 bg-white flex flex-col justify-between py-8 px-6 border-r border-[#E3E3E3] min-h-screen fixed left-0 top-0 h-full z-40">
         <div>
+          <div className="flex flex-col items-center mb-6">
+            <img src="/images/logo-score.svg" alt="ScoreMVP Logo" className="h-12 w-auto mb-2" />
+          </div>
           <div className="text-xs text-[#7B8BB2] font-semibold mb-4">Main Menu</div>
           <nav className="flex flex-col gap-2 mb-6">
             {mainMenuItems.map((item) => {
@@ -120,8 +137,23 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
                   <div className="p-4 border-b border-[#E3E3E3] flex justify-between items-center">
                     <span className="font-semibold text-[#2563eb]">Notificações</span>
                   </div>
-                  <div className="p-4 text-center text-[#7B8BB2]">
-                    Você não possui nenhuma notificação no momento
+                  <div className="p-4">
+                    {notifications.length === 0 ? (
+                      <div className="text-center text-[#7B8BB2]">Você não possui nenhuma notificação no momento</div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {notifications.map(n => (
+                          <li key={n.id} className="flex items-center gap-2 border-b last:border-b-0 px-2 py-2">
+                            <button className="flex-1 text-left" onClick={() => markAsRead(n.id)}>
+                              <span className="font-bold text-primary">{n.text}</span>
+                              {n.url && <a href={n.url} className="ml-2 text-primary underline" target="_blank" rel="noopener noreferrer">Acessar</a>}
+                              <span className="block text-xs text-muted-foreground">{n.timestamp}</span>
+                            </button>
+                            <span className="text-xs text-primary">Nova</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               )}
