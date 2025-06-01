@@ -361,7 +361,7 @@ export default function DashboardPage() {
               </div>
             </Card>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             <Card className="p-6 text-center">
               <div className="text-4xl font-bold text-blue-600">{overview?.total_jogos ?? '-'}</div>
               <div className="text-gray-500 mt-2">Jogos</div>
@@ -440,7 +440,9 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <PlayersStatsTable data={playersTable} />
+          <div className="overflow-x-auto rounded-lg shadow mb-8">
+            <PlayersStatsTable data={playersTable} />
+          </div>
         </>
       )}
     </div>

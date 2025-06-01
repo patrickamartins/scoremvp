@@ -488,7 +488,7 @@ const Painel: React.FC = () => {
               onChange={handleGameFormChange}
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-1">
             <Label htmlFor="local">Local</Label>
             <Input
               id="local"
@@ -498,7 +498,7 @@ const Painel: React.FC = () => {
               placeholder="Local do jogo"
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-1">
             <Label htmlFor="campeonato">Campeonato</Label>
             <Input
               id="campeonato"

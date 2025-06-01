@@ -57,7 +57,6 @@ def criar_jogadora(
 )
 def listar_jogadoras(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
 ):
     jogadoras = db.query(models.Jogadora).all()
     return [schemas.PlayerOut.from_orm(j) for j in jogadoras]
@@ -71,7 +70,6 @@ def listar_jogadoras(
 def ler_jogadora(
     player_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
 ):
     jog = db.query(models.Jogadora).filter(models.Jogadora.id == player_id).first()
     if not jog:
