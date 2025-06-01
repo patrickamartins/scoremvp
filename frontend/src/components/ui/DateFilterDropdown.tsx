@@ -48,7 +48,7 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
       {open && (
-        <div className="absolute left-0 mt-2 z-50 bg-white border rounded shadow-lg w-[320px] p-4 animate-fade-in">
+        <div className="absolute right-0 mt-2 z-50 bg-white border rounded shadow-lg w-[480px] p-4 animate-fade-in">
           <div className="flex flex-col gap-2 mb-4">
             {presets.map((preset) => (
               <label key={preset.value} className="flex items-center gap-2 cursor-pointer">
@@ -64,21 +64,25 @@ export function DateFilterDropdown({ value, onChange }: { value: any; onChange: 
             ))}
           </div>
           {selectedPreset === "custom" && (
-            <div className="flex flex-col gap-2 mb-4">
-              <label className="text-xs font-medium">Data inicial</label>
-              <input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="border rounded px-2 py-1"
-              />
-              <label className="text-xs font-medium">Data final</label>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="border rounded px-2 py-1"
-              />
+            <div className="flex flex-row gap-4 mb-4">
+              <div className="flex flex-col gap-2 flex-1">
+                <label className="text-xs font-medium">Data inicial</label>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="border rounded px-2 py-1 w-full"
+                />
+              </div>
+              <div className="flex flex-col gap-2 flex-1">
+                <label className="text-xs font-medium">Data final</label>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="border rounded px-2 py-1 w-full"
+                />
+              </div>
             </div>
           )}
           <div className="flex justify-end gap-2">

@@ -30,7 +30,30 @@ interface PlayersStatsTableProps {
   data: PlayerStats[];
 }
 
+function getTotals(data: PlayerStats[]) {
+  const sum = (key: keyof PlayerStats) => data.reduce((acc, p) => acc + (Number(p[key]) || 0), 0);
+  return {
+    pts: sum('pts'),
+    p2pts: sum('p2pts'),
+    p3pts: sum('p3pts'),
+    pll: sum('pll'),
+    rebo: sum('rebo'),
+    rebd: sum('rebd'),
+    treb: sum('treb'),
+    ass: sum('ass'),
+    err: sum('err'),
+    rb: sum('rb'),
+    t: sum('t'),
+    tr: sum('tr'),
+    fp: sum('fp'),
+    fr: sum('fr'),
+    plusMinus: sum('plusMinus'),
+    ef: sum('ef'),
+  };
+}
+
 export function PlayersStatsTable({ data }: PlayersStatsTableProps) {
+  const totals = getTotals(data);
   return (
     <div className="overflow-x-auto bg-white rounded shadow p-4 mb-8">
       <table className="min-w-full text-xs md:text-sm">
@@ -93,6 +116,30 @@ export function PlayersStatsTable({ data }: PlayersStatsTableProps) {
               <td className="px-2 py-1 text-center">{player.ef}</td>
             </tr>
           ))}
+          <tr className="bg-gray-100 font-bold">
+            <td className="px-2 py-1 text-center" colSpan={4}>TOTAL</td>
+            <td className="px-2 py-1 text-center">{totals.pts}</td>
+            <td className="px-2 py-1 text-center"></td>
+            <td className="px-2 py-1 text-center"></td>
+            <td className="px-2 py-1 text-center"></td>
+            <td className="px-2 py-1 text-center">{totals.p2pts}</td>
+            <td className="px-2 py-1 text-center"></td>
+            <td className="px-2 py-1 text-center">{totals.p3pts}</td>
+            <td className="px-2 py-1 text-center"></td>
+            <td className="px-2 py-1 text-center">{totals.pll}</td>
+            <td className="px-2 py-1 text-center">{totals.rebo}</td>
+            <td className="px-2 py-1 text-center">{totals.rebd}</td>
+            <td className="px-2 py-1 text-center">{totals.treb}</td>
+            <td className="px-2 py-1 text-center">{totals.ass}</td>
+            <td className="px-2 py-1 text-center">{totals.err}</td>
+            <td className="px-2 py-1 text-center">{totals.rb}</td>
+            <td className="px-2 py-1 text-center">{totals.t}</td>
+            <td className="px-2 py-1 text-center">{totals.tr}</td>
+            <td className="px-2 py-1 text-center">{totals.fp}</td>
+            <td className="px-2 py-1 text-center">{totals.fr}</td>
+            <td className="px-2 py-1 text-center">{totals.plusMinus}</td>
+            <td className="px-2 py-1 text-center">{totals.ef}</td>
+          </tr>
         </tbody>
       </table>
     </div>
