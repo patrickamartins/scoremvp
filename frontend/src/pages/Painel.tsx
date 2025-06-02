@@ -9,6 +9,7 @@ interface Player {
   nome: string;
   numero: number;
   posicao: string;
+  categoria?: string;
 }
 
 interface EstatisticasJogadora {
@@ -81,42 +82,39 @@ const Painel: React.FC = () => {
   // Adicionar status da partida
   const [gameStatus, setGameStatus] = useState<'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA'>('PENDENTE');
 
-  // Carregar jogadores e inicializar estatísticas
+  // Adicionar no início do componente:
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Player[]>([]);
+
+  // Buscar todas as jogadoras para autocomplete ao abrir modal
   useEffect(() => {
-    setLoadingPlayers(true);
-    getPlayers().then(({ data }) => {
-      const players = data.map((p: any) => ({
-        ...p,
-        posicao: p.posicao || 'Não definida',
-        categoria: p.categoria || categorias[0],
-      }));
-      setPlayers(players);
-      // Inicializa stats para todos os quartos
-      const initialStats: Record<number, Record<number, EstatisticasJogadora>> = {};
-      quartos.forEach(q => {
-        initialStats[q.value] = {};
-        players.forEach((p: Player) => {
-          initialStats[q.value][p.id] = {
-            dois: { tentativas: 0, acertos: 0 },
-            tres: { tentativas: 0, acertos: 0 },
-            lance: { tentativas: 0, acertos: 0 },
-            rebotes: 0,
-            assistencias: 0,
-            faltas: 0,
-            tocos: 0,
-            turnovers: 0,
-            roubos: 0,
-            interferencia: 0,
-          };
-        });
+    if (showModal) {
+      getPlayers().then(({ data }) => {
+        setAllPlayers(data.map((p: any) => ({
+          ...p,
+          posicao: p.posicao || '',
+          categoria: p.categoria || categorias[0],
+        })));
       });
-      setStats(initialStats);
-      setLoadingPlayers(false);
-    }).catch(() => {
-      toast.error("Erro ao carregar jogadoras. Tente novamente.");
-      setLoadingPlayers(false);
-    });
-  }, []);
+    }
+  }, [showModal]);
+
+  // Filtrar jogadoras por nome ou categoria
+  useEffect(() => {
+    if (searchTerm.length === 0) {
+      setSearchResults([]);
+      return;
+    }
+    const term = searchTerm.toLowerCase();
+    setSearchResults(
+      allPlayers.filter(
+        (p) =>
+          p.nome.toLowerCase().includes(term) ||
+          (p.categoria && p.categoria.toLowerCase().includes(term))
+      )
+    );
+  }, [searchTerm, allPlayers]);
 
   // Carregar estatísticas existentes quando um jogo é selecionado
   useEffect(() => {
@@ -435,6 +433,38 @@ const Painel: React.FC = () => {
       addPlayerBtnRef.current.focus();
     }
   }, [showModal]);
+
+  // Função para adicionar jogadora existente
+  function handleAddExistingPlayer(player: Player) {
+    if (players.some((p) => p.id === player.id)) {
+      toast.error("Jogadora já adicionada à partida");
+      return;
+    }
+    setPlayers((prev) => [...prev, player]);
+    // Inicializa stats para todos os quartos
+    setStats((prev) => {
+      const newStats = { ...prev };
+      quartos.forEach((q) => {
+        if (!newStats[q.value]) newStats[q.value] = {};
+        newStats[q.value][player.id] = {
+          dois: { tentativas: 0, acertos: 0 },
+          tres: { tentativas: 0, acertos: 0 },
+          lance: { tentativas: 0, acertos: 0 },
+          rebotes: 0,
+          assistencias: 0,
+          faltas: 0,
+          tocos: 0,
+          turnovers: 0,
+          roubos: 0,
+          interferencia: 0,
+        };
+      });
+      return newStats;
+    });
+    setSearchTerm("");
+    setSearchResults([]);
+    toast.success("Jogadora adicionada à partida!");
+  }
 
   return (
     <div className="p-8 mt-16 space-y-8 relative">
@@ -838,6 +868,32 @@ const Painel: React.FC = () => {
               ×
             </button>
             <h2 className="text-xl font-bold mb-4">Adicionar Jogador</h2>
+            {/* Busca de jogadoras existentes */}
+            <div className="mb-4">
+              <Label htmlFor="busca-jogadora">Buscar jogadora existente</Label>
+              <Input
+                id="busca-jogadora"
+                name="busca-jogadora"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Digite nome ou categoria"
+                autoComplete="off"
+              />
+              {searchResults.length > 0 && (
+                <ul className="bg-white border border-gray-200 rounded shadow mt-2 max-h-40 overflow-y-auto">
+                  {searchResults.map((p) => (
+                    <li
+                      key={p.id}
+                      className="px-3 py-2 cursor-pointer hover:bg-blue-100"
+                      onClick={() => handleAddExistingPlayer(p)}
+                    >
+                      {p.nome} <span className="text-xs text-gray-500">({p.categoria || 'Sem categoria'})</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {/* Formulário para nova jogadora */}
             <form onSubmit={handleAddPlayer} className="space-y-4">
               <div>
                 <Label htmlFor="nome">Nome</Label>
