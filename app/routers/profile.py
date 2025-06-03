@@ -89,14 +89,12 @@ def calculate_user_level(exp: int) -> tuple[str, str, int, int, int]:
     return current_level, next_level, next_level_exp, exp, progress
 
 @router.get("/me", response_model=ProfileBase)
-async def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Retorna o perfil do usuário atual"""
-    user = db.query(User).filter(User.id == current_user.id).first()
+async def get_profile(db: Session = Depends(get_db)):
+    """Retorna o perfil público (primeiro usuário do banco)"""
+    user = db.query(User).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    
     level, next_level, next_level_exp, current_exp, progress = calculate_user_level(user.exp)
-    
     return {
         "name": user.name,
         "email": user.email,
@@ -113,28 +111,24 @@ async def get_profile(current_user: User = Depends(get_current_user), db: Sessio
     }
 
 @router.get("/me/stats", response_model=ProfileStats)
-async def get_profile_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Retorna as estatísticas do usuário"""
-    # Buscar todos os jogos do usuário
-    games = db.query(Game).filter(Game.user_id == current_user.id).all()
-    
-    # Inicializar dados mensais
+async def get_profile_stats(db: Session = Depends(get_db)):
+    """Retorna as estatísticas do primeiro usuário"""
+    user = db.query(User).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    games = db.query(Game).filter(Game.user_id == user.id).all()
     evolution = [{"month": i, "points": 0} for i in range(1, 13)]
     assists = [{"month": i, "total": 0} for i in range(1, 13)]
     free_throws = [{"month": i, "total": 0} for i in range(1, 13)]
     rebounds = [{"month": i, "total": 0} for i in range(1, 13)]
-    
-    # Agregar estatísticas por mês
     for game in games:
         month = game.date.month
         stats = db.query(GameStats).filter(GameStats.game_id == game.id).all()
-        
         for stat in stats:
             evolution[month-1]["points"] += stat.points
             assists[month-1]["total"] += stat.assists
             free_throws[month-1]["total"] += stat.free_throws
             rebounds[month-1]["total"] += stat.rebounds
-    
     return {
         "evolution": evolution,
         "assists": assists,
@@ -143,9 +137,12 @@ async def get_profile_stats(current_user: User = Depends(get_current_user), db: 
     }
 
 @router.get("/me/events", response_model=List[EventBase])
-async def get_profile_events(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Retorna os eventos do usuário"""
-    events = db.query(Event).filter(Event.user_id == current_user.id).all()
+async def get_profile_events(db: Session = Depends(get_db)):
+    """Retorna os eventos do primeiro usuário"""
+    user = db.query(User).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    events = db.query(Event).filter(Event.user_id == user.id).all()
     return events
 
 @router.put("/me", response_model=ProfileBase)
