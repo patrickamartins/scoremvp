@@ -26,7 +26,7 @@ app.mount("/api/profile/avatar", StaticFiles(directory="uploads/avatars"), name=
 app.include_router(auth.router)
 app.include_router(games.router)
 app.include_router(players.router)
-app.include_router(profile.router)
+app.include_router(profile.router, prefix="/api")
 
 @app.get("/")
 async def root():
