@@ -1,351 +1,181 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
 import { toast } from 'sonner';
-import { api } from '../services/api';
+import { getProfile, updateProfile, profileSchema } from '../services/profile-service';
+import { z } from 'zod';
 
-const planos = [
-  { value: 'free', label: 'Free' },
-  { value: 'player', label: 'Player' },
-  { value: 'team', label: 'Team' },
-];
+type Profile = z.infer<typeof profileSchema>;
 
 export default function Profile() {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    team: '',
-    favoriteTeam: '',
-    document: '',
-    profileImage: '',
-    password: '',
-    confirmPassword: '',
-    plan: 'free',
-  });
-  const [profileImagePreview, setProfileImagePreview] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  // Histórico de notificações lidas (mock, pode ser global/localStorage)
-  const [readNotifications, setReadNotifications] = useState<any[]>(() => {
-    const saved = localStorage.getItem('readNotifications');
-    return saved ? JSON.parse(saved) : [];
-  });
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
-  const isTeam = false;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'file' ? (e.target as any).files[0] : value,
-    }));
-    setIsEditing(true);
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm((prev) => ({ ...prev, profileImage: file }));
-      setProfileImagePreview(URL.createObjectURL(file));
-      setIsEditing(true);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!user?.id) {
-      toast.error('ID do usuário não encontrado. Faça login novamente.');
-      return;
-    }
+  async function loadProfile() {
     try {
-      setIsSaving(true);
-      
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('email', form.email);
-      formData.append('phone', form.phone);
-      formData.append('team', form.team);
-      formData.append('favoriteTeam', form.favoriteTeam);
-      formData.append('document', form.document);
-      formData.append('plan', form.plan);
-      
-      if (form.profileImage instanceof File) {
-        formData.append('profileImage', form.profileImage);
-      }
-      
-      if (form.password) {
-        formData.append('password', form.password);
-      }
-
-      const response = await api.put(`/users/${user.id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data) {
-        updateUser(response.data);
-        setIsEditing(false);
-        toast.success('Alterações salvas com sucesso!');
-      }
+      const data = await getProfile();
+      setProfile(data);
     } catch (error) {
-      console.error('Erro ao salvar alterações:', error);
-      toast.error('Erro ao salvar alterações. Tente novamente.');
+      toast.error('Erro ao carregar perfil');
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
-  };
-
-  const handleCancel = () => {
-    setForm({
-      name: '',
-      email: '',
-      phone: '',
-      team: '',
-      favoriteTeam: '',
-      document: '',
-      profileImage: '',
-      password: '',
-      confirmPassword: '',
-      plan: 'free',
-    });
-    setProfileImagePreview('');
-    setIsEditing(false);
-  };
-
-  const handleCancelAccount = () => {
-    setShowCancelModal(true);
-  };
-
-  const handleConfirmCancelAccount = () => {
-    setShowCancelModal(false);
-    toast.success('Conta cancelada!');
-    // Aqui você pode chamar o backend para cancelar a conta
-  };
-
-  const handleUpgradePlan = () => {
-    toast.info('Redirecionando para página de planos...');
-    // Redirecionar para página de planos/pagamento
-  };
-
-  const canSave = isEditing && (
-    form.name !== user?.name ||
-    form.email !== user?.email ||
-    form.phone !== user?.phone ||
-    form.team !== user?.team ||
-    form.favoriteTeam !== user?.favoriteTeam ||
-    form.profileImage !== user?.profileImage ||
-    (form.password && form.password === form.confirmPassword)
-  );
-
-  // Proteção: só renderiza o formulário se user?.id existir
-  if (!user?.id) {
-    return <div>Usuário não autenticado. Faça login novamente.</div>;
   }
 
-  return (
-    <div className="max-w-2xl mx-auto p-8 mt-16 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-6">Configurações da Conta</h2>
-      <form className="space-y-6">
-        <div className="flex items-center gap-6">
-          <div className="relative w-32 h-32">
-            <img
-              src={profileImagePreview || '/avatar-placeholder.png'}
-              alt="Foto de perfil"
-              className="w-32 h-32 rounded-full object-cover border"
-            />
-            <input
-              type="file"
-              accept="image/*"
-              name="profileImage"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleImageChange}
-            />
-            <button
-              type="button"
-              className="absolute bottom-2 right-2 bg-blue-600 text-white rounded-full p-2 shadow hover:bg-blue-700"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Trocar
-            </button>
-          </div>
-          <div className="flex-1 space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Nome completo</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            <label className="block text-sm font-medium text-gray-700 mt-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            <label className="block text-sm font-medium text-gray-700 mt-2">Telefone</label>
-            <input
-              type="text"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Time que joga</label>
-            <input
-              type="text"
-              name="team"
-              value={form.team}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Time do coração</label>
-            <input
-              type="text"
-              name="favoriteTeam"
-              value={form.favoriteTeam}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Plano atual</label>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold capitalize">{planos.find(p => p.value === form.plan)?.label || 'Free'}</span>
-              <button
-                type="button"
-                className="ml-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={handleUpgradePlan}
-              >
-                Fazer upgrade de plano
-              </button>
+  // Modal de edição
+  function EditProfileModal() {
+    const [form, setForm] = useState<Profile | null>(profile);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    if (!form) return null;
+
+    async function handleSave() {
+      setSaving(true);
+      setError(null);
+      try {
+        const updated = await updateProfile(form);
+        setProfile(updated);
+        toast.success('Perfil atualizado!');
+        setShowEditModal(false);
+      } catch (e: any) {
+        setError(e.message || 'Erro ao atualizar perfil');
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full relative">
+          <button 
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl" 
+            onClick={() => setShowEditModal(false)} 
+            title="Fechar" 
+            type="button"
+          >
+            ×
+          </button>
+          <h2 className="text-xl font-bold mb-4">Editar Perfil</h2>
+          <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+            <div>
+              <Label htmlFor="name">Nome</Label>
+              <Input 
+                id="name" 
+                name="name" 
+                value={form.name} 
+                onChange={e => setForm(prev => prev ? { ...prev, name: e.target.value } : null)} 
+              />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">{isTeam ? 'CNPJ' : 'CPF'}</label>
-            <input
-              type="text"
-              name="document"
-              value={form.document}
-              readOnly
-              className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
-            />
-          </div>
+            <div>
+              <Label htmlFor="email">E-mail</Label>
+              <Input 
+                id="email" 
+                name="email" 
+                value={form.email} 
+                onChange={e => setForm(prev => prev ? { ...prev, email: e.target.value } : null)} 
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Telefone</Label>
+              <Input 
+                id="phone" 
+                name="phone" 
+                value={form.phone} 
+                onChange={e => setForm(prev => prev ? { ...prev, phone: e.target.value } : null)} 
+              />
+            </div>
+            <div>
+              <Label htmlFor="plan">Plano</Label>
+              <Select 
+                name="plan" 
+                value={form.plan} 
+                onValueChange={value => setForm(prev => prev ? { ...prev, plan: value as "Bronze" | "Prata" | "Ouro" } : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bronze">Bronze</SelectItem>
+                  <SelectItem value="Prata">Prata</SelectItem>
+                  <SelectItem value="Ouro">Ouro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {error && <div className="text-red-500 text-xs">{error}</div>}
+            <div className="flex gap-4 mt-4">
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Salvando...' : 'Salvar'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nova senha</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              autoComplete="new-password"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Confirmar nova senha</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              autoComplete="new-password"
-            />
-            {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
-              <span className="text-xs text-red-500">As senhas não coincidem.</span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-4 mt-8">
-          <button
-            type="button"
-            className={`px-6 py-2 rounded font-bold text-white ${canSave ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
-            onClick={handleSave}
-            disabled={!canSave || isSaving || !user?.id}
-          >
-            {isSaving ? 'Salvando...' : 'Salvar alterações'}
-          </button>
-          <button
-            type="button"
-            className="px-6 py-2 rounded font-bold border border-gray-300 bg-white hover:bg-gray-100"
-            onClick={handleCancel}
-            disabled={isSaving}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="ml-auto px-6 py-2 rounded font-bold border border-red-500 text-red-600 bg-white hover:bg-red-50"
-            onClick={handleCancelAccount}
-            disabled={isSaving}
-          >
-            Cancelar conta
-          </button>
-        </div>
-      </form>
-      <div className="mt-12">
-        <h3 className="text-lg font-bold mb-2">Histórico de Notificações Lidas</h3>
-        {readNotifications.length === 0 ? (
-          <div className="text-gray-500">Nenhuma notificação lida ainda.</div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {readNotifications.map((n, idx) => (
-              <li key={n.id || idx} className="py-2">
-                <span className="font-semibold text-primary">{n.text}</span>
-                {n.url && <a href={n.url} className="ml-2 text-primary underline" target="_blank" rel="noopener noreferrer">Acessar</a>}
-                <span className="block text-xs text-muted-foreground">{n.timestamp}</span>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
-      {/* Modal de confirmação de cancelamento de conta */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" tabIndex={-1} onKeyDown={(e) => { if (e.key === 'Escape') setShowCancelModal(false); }}>
-          <div className="bg-white p-8 rounded shadow max-w-md w-full relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
-              onClick={() => setShowCancelModal(false)}
-              title="Fechar"
-              type="button"
-            >
-              ×
-            </button>
-            <h3 className="text-xl font-bold mb-4">Tem certeza que deseja cancelar sua conta?</h3>
-            <p className="mb-6">Esta ação é irreversível. Todos os seus dados serão removidos do sistema.</p>
-            <div className="flex gap-4">
-              <button
-                className="px-6 py-2 rounded font-bold bg-red-600 text-white hover:bg-red-700"
-                onClick={handleConfirmCancelAccount}
-              >
-                Confirmar cancelamento
-              </button>
-              <button
-                className="px-6 py-2 rounded font-bold border border-gray-300 bg-white hover:bg-gray-100"
-                onClick={() => setShowCancelModal(false)}
-              >
-                Voltar
-              </button>
+    );
+  }
+
+  if (loading) return <div className="p-8 mt-16">Carregando...</div>;
+  if (!profile) return <div className="p-8 mt-16 text-red-500">Erro ao carregar dados do perfil.</div>;
+
+  return (
+    <div className="p-8 mt-16">
+      <div className="max-w-2xl mx-auto">
+        <Card className="p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <img 
+              src={profile.avatar || `https://ui-avatars.com/api/?name=${profile.name}`} 
+              alt="avatar" 
+              className="w-20 h-20 rounded-full object-cover"
+            />
+            <div>
+              <h1 className="text-2xl font-bold">{profile.name}</h1>
+              <p className="text-gray-500">{profile.email}</p>
+              <p className="text-gray-500">{profile.phone}</p>
+              <p className="text-sm font-semibold text-purple-700">{profile.plan}</p>
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-bold mb-2">Nível atual</h2>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-semibold text-orange-500">{profile.level}</span>
+                <span className="text-xs text-gray-400">Progresso de nível</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                <div 
+                  className="bg-orange-400 h-3 rounded-full" 
+                  style={{ width: `${profile.progress}%` }}
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                Ganhe mais {profile.nextLevelExp - profile.currentExp} pontos para alcançar {profile.nextLevel}
+              </div>
+              <div className="text-xs text-gray-400 mt-2">
+                {profile.currentExp} / {profile.nextLevelExp}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Button className="w-full" onClick={() => setShowEditModal(true)}>
+                Editar perfil
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+      {showEditModal && <EditProfileModal />}
     </div>
   );
 } 
