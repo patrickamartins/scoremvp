@@ -2,15 +2,15 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes.auth import router as auth_router
-from routes.players import router as players_router
-from routes.games import router as games_router
-from routes.estatisticas import router as estatisticas_router
-from database import init_db
-from core.settings import settings
-from routes.dashboard import router as dashboard_router
-from routes.leads import router as leads_router
-from routes.profile import router as profile_router
+from app.routes.auth import router as auth_router
+from app.routes.players import router as players_router
+from app.routes.games import router as games_router
+from app.routes.estatisticas import router as estatisticas_router
+from app.database import init_db
+from app.core.settings import settings
+from app.routes.dashboard import router as dashboard_router
+from app.routes.leads import router as leads_router
+from app.routes.profile import router as profile_router
 import logging
 
 # Configurar logging
