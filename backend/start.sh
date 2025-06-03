@@ -11,9 +11,13 @@ PORT=$(echo $PORT | tr -cd '0-9')
 echo "Starting server on port $PORT"
 echo "Current directory: $(pwd)"
 echo "Files in directory: $(ls -la)"
+echo "PYTHONPATH: $PYTHONPATH"
 
 # Garante que a pasta de uploads existe antes de iniciar o servidor
 mkdir -p app/media/avatars
 
-# Inicia o FastAPI/Uvicorn
-exec uvicorn app.main:app --host 0.0.0.0 --port $PORT 
+# Verifica se o uvicorn está instalado
+python -c "import uvicorn" || { echo "uvicorn não está instalado!"; exit 1; }
+
+# Inicia o FastAPI/Uvicorn com mais logs
+exec uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level debug 
