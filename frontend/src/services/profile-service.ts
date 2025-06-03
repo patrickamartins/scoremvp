@@ -1,3 +1,5 @@
+const API_URL = 'https://scoremvp-backend.onrender.com/api';
+
 import { z } from 'zod';
 
 export const profileSchema = z.object({
@@ -29,25 +31,25 @@ export const eventSchema = z.object({
 });
 
 export async function getProfile() {
-  const res = await fetch('/api/profile/me');
+  const res = await fetch(`${API_URL}/profile/me`);
   const data = await res.json();
   return profileSchema.parse(data);
 }
 
 export async function getStats() {
-  const res = await fetch('/api/profile/me/stats');
+  const res = await fetch(`${API_URL}/profile/me/stats`);
   const data = await res.json();
   return statsSchema.parse(data);
 }
 
 export async function getEvents() {
-  const res = await fetch('/api/profile/me/events');
+  const res = await fetch(`${API_URL}/profile/me/events`);
   const data = await res.json();
   return z.array(eventSchema).parse(data);
 }
 
 export async function updateProfile(payload: z.infer<typeof profileSchema>) {
-  const res = await fetch('/api/profile/me', {
+  const res = await fetch(`${API_URL}/profile/me`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -61,7 +63,7 @@ export async function uploadAvatar(file: File) {
   const formData = new FormData();
   formData.append('file', file);
   
-  const res = await fetch('/api/profile/me/avatar', {
+  const res = await fetch(`${API_URL}/profile/me/avatar`, {
     method: 'POST',
     body: formData,
   });
