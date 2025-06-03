@@ -10,6 +10,7 @@ from app.database import init_db
 from app.core.settings import settings
 from app.routes.dashboard import router as dashboard_router
 from app.routes.leads import router as leads_router
+from app.routes.profile import router as profile_router
 import logging
 
 # Configurar logging
@@ -55,6 +56,7 @@ app.include_router(games_router, prefix="/api")
 app.include_router(estatisticas_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(leads_router, prefix="/api")
+app.include_router(profile_router, prefix="/api")
 
 # Montar arquivos estáticos
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
