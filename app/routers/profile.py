@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from typing import List
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
@@ -95,7 +95,7 @@ async def get_profile(db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     level, next_level, next_level_exp, current_exp, progress = calculate_user_level(user.exp)
-    return {
+    data = {
         "name": user.name,
         "email": user.email,
         "phone": user.phone or "",
@@ -109,6 +109,7 @@ async def get_profile(db: Session = Depends(get_db)):
         "totalExp": user.exp,
         "progress": progress
     }
+    return JSONResponse(content=data, headers={"Cache-Control": "no-store"})
 
 @router.get("/me/stats", response_model=ProfileStats)
 async def get_profile_stats(db: Session = Depends(get_db)):
@@ -129,12 +130,13 @@ async def get_profile_stats(db: Session = Depends(get_db)):
             assists[month-1]["total"] += stat.assists
             free_throws[month-1]["total"] += stat.free_throws
             rebounds[month-1]["total"] += stat.rebounds
-    return {
+    data = {
         "evolution": evolution,
         "assists": assists,
         "free_throws": free_throws,
         "rebounds": rebounds
     }
+    return JSONResponse(content=data, headers={"Cache-Control": "no-store"})
 
 @router.get("/me/events", response_model=List[EventBase])
 async def get_profile_events(db: Session = Depends(get_db)):
@@ -143,7 +145,16 @@ async def get_profile_events(db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     events = db.query(Event).filter(Event.user_id == user.id).all()
-    return events
+    # Serializar eventos para garantir compatibilidade com JSONResponse
+    data = [
+        {
+            "date": event.date.isoformat() if hasattr(event.date, 'isoformat') else str(event.date),
+            "status": event.status,
+            "title": event.title
+        }
+        for event in events
+    ]
+    return JSONResponse(content=data, headers={"Cache-Control": "no-store"})
 
 @router.put("/me", response_model=ProfileBase)
 async def update_profile(
