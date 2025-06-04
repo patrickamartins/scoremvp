@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.deps import get_db, get_current_user
 from app.schemas.user import UserResponse, UserUpdate
-from app.models.user import User
 from app.schemas.profile import UserStatsResponse, UserEventResponse
+from app.models.user import User
 from app.crud import user as crud
 from datetime import datetime
 
@@ -47,7 +47,6 @@ def get_my_stats(
         assists=[{"month": m, "total": 5 + m} for m in range(1, 13)],
         free_throws=[{"month": m, "total": 3 + m} for m in range(1, 13)],
         rebounds=[{"month": m, "total": 7 + m} for m in range(1, 13)],
-        # ... outras estatísticas ...
     )
 
 @router.get("/me/events", response_model=List[UserEventResponse])

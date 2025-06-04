@@ -1,38 +1,38 @@
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+from datetime import datetime
 from app.models.user import UserRole, UserPlan
 
 class UserBase(BaseModel):
-    name: str
     email: EmailStr
-    role: UserRole
-    is_active: bool = True
-    plan: UserPlan = UserPlan.FREE
-    profile_image: Optional[str] = None
+    username: str
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = True
+    is_superuser: bool = False
 
 class UserCreate(UserBase):
     password: str
-    send_activation_email: bool = True
+    cpf: str = Field(..., min_length=11, max_length=11)
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
     email: Optional[EmailStr] = None
-    role: Optional[UserRole] = None
-    is_active: Optional[bool] = None
-    plan: Optional[UserPlan] = None
-    profile_image: Optional[str] = None
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
 
-class UserResponse(UserBase):
+class UserInDBBase(UserBase):
     id: int
     created_at: datetime
-    last_payment_date: Optional[datetime] = None
-    next_payment_date: Optional[datetime] = None
-    card_last4: Optional[str] = None
-    card_brand: Optional[str] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+class UserResponse(UserInDBBase):
+    pass
+
+class UserInDB(UserInDBBase):
+    hashed_password: str
 
 class UserListResponse(BaseModel):
     id: int

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 
 class StatMonth(BaseModel):
     month: int
@@ -7,13 +8,13 @@ class StatMonth(BaseModel):
     total: Optional[int] = 0
 
 class UserStatsResponse(BaseModel):
-    evolution: List[StatMonth]  # Pontuação por mês
-    assists: List[StatMonth]
-    free_throws: List[StatMonth]
-    rebounds: List[StatMonth]
+    evolution: List[dict]
+    assists: List[dict]
+    free_throws: List[dict]
+    rebounds: List[dict]
     # Adicione outros campos conforme necessário
 
 class UserEventResponse(BaseModel):
-    date: str  # yyyy-mm-dd
-    status: str  # accepted, pending, rejected
+    date: str
+    status: str
     title: str 
