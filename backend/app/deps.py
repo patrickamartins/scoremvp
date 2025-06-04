@@ -5,7 +5,10 @@ from app import database, models, core
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
+# Re-export get_db from database
+get_db = database.get_db
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     username = core.verify_access_token(token)
     if username is None:
         raise HTTPException(
