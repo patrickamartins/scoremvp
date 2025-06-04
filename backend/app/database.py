@@ -23,7 +23,7 @@ Base = declarative_base()
 
 def init_db():
     # Importar todos os modelos aqui para garantir que eles sejam registrados no Base.metadata
-    from app.models import User, Game, Notification, Lead
+    from app.models import User, Game, Notification, Lead, Player
     
     # Criar todas as tabelas
     Base.metadata.create_all(bind=engine)
