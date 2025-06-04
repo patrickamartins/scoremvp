@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app import models
+from app.models import User
 from app.schemas.user import UserResponse, UserCreate
 from app.schemas.token import Token
 from app.core.security import (
@@ -32,19 +32,19 @@ def register(
     db: Session = Depends(get_db),
 ):
     # Verifica se o usuário já existe
-    if db.query(models.User).filter(models.User.email == user_in.email).first():
+    if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(
             status_code=400,
             detail="Email já registrado",
         )
-    if db.query(models.User).filter(models.User.username == user_in.username).first():
+    if db.query(User).filter(User.username == user_in.username).first():
         raise HTTPException(
             status_code=400,
             detail="Username já registrado",
         )
     
     # Cria o novo usuário
-    user = models.User(
+    user = User(
         username=user_in.username,
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
@@ -64,7 +64,7 @@ def login(
     db: Session = Depends(get_db),
 ):
     # Busca o usuário
-    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -90,6 +90,6 @@ def login(
     summary="Retorna informações do usuário logado",
 )
 def read_users_me(
-    current_user: models.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     return current_user
