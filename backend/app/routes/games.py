@@ -8,6 +8,7 @@ from datetime import datetime
 from app.database import get_db
 from app import models, schemas
 from app.core.security import get_current_user
+from app.schemas import GameOut
 
 router = APIRouter(
     prefix="/games",
