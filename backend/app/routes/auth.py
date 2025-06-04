@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import models
+from app.schemas.user import UserResponse, UserCreate
+from app.schemas.token import Token
 from app.core.security import (
     get_password_hash,
     verify_password,
@@ -21,12 +23,12 @@ router = APIRouter(
 
 @router.post(
     "/register",
-    response_model=schemas.UserOut,
+    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Registra um novo usuário",
 )
 def register(
-    user_in: schemas.UserCreate,
+    user_in: UserCreate,
     db: Session = Depends(get_db),
 ):
     # Verifica se o usuário já existe
@@ -50,11 +52,11 @@ def register(
     db.add(user)
     db.commit()
     db.refresh(user)
-    return schemas.UserOut.from_orm(user)
+    return user
 
 @router.post(
     "/login",
-    response_model=schemas.Token,
+    response_model=Token,
     summary="Realiza login e retorna token JWT",
 )
 def login(
@@ -84,7 +86,7 @@ def login(
 
 @router.get(
     "/me",
-    response_model=schemas.UserOut,
+    response_model=UserResponse,
     summary="Retorna informações do usuário logado",
 )
 def read_users_me(
