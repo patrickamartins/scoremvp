@@ -4,7 +4,7 @@ from typing import List, Optional
 from app.models.user import User, UserRole, UserPlan
 from app.schemas.user import UserCreate, UserUpdate, UserSearchParams
 from app.core.security import get_password_hash
-from app.core.email import send_activation_email
+from app.core.email import email_service
 
 def get_user(db: Session, user_id: int) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
@@ -59,7 +59,11 @@ def create_user(db: Session, user: UserCreate) -> User:
     db.refresh(db_user)
 
     if user.send_activation_email:
-        send_activation_email(db_user)
+        email_service.send_notification_email(
+            to_email=db_user.email,
+            subject="Ativação de Conta - ScoreMVP",
+            body=f"Olá {db_user.name}, sua conta foi criada com sucesso!"
+        )
 
     return db_user
 
