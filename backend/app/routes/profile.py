@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.api import deps
+from app.deps import get_db, get_current_user
 from app.schemas.user import UserResponse, UserUpdate
 from app.models.user import User
 from app.schemas.profile import UserStatsResponse, UserEventResponse
@@ -12,16 +12,16 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 
 @router.get("/me", response_model=UserResponse)
 def get_my_profile(
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     return current_user
 
 @router.put("/me", response_model=UserResponse)
 def update_my_profile(
     user_update: UserUpdate,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     # Não permitir alteração de CPF
     if hasattr(user_update, 'cpf'):
@@ -34,8 +34,8 @@ def update_my_profile(
 @router.get("/me/stats", response_model=UserStatsResponse)
 def get_my_stats(
     year: Optional[int] = None,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     # Buscar estatísticas individuais do usuário por ano
     # (Implementação mock, ajustar para buscar dados reais)
@@ -53,8 +53,8 @@ def get_my_stats(
 @router.get("/me/events", response_model=List[UserEventResponse])
 def get_my_events(
     year: Optional[int] = None,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     # Buscar eventos/convocações do usuário por ano
     # (Implementação mock, ajustar para buscar dados reais)
