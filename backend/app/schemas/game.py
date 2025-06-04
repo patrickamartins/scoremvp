@@ -12,6 +12,16 @@ class GameCreate(BaseModel):
     owner_id: Optional[int] = None
     # Adicione outros campos necessários para criação
 
+class GameUpdate(BaseModel):
+    opponent: Optional[str] = None
+    date: Optional[datetime] = None
+    time: Optional[str] = None
+    location: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    owner_id: Optional[int] = None
+    # Adicione outros campos necessários para atualização
+
 class GameOut(BaseModel):
     id: int
     opponent: str
