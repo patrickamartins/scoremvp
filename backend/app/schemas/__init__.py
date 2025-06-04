@@ -8,4 +8,4 @@ from .profile import *
 from .token import *
 from .game import GameOut, GameCreate, GameUpdate
 from .player import PlayerOut, PlayerCreate, PlayerUpdate
-from .estatistica import EstatisticaOut, EstatisticaCreate, EstatisticaUpdate 
+from .estatistica import EstatisticaOut, EstatisticaCreate, EstatisticaUpdate, EstatisticasResumo 

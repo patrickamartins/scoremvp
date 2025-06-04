@@ -41,4 +41,10 @@ class EstatisticaOut(EstatisticaBase):
     created_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class EstatisticasResumo(BaseModel):
+    total_pontos: int
+    total_assistencias: int
+    total_rebotes: int
+    # Adicione outros campos de resumo conforme necessário 
