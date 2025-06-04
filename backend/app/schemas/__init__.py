@@ -6,4 +6,5 @@ This package contains all Pydantic models used for request/response validation.
 from .user import *
 from .profile import *
 from .token import *
-from .game import GameOut, GameCreate, GameUpdate 
+from .game import GameOut, GameCreate, GameUpdate
+from .player import PlayerOut, PlayerCreate, PlayerUpdate 
