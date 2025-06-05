@@ -10,6 +10,7 @@ import {
   Calendar as CalendarIcon,
   LucideIcon
 } from 'lucide-react';
+import { useAuthStore } from '../store';
 
 interface MenuItem {
   path: string;
@@ -19,24 +20,59 @@ interface MenuItem {
 }
 
 interface AdminLayoutProps {
-  user?: { name: string; avatarUrl?: string; email: string; plan?: string; role?: string };
+  user?: { username: string; email: string; role: string };
 }
 
-export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', plan: 'Free', role: 'admin' } }: AdminLayoutProps) {
+export function AdminLayout({ user: userProp }: AdminLayoutProps) {
+  const storeUser = useAuthStore(state => state.user);
+  const user = userProp || storeUser || { username: 'Admin', email: '', role: 'superadmin' };
   const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
 
-  // Verifica se é admin ou plano Team
-  const isAdminOrTeam = (user?.role ?? '') === 'admin' || (user?.role ?? '') === 'team';
+  // Lógica de menus por papel
+  let mainMenuItems: MenuItem[] = [];
+  if (user.role === 'superadmin') {
+    mainMenuItems = [
+      { path: '/dashboard', label: 'Dashboard Geral', icon: LayoutDashboard },
+      { path: '/usuarios', label: 'Usuários', icon: Users },
+      { path: '/painel', label: 'Painel', icon: Users },
+      { path: '/notificacoes', label: 'Notificações', icon: Bell },
+      { path: '/agenda', label: 'Agenda', icon: CalendarIcon },
+      { path: '/nossos-jogos', label: 'Nossos Jogos', icon: CalendarIcon },
+    ];
+  } else if (user.role === 'team_admin') {
+    mainMenuItems = [
+      { path: '/dashboard', label: 'Dashboard do Time', icon: LayoutDashboard },
+      { path: '/jogadoras', label: 'Jogadoras', icon: Users },
+      { path: '/painel', label: 'Painel', icon: Users },
+      { path: '/notificacoes', label: 'Notificações', icon: Bell },
+      { path: '/agenda', label: 'Agenda', icon: CalendarIcon },
+      { path: '/nossos-jogos', label: 'Nossos Jogos', icon: CalendarIcon },
+    ];
+  } else if (user.role === 'scout') {
+    mainMenuItems = [
+      { path: '/dashboard', label: 'Dashboard de Análise', icon: LayoutDashboard },
+      { path: '/registrar-estatisticas', label: 'Registrar Estatísticas', icon: Users },
+      { path: '/notificacoes', label: 'Notificações', icon: Bell },
+      { path: '/agenda', label: 'Agenda', icon: CalendarIcon },
+    ];
+  } else if (user.role === 'player') {
+    mainMenuItems = [
+      { path: '/dashboard', label: 'Meu Dashboard', icon: LayoutDashboard },
+      { path: '/estatisticas', label: 'Minhas Estatísticas', icon: Users },
+      { path: '/equipe', label: 'Equipe', icon: Users },
+      { path: '/historico', label: 'Histórico de Jogos', icon: CalendarIcon },
+      { path: '/agenda', label: 'Agenda', icon: CalendarIcon },
+    ];
+  } else {
+    // guest ou não logado
+    mainMenuItems = [
+      { path: '/dashboard-publico', label: 'Dashboard Público', icon: LayoutDashboard },
+      { path: '/jogos', label: 'Jogos', icon: CalendarIcon },
+      { path: '/rankings', label: 'Rankings', icon: Users },
+    ];
+  }
 
-  const mainMenuItems: MenuItem[] = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/painel', label: 'Painel', icon: Users },
-    { path: '/usuarios', label: 'Usuários', icon: Users },
-    { path: '/notificacoes', label: 'Notificações', icon: Bell },
-    { path: '/agenda', label: 'Agenda', icon: CalendarIcon },
-    ...(isAdminOrTeam ? [{ path: '/nossos-jogos', label: 'Nossos Jogos', icon: CalendarIcon }] : []),
-  ];
   const bottomMenuItems: MenuItem[] = [
     { path: '/configuracoes', label: 'Configurações', icon: Settings },
     { path: '/logout', label: 'Log Out', icon: LogOut, extraClass: 'text-red-500 hover:bg-red-50' },
@@ -57,6 +93,15 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
     setNotifications(n => n.filter(notif => notif.id !== id));
     // Aqui pode-se disparar evento global ou salvar no localStorage/histórico
   }
+
+  // Nome do plano por papel
+  const planoPorRole: Record<string, string> = {
+    superadmin: 'Master',
+    team_admin: 'Gestor',
+    scout: 'Scout',
+    player: 'Atleta',
+    guest: 'Visitante',
+  };
 
   return (
     <div className="flex" style={{ fontFamily: 'Jakarta Sans, sans-serif' }}>
@@ -113,16 +158,12 @@ export function AdminLayout({ user = { name: 'Admin', avatarUrl: '', email: '', 
         <header className="flex items-center justify-end bg-white h-16 px-8 border-b border-[#E3E3E3] fixed top-0 left-64 right-0 z-30">
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end mr-2">
-              <span className="font-semibold text-[#7B8BB2]">{user.name}</span>
+              <span className="font-semibold text-[#7B8BB2]">{user.username}</span>
               <span className="text-xs text-gray-400">{user.email}</span>
-              <span className="text-xs text-blue-600 font-bold capitalize">{user.plan || 'Free'}</span>
+              <span className="text-xs text-blue-600 font-bold capitalize">{planoPorRole[user.role]}</span>
             </div>
             <button className="w-10 h-10 rounded-full border border-[#E3E3E3] overflow-hidden bg-[#F3F3F3] flex items-center justify-center">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                <UserCircle size={24} className="text-[#7B8BB2]" />
-              )}
+              <UserCircle size={24} className="text-[#7B8BB2]" />
             </button>
             {/* Sino de notificações */}
             <div className="relative">

@@ -4,12 +4,12 @@ from datetime import datetime
 import enum
 from app.database import Base
 
-class UserRole(enum.Enum):
-    ADMIN = "admin"
+class UserRole(str, enum.Enum):
+    SUPERADMIN = "superadmin"
+    TEAM_ADMIN = "team_admin"
+    SCOUT = "scout"
     PLAYER = "player"
-    COACH = "coach"
-    ANALYST = "analyst"
-    TEAM = "team"
+    GUEST = "guest"
 
 class UserPlan(enum.Enum):
     FREE = "free"
