@@ -39,4 +39,5 @@ class User(Base):
     
     # Relacionamentos
     sent_notifications = relationship("Notification", back_populates="creator")
-    notifications = relationship("UserNotification", back_populates="user") 
+    notifications = relationship("UserNotification", back_populates="user")
+    games = relationship("Game", back_populates="owner") 
