@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { useAuthStore } from '../store';
 
 export function Sidebar() {
   const location = useLocation();
@@ -18,6 +19,7 @@ export function Sidebar() {
   const [hovered, setHovered] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [fixedExpanded, setFixedExpanded] = useState(true);
+  const user = useAuthStore(state => state.user) || { role: 'guest' };
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -41,6 +43,12 @@ export function Sidebar() {
       icon: Settings,
       label: 'Configurações',
       show: true
+    },
+    {
+      path: '/usuarios',
+      icon: Users,
+      label: 'Usuários',
+      show: user.role === 'superadmin' // Exemplo de menu exclusivo
     }
   ];
 
@@ -79,7 +87,8 @@ export function Sidebar() {
         <div className="flex-1 py-4 overflow-y-auto">
           <nav className="space-y-1 px-2">
             {menuItems.map((item) => {
-              if (!item.show) return null;
+              // Superadmin vê todos os menus
+              if (user.role !== 'superadmin' && !item.show) return null;
               const Icon = item.icon;
               return (
                 <Link
@@ -140,7 +149,7 @@ export function Sidebar() {
             </div>
             <nav className="space-y-1 px-2 py-4 flex-1 overflow-y-auto">
               {menuItems.map((item) => {
-                if (!item.show) return null;
+                if (user.role !== 'superadmin' && !item.show) return null;
                 const Icon = item.icon;
                 return (
                   <Link
