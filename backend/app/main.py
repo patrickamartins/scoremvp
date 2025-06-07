@@ -36,11 +36,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "*",  # Permitir qualquer origem temporariamente para debug
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://scoremvp.com.br",
-        "https://score-mvp.vercel.app"
+        "https://scoremvp.com.br",  # produção
+        "http://localhost:5173",    # dev vite
+        "http://localhost:3000"     # dev react
     ],
     allow_credentials=True,
     allow_methods=["*"],
