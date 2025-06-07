@@ -27,7 +27,7 @@ def criar_jogo(
     db: Session = Depends(get_db),
 ):
     data = game_in.dict()
-    novo = models.Jogo(
+    novo = models.Game(
         opponent=data['opponent'],
         date=data['date'],
         location=data.get('location'),
@@ -64,14 +64,14 @@ def listar_jogos(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    query = db.query(models.Jogo).filter(models.Jogo.owner_id == current_user.id)
+    query = db.query(models.Game).filter(models.Game.owner_id == current_user.id)
     
     if status:
-        query = query.filter(models.Jogo.status == status)
+        query = query.filter(models.Game.status == status)
     if data_inicio:
-        query = query.filter(models.Jogo.date >= data_inicio)
+        query = query.filter(models.Game.date >= data_inicio)
     if data_fim:
-        query = query.filter(models.Jogo.date <= data_fim)
+        query = query.filter(models.Game.date <= data_fim)
     
     return query.offset(skip).limit(limit).all()
 
@@ -86,9 +86,9 @@ def ler_jogo(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jogo = db.query(models.Jogo).filter(
-        models.Jogo.id == game_id,
-        models.Jogo.owner_id == current_user.id
+    jogo = db.query(models.Game).filter(
+        models.Game.id == game_id,
+        models.Game.owner_id == current_user.id
     ).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
@@ -106,9 +106,9 @@ def atualizar_jogo(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jogo = db.query(models.Jogo).filter(
-        models.Jogo.id == game_id,
-        models.Jogo.owner_id == current_user.id
+    jogo = db.query(models.Game).filter(
+        models.Game.id == game_id,
+        models.Game.owner_id == current_user.id
     ).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
@@ -131,9 +131,9 @@ def remover_jogo(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jogo = db.query(models.Jogo).filter(
-        models.Jogo.id == game_id,
-        models.Jogo.owner_id == current_user.id
+    jogo = db.query(models.Game).filter(
+        models.Game.id == game_id,
+        models.Game.owner_id == current_user.id
     ).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
@@ -152,7 +152,7 @@ def ler_jogo_publico(
     game_id: int,
     db: Session = Depends(get_db),
 ):
-    jogo = db.query(models.Jogo).filter(models.Jogo.id == game_id).first()
+    jogo = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
     return jogo
