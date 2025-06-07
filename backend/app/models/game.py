@@ -1,14 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table
+from app.models.base import Base, game_player
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
-
-# Tabela de associação entre jogos e jogadoras
-game_player = Table(
-    'game_player',
-    Base.metadata,
-    Column('game_id', Integer, ForeignKey('games.id')),
-    Column('player_id', Integer, ForeignKey('players.id'))
-)
 
 class Game(Base):
     __tablename__ = "games"

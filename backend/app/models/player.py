@@ -1,6 +1,6 @@
+from app.models.base import Base, game_player
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
 
 class Player(Base):
     __tablename__ = "players"
@@ -13,4 +13,5 @@ class Player(Base):
     created_at = Column(DateTime, server_default="now()")
 
     # Relacionamentos
-    games = relationship("Game", secondary="game_player", back_populates="players") 
+    games = relationship("Game", secondary=game_player, back_populates="players")
+    statistics = relationship("Statistic", back_populates="player") 
