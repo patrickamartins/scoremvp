@@ -177,7 +177,7 @@ export default function DashboardPage() {
   }));
 
   // Dados para a tabela
-  const playersTable = filteredPlayersStats.map((p, idx) => ({
+  const playersTable = filteredPlayersStats.map((p) => ({
     no: p.number,
     name: p.name,
     pos: p.position,

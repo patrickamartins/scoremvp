@@ -4,7 +4,7 @@ import { ToastProvider } from '@/components/ui/use-toast'
 
 function App() {
   return (
-    <ToastProvider value={{ toast: (options) => alert(options.title) }}>
+    <ToastProvider value={{ toast: (options: any) => alert(options.title) }}>
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

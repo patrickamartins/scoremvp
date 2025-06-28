@@ -33,7 +33,6 @@ export default function NotificacoesPage() {
   const [log, setLog] = useState<any[]>([]);
   const [myNotifications, setMyNotifications] = useState<any[]>([]);
   const [unread, setUnread] = useState<number>(0);
-  const [readNotifications, setReadNotifications] = useState<any[]>([]);
 
   // Simula busca de notificações do usuário
   useEffect(() => {
@@ -81,11 +80,6 @@ export default function NotificacoesPage() {
   };
   const markAsRead = (id: number) => {
     setMyNotifications(n => n.map(notif => notif.id === id ? { ...notif, read: true } : notif));
-    // Adiciona ao histórico
-    const notif = myNotifications.find(n => n.id === id);
-    if (notif && !notif.read) {
-      setReadNotifications(prev => [{ ...notif, read: true }, ...prev]);
-    }
   };
 
   return (

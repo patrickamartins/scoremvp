@@ -2,25 +2,22 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   getGame,
-  getEstatisticasByJogo,
-  createEstatistica,
-  undoLastEstatistica,
+  getPlayers,
 } from '../services/api';
-import { getPlayers } from '../services/api';
 
 interface Player {
   id: number;
-  nome: string;
+  name: string;
 }
 
 interface Estatistica {
   id: number;
-  jogadora_id: number;
-  jogo_id: number;
-  pontos: number;
-  assistencias: number;
-  rebotes: number;
-  roubos: number;
+  player_id: number;
+  game_id: number;
+  points: number;
+  assists: number;
+  rebounds: number;
+  steals: number;
 }
 
 interface GameInfo {
@@ -36,18 +33,20 @@ export default function GameDetail() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [stats, setStats] = useState<Estatistica[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<string>('');
-  const [action, setAction] = useState<'pontos' | 'assistencias' | 'rebotes' | 'roubos'>('pontos');
+  const [action, setAction] = useState<'points' | 'assists' | 'rebounds' | 'steals'>('points');
 
   const fetchData = async () => {
     if (!gameId) return;
-    const resGame = await getGame(gameId);
-    setGame(resGame.data);
-    const resStats = await getEstatisticasByJogo(gameId);
-    setStats(resStats.data);
-    const resPlayers = await getPlayers();
-    setPlayers(resPlayers.data);
-    if (resPlayers.data.length > 0) {
-      setSelectedPlayer(resPlayers.data[0].id.toString());
+    try {
+      const resGame = await getGame(parseInt(gameId));
+      setGame(resGame);
+      const resPlayers = await getPlayers();
+      setPlayers(resPlayers);
+      if (resPlayers.length > 0) {
+        setSelectedPlayer(resPlayers[0].id.toString());
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
     }
   };
 
@@ -57,22 +56,28 @@ export default function GameDetail() {
 
   const handleAdd = async () => {
     if (!gameId || !selectedPlayer) return;
-    const data = {
-      jogadora_id: parseInt(selectedPlayer),
-      jogo_id: parseInt(gameId),
-      pontos: action === 'pontos' ? 1 : 0,
-      assistencias: action === 'assistencias' ? 1 : 0,
-      rebotes: action === 'rebotes' ? 1 : 0,
-      roubos: action === 'roubos' ? 1 : 0,
-    };
-    await createEstatistica(data);
-    fetchData();
+    try {
+      const data = {
+        player_id: parseInt(selectedPlayer),
+        game_id: parseInt(gameId),
+        points: action === 'points' ? 1 : 0,
+        assists: action === 'assists' ? 1 : 0,
+        rebounds: action === 'rebounds' ? 1 : 0,
+        steals: action === 'steals' ? 1 : 0,
+      };
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao adicionar estatística:', error);
+    }
   };
 
   const handleUndo = async () => {
     if (!gameId) return;
-    await undoLastEstatistica(gameId);
-    fetchData();
+    try {
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao desfazer:', error);
+    }
   };
 
   if (!game) return <p>Carregando...</p>;
@@ -92,18 +97,18 @@ export default function GameDetail() {
             className="border px-2 py-1 rounded"
           >
             {players.map(p => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
           <select
             value={action}
-            onChange={(e) => setAction(e.target.value as any)}
+            onChange={(e) => setAction(e.target.value as 'points' | 'assists' | 'rebounds' | 'steals')}
             className="border px-2 py-1 rounded"
           >
-            <option value="pontos">Ponto</option>
-            <option value="assistencias">Assistência</option>
-            <option value="rebotes">Rebote</option>
-            <option value="roubos">Roubo</option>
+            <option value="points">Ponto</option>
+            <option value="assists">Assistência</option>
+            <option value="rebounds">Rebote</option>
+            <option value="steals">Roubo</option>
           </select>
           <button onClick={handleAdd} className="px-4 py-2 bg-blue-500 text-white rounded">
             Adicionar
@@ -118,11 +123,11 @@ export default function GameDetail() {
       <ul className="list-disc ml-6 mt-2">
         {stats.map(stat => (
           <li key={stat.id}>
-            Jogadora ID {stat.jogadora_id}:
-            {stat.pontos ? ` +${stat.pontos} ponto` : ''}
-            {stat.assistencias ? ` +${stat.assistencias} assistência` : ''}
-            {stat.rebotes ? ` +${stat.rebotes} rebote` : ''}
-            {stat.roubos ? ` +${stat.roubos} roubo` : ''}
+            Jogadora ID {stat.player_id}:
+            {stat.points ? ` +${stat.points} ponto` : ''}
+            {stat.assists ? ` +${stat.assists} assistência` : ''}
+            {stat.rebounds ? ` +${stat.rebounds} rebote` : ''}
+            {stat.steals ? ` +${stat.steals} roubo` : ''}
           </li>
         ))}
       </ul>

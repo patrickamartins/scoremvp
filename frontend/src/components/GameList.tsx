@@ -52,7 +52,7 @@ export default function GameList() {
               {games.map((game) => (
                 <tr key={game.id}>
                   <td className="border px-4 py-2">
-                    {format(new Date(game.date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {format(new Date(game.date), 'dd/MM/yyyy')}
                   </td>
                   <td className="border px-4 py-2">
                     {format(new Date(game.date), 'HH:mm')}

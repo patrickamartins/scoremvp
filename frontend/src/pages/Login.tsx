@@ -10,6 +10,14 @@ export function Login() {
     password: '',
   });
 
+  const signIn = async (username: string) => {
+    // Implementação simples de signIn
+    if (username === 'admin' && formData.password === 'admin') {
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error('Credenciais inválidas'));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

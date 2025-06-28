@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, getGame, getPlayers, getGameStats, createGameStats } from "@/services/api";
+import { getGame, getPlayers, getGameStats, createGameStats } from "@/services/api";
 import { Game, GameStats } from "@/types/game";
 import { Player } from "@/types/player";
 import { Button } from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Label } from "../components/ui/Label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { useToast } from "@/components/ui/use-toast";
 

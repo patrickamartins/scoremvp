@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, isSameDay, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, isSameDay, addDays, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -16,10 +16,20 @@ export default function AgendaPage() {
   const [selectedConvoc, setSelectedConvoc] = useState<any | null>(null);
   const [convocacoes, setConvocacoes] = useState(mockConvocacoes);
 
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(calendarMonth),
-    end: endOfMonth(calendarMonth),
-  });
+  // Função para gerar dias do mês
+  const getDaysInMonth = (date: Date) => {
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    const days = [];
+    let current = start;
+    while (current <= end) {
+      days.push(current);
+      current = addDays(current, 1);
+    }
+    return days;
+  };
+
+  const daysInMonth = getDaysInMonth(calendarMonth);
 
   function getConvocacaoByDay(day: Date) {
     return convocacoes.find(c => isSameDay(c.date, day));
@@ -35,7 +45,7 @@ export default function AgendaPage() {
       <h1 className="text-2xl font-bold mb-6 text-[#2563eb]">Agenda</h1>
       <Card className="p-4 mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="font-bold text-[#2563eb] text-lg">{format(calendarMonth, 'MMMM yyyy', { locale: ptBR })}</span>
+          <span className="font-bold text-[#2563eb] text-lg">{format(calendarMonth, 'MMMM yyyy')}</span>
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(addDays(startOfMonth(calendarMonth), -1))}>{'<'}</Button>
             <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(addDays(endOfMonth(calendarMonth), 1))}>{'>'}</Button>
@@ -77,7 +87,7 @@ export default function AgendaPage() {
             <h2 className="text-xl font-bold mb-4 text-[#2563eb]">Convocação</h2>
             <div className="mb-2"><b>Quem convocou:</b> {selectedConvoc.by}</div>
             <div className="mb-2"><b>Time:</b> {selectedConvoc.team}</div>
-            <div className="mb-2"><b>Data:</b> {format(selectedConvoc.date, 'dd/MM/yyyy', { locale: ptBR })}</div>
+            <div className="mb-2"><b>Data:</b> {format(selectedConvoc.date, 'dd/MM/yyyy')}</div>
             <div className="mb-2"><b>Hora:</b> {selectedConvoc.hour}</div>
             <div className="mb-2"><b>Adversário:</b> {selectedConvoc.opponent}</div>
             <div className="mb-4"><b>Informações extras:</b> {selectedConvoc.extra || '-'}</div>

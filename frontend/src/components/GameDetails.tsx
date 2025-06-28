@@ -78,7 +78,7 @@ export default function GameDetails({ gameId }: GameDetailsProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700">Data</label>
             <p className="mt-1 text-gray-900">
-              {format(new Date(game.date), 'dd/MM/yyyy', { locale: ptBR })}
+              {format(new Date(game.date), 'dd/MM/yyyy')}
             </p>
           </div>
           <div>
