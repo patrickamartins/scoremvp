@@ -9,7 +9,7 @@ interface Game {
   opponent: string;
   date: string;
   location: string;
-  categoria: string;
+  category: string;
   status: string;
 }
 
@@ -59,7 +59,7 @@ export default function GameList() {
                   </td>
                   <td className="border px-4 py-2">{game.opponent}</td>
                   <td className="border px-4 py-2">{game.location}</td>
-                  <td className="border px-4 py-2">{game.categoria}</td>
+                  <td className="border px-4 py-2">{game.category}</td>
                   <td className="border px-4 py-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       game.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' :

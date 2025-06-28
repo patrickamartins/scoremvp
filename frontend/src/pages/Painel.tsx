@@ -57,7 +57,7 @@ const Painel: React.FC = () => {
     data: "",
     horario: "",
     local: "",
-    categoria: categorias[0],
+    category: categorias[0],
     campeonato: "",
   });
   const [gameFormError, setGameFormError] = useState("");
@@ -70,12 +70,12 @@ const Painel: React.FC = () => {
 
   // Jogadores
   const [showModal, setShowModal] = useState(false);
-  const [playerForm, setPlayerForm] = useState<Player & { categoria?: string }>({
+  const [playerForm, setPlayerForm] = useState<Player & { category?: string }>({
     id: 0,
     name: "",
     number: 0,
     position: "",
-    categoria: categorias[0],
+    category: categorias[0],
   });
   const [formError, setFormError] = useState("");
 
@@ -111,7 +111,7 @@ const Painel: React.FC = () => {
         setAllPlayers(players.map((p: any) => ({
           ...p,
           position: p.position || '',
-          categoria: p.categoria || categorias[0],
+          category: p.category || categorias[0],
         })));
       });
     }
@@ -128,7 +128,7 @@ const Painel: React.FC = () => {
       allPlayers.filter(
         (p) =>
           (typeof p?.name === 'string' && p.name.toLowerCase().includes(term)) ||
-          (typeof p?.categoria === 'string' && p.categoria.toLowerCase().includes(term))
+          (typeof p?.category === 'string' && p.category.toLowerCase().includes(term))
       )
     );
   }, [searchTerm, allPlayers]);
@@ -267,7 +267,7 @@ const Painel: React.FC = () => {
         name: playerForm.name,
         number: playerForm.number,
         position: playerForm.position,
-        category: playerForm.categoria,
+        category: playerForm.category,
       });
 
       setPlayers((prev) => [...prev, newPlayer]);
@@ -276,7 +276,7 @@ const Painel: React.FC = () => {
         name: "",
         number: 0,
         position: "",
-        categoria: categorias[0],
+        category: categorias[0],
       });
       setFormError("");
       setShowModal(false);
@@ -311,7 +311,7 @@ const Painel: React.FC = () => {
         date: gameForm.data,
         time: gameForm.horario,
         location: gameForm.local,
-        category: gameForm.categoria,
+        category: gameForm.category,
         status: "PENDENTE",
       });
 
@@ -797,11 +797,11 @@ const Painel: React.FC = () => {
             />
           </div>
           <div>
-            <Label htmlFor="categoria">Categoria</Label>
+            <Label htmlFor="category">Category</Label>
             <select
-              id="categoria"
-              name="categoria"
-              value={gameForm.categoria}
+              id="category"
+              name="category"
+              value={gameForm.category}
               onChange={handleGameFormChange}
               className="w-full rounded-md border border-gray-300 px-3 py-2"
             >
@@ -1079,7 +1079,7 @@ const Painel: React.FC = () => {
                 name="busca-jogadora"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Digite nome ou categoria"
+                placeholder="Digite nome ou category"
                 autoComplete="off"
               />
               {searchResults.length > 0 && (
@@ -1090,7 +1090,7 @@ const Painel: React.FC = () => {
                       className="px-3 py-2 cursor-pointer hover:bg-blue-100"
                       onClick={() => handleAddExistingPlayer(p)}
                     >
-                      {p.name} <span className="text-xs text-gray-500">({p.categoria || 'Sem categoria'})</span>
+                      {p.name} <span className="text-xs text-gray-500">({p.category || 'Sem category'})</span>
                     </li>
                   ))}
                 </ul>
@@ -1141,11 +1141,11 @@ const Painel: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="categoria">Categoria</Label>
+                <Label htmlFor="category">Category</Label>
                 <select
-                  id="categoria"
-                  name="categoria"
-                  value={playerForm.categoria}
+                  id="category"
+                  name="category"
+                  value={playerForm.category}
                   onChange={handlePlayerFormChange}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                   tabIndex={0}
@@ -1180,7 +1180,7 @@ const Painel: React.FC = () => {
               <span className="font-bold">Adversário:</span> {gameForm.adversario}
             </div>
             <div>
-              <span className="font-bold">Categoria:</span> {gameForm.categoria}
+              <span className="font-bold">Category:</span> {gameForm.category}
             </div>
             <div>
               <span className="font-bold">Data:</span> {gameForm.data}
@@ -1219,7 +1219,7 @@ const Painel: React.FC = () => {
           <ul className="space-y-2">
             {pendingGames.map((game) => (
               <li key={game.id} className="flex items-center gap-2">
-                <span>{game.opponent} - {game.date?.slice(0, 10)} - {game.categoria}</span>
+                <span>{game.opponent} - {game.date?.slice(0, 10)} - {game.category}</span>
                 <button
                   className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                   onClick={() => handleSelectDraft(game)}

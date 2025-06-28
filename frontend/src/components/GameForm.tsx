@@ -6,7 +6,7 @@ interface GameFormProps {
     opponent: string;
     date: string;
     location: string;
-    categoria: string;
+    category: string;
   }) => void;
 }
 
@@ -15,7 +15,7 @@ export default function GameForm({ onSubmit }: GameFormProps) {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [category, setCategory] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +23,7 @@ export default function GameForm({ onSubmit }: GameFormProps) {
       opponent,
       date: date + 'T' + (time || '00:00'),
       location,
-      categoria
+      category
     });
   };
 
@@ -73,8 +73,8 @@ export default function GameForm({ onSubmit }: GameFormProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700">Categoria</label>
             <select
-              value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               required
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >

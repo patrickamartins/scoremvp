@@ -131,7 +131,7 @@ export default function DashboardPage() {
       filtered = filtered.filter((p: any) => String(p.id) === playerFilter);
     }
     if (categoryFilter) {
-      filtered = filtered.filter((p: any) => p.categoria === categoryFilter);
+      filtered = filtered.filter((p: any) => p.category === categoryFilter);
     }
     return filtered;
   }, [playersStats, playerFilter, categoryFilter]);
@@ -343,7 +343,7 @@ export default function DashboardPage() {
                     {selectedGame.opponent} <span className="text-gray-500 font-normal">vs</span> AACB Brasília
                   </div>
                   <div className="text-sm text-gray-600">
-                    {selectedGame.location} &bull; {selectedGame.categoria || '-'}
+                    {selectedGame.location} &bull; {selectedGame.category || '-'}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     {selectedGame.campeonato || 'Campeonato não informado'}

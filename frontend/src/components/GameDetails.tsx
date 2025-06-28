@@ -9,7 +9,7 @@ interface Game {
   opponent: string;
   date: string;
   location: string;
-  categoria: string;
+  category: string;
   status: string;
 }
 
@@ -93,7 +93,7 @@ export default function GameDetails({ gameId }: GameDetailsProps) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Categoria</label>
-            <p className="mt-1 text-gray-900">{game.categoria}</p>
+            <p className="mt-1 text-gray-900">{game.category}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Status</label>
