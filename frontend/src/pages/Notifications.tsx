@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,15 +28,12 @@ interface UserNotification {
 }
 
 export default function Notifications() {
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [notificationLog, setNotificationLog] = useState<Notification[]>([]);
   const [content, setContent] = useState('');
   const [url, setUrl] = useState('');
   const [target, setTarget] = useState<'all' | 'players' | 'mvp' | 'team'>('all');
   const [loading, setLoading] = useState(false);
-
-  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     loadNotifications();

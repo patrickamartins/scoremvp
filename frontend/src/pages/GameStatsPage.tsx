@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import GameStats from '../components/GameStats';
-import GameStatsTable from '../components/GameStatsTable';
-import GameStatsForm from '../components/GameStatsForm';
+import { GameStatsTable } from '../components/GameStatsTable';
+import { GameStatsForm } from '../components/GameStatsForm';
 
 interface Game {
   id: number;

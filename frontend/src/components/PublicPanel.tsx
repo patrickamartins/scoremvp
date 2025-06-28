@@ -3,7 +3,7 @@ import { api, getGames, getPlayers, getGameStats } from "@/services/api";
 import { Game, GameStats } from "@/types/game";
 import { Player } from "@/types/player";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { useToast } from "@/components/ui/use-toast";
 
 export function PublicPanel() {

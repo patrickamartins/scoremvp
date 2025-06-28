@@ -7,12 +7,19 @@ export interface Player {
 }
 
 export interface GameStats {
+  id: number;
+  player_id: number;
+  game_id: number;
   points: number;
   rebounds: number;
   assists: number;
   steals: number;
   blocks: number;
   fouls: number;
+  turnovers: number;
+  minutes_played: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PlayerGameStats {
