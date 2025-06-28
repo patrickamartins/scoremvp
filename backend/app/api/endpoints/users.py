@@ -8,7 +8,8 @@ from app.schemas.user import (
     UserUpdate,
     UserResponse,
     UserListResponse,
-    UserSearchParams
+    UserFilter,
+    UserPagination
 )
 from app.models.user import User, UserRole, UserPlan
 import os
@@ -18,9 +19,9 @@ router = APIRouter()
 
 @router.get("/", response_model=List[UserListResponse])
 def get_users(
-    search: Optional[str] = None,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
     role: Optional[UserRole] = None,
-    plan: Optional[UserPlan] = None,
     is_active: Optional[bool] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
@@ -30,15 +31,9 @@ def get_users(
     """
     Listar usuários (apenas admin).
     """
-    params = UserSearchParams(
-        search=search,
-        role=role,
-        plan=plan,
-        is_active=is_active,
-        skip=skip,
-        limit=limit
-    )
-    users, total = crud.get_users(db, params)
+    filters = UserFilter(name=name, email=email, role=role, is_active=is_active)
+    pagination = UserPagination(skip=skip, limit=limit)
+    users, total = crud.get_users(db, filters, pagination)
     return users
 
 @router.post("/", response_model=UserResponse)

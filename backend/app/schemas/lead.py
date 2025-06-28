@@ -5,13 +5,12 @@ from datetime import datetime
 class LeadBase(BaseModel):
     nome: str
     email: EmailStr
-    telefone: Optional[str] = None
-    mensagem: Optional[str] = None
+    whatsapp: str
 
 class LeadCreate(LeadBase):
     pass
 
-class LeadOut(LeadBase):
+class Lead(LeadBase):
     id: int
     created_at: datetime
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 interface User {
   id: number;
-  username: string;
+  name: string;
   email: string;
   token: string;
   role: string;

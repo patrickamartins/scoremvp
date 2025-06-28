@@ -1,307 +1,208 @@
-import { useState, useEffect, useRef } from 'react';
-import { api } from '../services/api';
-import { Card } from "./ui/Card";
-import { toast } from 'sonner';
-
-interface Player {
-  id: number;
-  nome: string;
-  numero: number;
-  posicao: string;
-}
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api, getGame, getPlayer, updateGameStats } from "@/services/api";
+import { Game } from "@/types/game";
+import { Player, PlayerStats } from "@/types/player";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 interface GameStatsFormProps {
   gameId: number;
-  onSubmit: () => void;
+  statsId: number;
 }
 
-export default function GameStatsForm({ gameId, onSubmit }: GameStatsFormProps) {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
-  const [quarto, setQuarto] = useState<number>(1);
-  const [pontos, setPontos] = useState<number>(0);
-  const [assistencias, setAssistencias] = useState<number>(0);
-  const [rebotes, setRebotes] = useState<number>(0);
-  const [roubos, setRoubos] = useState<number>(0);
-  const [faltas, setFaltas] = useState<number>(0);
-  const [doisTentativas, setDoisTentativas] = useState<number>(0);
-  const [doisAcertos, setDoisAcertos] = useState<number>(0);
-  const [tresTentativas, setTresTentativas] = useState<number>(0);
-  const [tresAcertos, setTresAcertos] = useState<number>(0);
-  const [lanceTentativas, setLanceTentativas] = useState<number>(0);
-  const [lanceAcertos, setLanceAcertos] = useState<number>(0);
-  const [interferencia, setInterferencia] = useState<number>(0);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const playerSelectRef = useRef<HTMLSelectElement>(null);
+export function GameStatsForm({ gameId, statsId }: GameStatsFormProps) {
+  const [game, setGame] = useState<Game | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [stats, setStats] = useState<PlayerStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    api.get('/jogadoras').then(({ data }) => {
-      setPlayers(data);
-    });
-  }, []);
+    const fetchData = async () => {
+      try {
+        const [gameData, statsData] = await Promise.all([
+          getGame(gameId),
+          api.get<PlayerStats>(`/games/${gameId}/stats/${statsId}`).then(res => res.data)
+        ]);
+        setGame(gameData);
+        setStats(statsData);
 
-  useEffect(() => {
-    if (playerSelectRef.current) {
-      playerSelectRef.current.focus();
-    }
-  }, [players]);
+        const playerData = await getPlayer(statsData.player_id);
+        setPlayer(playerData);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [gameId, statsId, toast]);
+
+  const handleInputChange = (field: keyof PlayerStats, value: number) => {
+    if (!stats) return;
+    setStats(prev => prev ? { ...prev, [field]: value } : null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
-    if (!selectedPlayer) {
-      setFormError('Selecione uma jogadora.');
-      return;
-    }
-    setSaving(true);
+    if (!stats) return;
+
     try {
-      await api.post(`/jogos/${gameId}/stats`, {
-        jogadora_id: selectedPlayer,
-        quarto,
-        pontos,
-        assistencias,
-        rebotes,
-        roubos,
-        faltas,
-        dois_tentativas: doisTentativas,
-        dois_acertos: doisAcertos,
-        tres_tentativas: tresTentativas,
-        tres_acertos: tresAcertos,
-        lance_tentativas: lanceTentativas,
-        lance_acertos: lanceAcertos,
-        interferencia
+      await updateGameStats(gameId, statsId, {
+        points: stats.points,
+        rebounds: stats.rebounds,
+        assists: stats.assists,
+        steals: stats.steals,
+        blocks: stats.blocks,
+        fouls: stats.fouls,
+        turnovers: stats.turnovers,
+        minutes_played: stats.minutes_played,
       });
-      // Limpar formulário
-      setSelectedPlayer(null);
-      setQuarto(1);
-      setPontos(0);
-      setAssistencias(0);
-      setRebotes(0);
-      setRoubos(0);
-      setFaltas(0);
-      setDoisTentativas(0);
-      setDoisAcertos(0);
-      setTresTentativas(0);
-      setTresAcertos(0);
-      setLanceTentativas(0);
-      setLanceAcertos(0);
-      setInterferencia(0);
-      toast.success('Estatísticas salvas com sucesso!');
-      onSubmit();
+
+      toast({
+        title: "Sucesso",
+        description: "Estatísticas atualizadas com sucesso",
+      });
+
+      navigate(`/games/${gameId}`);
     } catch (error) {
-      setFormError('Erro ao salvar estatísticas. Tente novamente.');
-      toast.error('Erro ao salvar estatísticas.');
-    } finally {
-      setSaving(false);
+      console.error("Erro ao atualizar estatísticas:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar as estatísticas",
+        variant: "destructive",
+      });
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (!game || !player || !stats) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-lg">Dados não encontrados</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4">
-      <Card title="Adicionar Estatísticas">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jogadora</label>
-              <select
-                ref={playerSelectRef}
-                value={selectedPlayer || ""}
-                onChange={(e) => setSelectedPlayer(Number(e.target.value))}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-                autoFocus
-              >
-                <option value="">Selecione uma jogadora</option>
-                {players.map((player) => (
-                  <option key={player.id} value={player.id}>
-                    {player.numero} - {player.nome} ({player.posicao})
-                  </option>
-                ))}
-              </select>
+    <div className="container mx-auto p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Editar Estatísticas - {player.name} vs {game.opponent}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="points">Pontos</Label>
+                <Input
+                  id="points"
+                  type="number"
+                  value={stats.points}
+                  onChange={(e) => handleInputChange("points", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rebounds">Rebotes</Label>
+                <Input
+                  id="rebounds"
+                  type="number"
+                  value={stats.rebounds}
+                  onChange={(e) => handleInputChange("rebounds", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="assists">Assistências</Label>
+                <Input
+                  id="assists"
+                  type="number"
+                  value={stats.assists}
+                  onChange={(e) => handleInputChange("assists", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="steals">Roubos</Label>
+                <Input
+                  id="steals"
+                  type="number"
+                  value={stats.steals}
+                  onChange={(e) => handleInputChange("steals", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="blocks">Bloqueios</Label>
+                <Input
+                  id="blocks"
+                  type="number"
+                  value={stats.blocks}
+                  onChange={(e) => handleInputChange("blocks", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fouls">Faltas</Label>
+                <Input
+                  id="fouls"
+                  type="number"
+                  value={stats.fouls}
+                  onChange={(e) => handleInputChange("fouls", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="turnovers">Perdas</Label>
+                <Input
+                  id="turnovers"
+                  type="number"
+                  value={stats.turnovers}
+                  onChange={(e) => handleInputChange("turnovers", Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="minutes_played">Minutos</Label>
+                <Input
+                  id="minutes_played"
+                  type="number"
+                  value={stats.minutes_played}
+                  onChange={(e) => handleInputChange("minutes_played", Number(e.target.value))}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Quarto</label>
-              <select
-                value={quarto}
-                onChange={(e) => setQuarto(Number(e.target.value))}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              >
-                <option value={1}>1º Quarto</option>
-                <option value={2}>2º Quarto</option>
-                <option value={3}>3º Quarto</option>
-                <option value={4}>4º Quarto</option>
-              </select>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => navigate(`/games/${gameId}`)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar</Button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Pontos</label>
-              <input
-                type="number"
-                min="0"
-                value={pontos}
-                onChange={(e) => setPontos(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Assistências</label>
-              <input
-                type="number"
-                min="0"
-                value={assistencias}
-                onChange={(e) => setAssistencias(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Rebotes</label>
-              <input
-                type="number"
-                min="0"
-                value={rebotes}
-                onChange={(e) => setRebotes(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Roubos</label>
-              <input
-                type="number"
-                min="0"
-                value={roubos}
-                onChange={(e) => setRoubos(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Faltas</label>
-              <input
-                type="number"
-                min="0"
-                value={faltas}
-                onChange={(e) => setFaltas(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">2PT Tentativas</label>
-              <input
-                type="number"
-                min="0"
-                value={doisTentativas}
-                onChange={(e) => setDoisTentativas(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">2PT Acertos</label>
-              <input
-                type="number"
-                min="0"
-                max={doisTentativas}
-                value={doisAcertos}
-                onChange={(e) => setDoisAcertos(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">3PT Tentativas</label>
-              <input
-                type="number"
-                min="0"
-                value={tresTentativas}
-                onChange={(e) => setTresTentativas(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">3PT Acertos</label>
-              <input
-                type="number"
-                min="0"
-                max={tresTentativas}
-                value={tresAcertos}
-                onChange={(e) => setTresAcertos(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">LL Tentativas</label>
-              <input
-                type="number"
-                min="0"
-                value={lanceTentativas}
-                onChange={(e) => setLanceTentativas(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">LL Acertos</label>
-              <input
-                type="number"
-                min="0"
-                max={lanceTentativas}
-                value={lanceAcertos}
-                onChange={(e) => setLanceAcertos(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Interferência</label>
-              <input
-                type="number"
-                min="0"
-                value={interferencia}
-                onChange={(e) => setInterferencia(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                tabIndex={0}
-                disabled={saving}
-              />
-            </div>
-          </div>
-          {formError && <div className="text-red-500 text-sm">{formError}</div>}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold mt-2 flex items-center justify-center disabled:opacity-50"
-            disabled={saving}
-            tabIndex={0}
-          >
-            {saving ? <span className="loader mr-2"></span> : null}
-            {saving ? 'Salvando...' : 'Salvar Estatísticas'}
-          </button>
-        </form>
+          </form>
+        </CardContent>
       </Card>
     </div>
   );
-}
-
-// Loader CSS
-// .loader { border: 2px solid #f3f3f3; border-top: 2px solid #2563eb; border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite; }
-// @keyframes spin { 100% { transform: rotate(360deg); } } 
+} 

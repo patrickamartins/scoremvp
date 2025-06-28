@@ -1,70 +1,70 @@
 import { api } from './api';
 
 export interface GameStats {
-  total_pontos: number;
-  total_assistencias: number;
-  total_rebotes: number;
-  total_roubos: number;
-  total_faltas: number;
-  por_quarto: Array<{
-    quarto: number;
-    total_pontos: number;
-    total_assistencias: number;
-    total_rebotes: number;
-    total_roubos: number;
-    total_faltas: number;
+  total_points: number;
+  total_assists: number;
+  total_rebounds: number;
+  total_steals: number;
+  total_fouls: number;
+  by_quarter: Array<{
+    quarter: number;
+    total_points: number;
+    total_assists: number;
+    total_rebounds: number;
+    total_steals: number;
+    total_fouls: number;
   }>;
 }
 
 export interface PlayerStats {
   id: number;
-  jogadora_id: number;
-  jogo_id: number;
-  quarto: number;
-  pontos: number;
-  assistencias: number;
-  rebotes: number;
-  roubos: number;
-  faltas: number;
-  dois_tentativas: number;
-  dois_acertos: number;
-  tres_tentativas: number;
-  tres_acertos: number;
-  lance_tentativas: number;
-  lance_acertos: number;
-  interferencia: number;
+  player_id: number;
+  game_id: number;
+  quarter: number;
+  points: number;
+  assists: number;
+  rebounds: number;
+  steals: number;
+  fouls: number;
+  two_attempts: number;
+  two_hits: number;
+  three_attempts: number;
+  three_hits: number;
+  free_throw_attempts: number;
+  free_throw_hits: number;
+  interference: number;
 }
 
 export interface NewPlayerStats {
-  jogadora_id: number;
-  quarto: number;
-  pontos: number;
-  assistencias: number;
-  rebotes: number;
-  roubos: number;
-  faltas: number;
-  dois_tentativas: number;
-  dois_acertos: number;
-  tres_tentativas: number;
-  tres_acertos: number;
-  lance_tentativas: number;
-  lance_acertos: number;
-  interferencia: number;
+  player_id: number;
+  quarter: number;
+  points: number;
+  assists: number;
+  rebounds: number;
+  steals: number;
+  fouls: number;
+  two_attempts: number;
+  two_hits: number;
+  three_attempts: number;
+  three_hits: number;
+  free_throw_attempts: number;
+  free_throw_hits: number;
+  interference: number;
 }
 
 export const GameStatsService = {
   getGameStats: async (gameId: number): Promise<GameStats> => {
-    const { data } = await api.get(`/jogos/${gameId}/stats`);
+    const { data } = await api.get(`/estatisticas/stats/games/${gameId}`);
     return data;
   },
 
   getPlayerStats: async (gameId: number): Promise<PlayerStats[]> => {
-    const { data } = await api.get(`/jogos/${gameId}/stats/jogadoras`);
+    const { data } = await api.get(`/estatisticas/stats/games/${gameId}/players`);
     return data;
   },
 
   addPlayerStats: async (gameId: number, stats: NewPlayerStats): Promise<PlayerStats> => {
-    const { data } = await api.post(`/jogos/${gameId}/stats`, stats);
+    const { data } = await api.post(`/estatisticas/stats/games/${gameId}`, stats);
     return data;
   }
 }; 

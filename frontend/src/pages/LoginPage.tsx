@@ -8,20 +8,21 @@ import { toast } from "sonner";
 export default function LoginPage() {
   usePageTitle("Login");
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('LoginPage handleSubmit chamado');
     e.preventDefault();
     setLoading(true);
     setError('');
     
     try {
       const form = new URLSearchParams();
-      form.append('username', username);
+      form.append('username', email);
       form.append('password', password);
 
       const response = await login(form);
@@ -54,15 +55,18 @@ export default function LoginPage() {
             {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Input
-                  id="username"
-                  name="username"
-                  type="text"
-                  value={username}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                  placeholder="Usuário ou email"
-                  className="rounded-full bg-[#f3f4f6] border border-gray-300 px-4 py-2"
+                <label htmlFor="email" className="sr-only">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
                   required
+                  value={email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Email"
                 />
               </div>
               <div>

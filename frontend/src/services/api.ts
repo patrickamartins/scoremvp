@@ -1,8 +1,12 @@
 // src/services/api.ts
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { Game, GameCreate, GameUpdate, GameStats, GameStatsCreate, GameStatsUpdate } from '@/types/game';
+import { Player, PlayerCreate, PlayerUpdate, PlayerStats } from '@/types/player';
+
+console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://scoremvp-backend.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -10,6 +14,7 @@ export const api = axios.create({
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  console.log('Axios request:', config.method, config.url, config);
   const token = localStorage.getItem('token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -31,6 +36,12 @@ api.interceptors.response.use(
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
 }
 
 export interface SignupResponse {
@@ -43,6 +54,7 @@ export interface SignupResponse {
  * Faz login usando OAuth2PasswordRequestForm (x-www-form-urlencoded)
  */
 export const login = async (form: URLSearchParams) => {
+  console.log('Disparando login para /auth/login', form.toString());
   return api.post<LoginResponse>('/auth/login', form, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -71,131 +83,88 @@ export function setAuthToken(token: string): void {
 
 // —— Players —————————————————————————————
 
-export interface Player {
-  id: number;
-  nome: string;
-  numero: number;
-  posicao?: string;
-}
+export const getPlayers = async (): Promise<Player[]> => {
+  const response = await api.get('/players');
+  return response.data;
+};
 
-type NewPlayer = Omit<Player, 'id'>;
-type UpdatePlayerPayload = Partial<NewPlayer>;
+export const getPlayer = async (id: number): Promise<Player> => {
+  const response = await api.get(`/players/${id}`);
+  return response.data;
+};
 
-export function getPlayers(): Promise<AxiosResponse<Player[]>> {
-  return api.get<Player[]>('/players');
-}
+export const createPlayer = async (player: PlayerCreate): Promise<Player> => {
+  const response = await api.post('/players', player);
+  return response.data;
+};
 
-export function getPlayer(id: number): Promise<AxiosResponse<Player>> {
-  return api.get<Player>(`/players/${id}`);
-}
+export const updatePlayer = async (id: number, player: PlayerUpdate): Promise<Player> => {
+  const response = await api.put(`/players/${id}`, player);
+  return response.data;
+};
 
-export function createPlayer(payload: NewPlayer): Promise<AxiosResponse<Player>> {
-  return api.post<Player>('/players', payload);
-}
-
-export function updatePlayer(
-  id: number,
-  payload: UpdatePlayerPayload
-): Promise<AxiosResponse<Player>> {
-  return api.put<Player>(`/players/${id}`, payload);
-}
-
-export function deletePlayer(id: number): Promise<AxiosResponse<void>> {
-  return api.delete<void>(`/players/${id}`);
-}
+export const deletePlayer = async (id: number): Promise<void> => {
+  await api.delete(`/players/${id}`);
+};
 
 // —— Games —————————————————————————————
 
-export interface Game {
-  id: number;
-  opponent: string;
-  date: string;
-  time?: string;
-  location?: string;
-  categoria?: string;
-  status?: string;
-  jogadoras?: number[];
-}
+export const getGames = async (): Promise<Game[]> => {
+  const response = await api.get('/games');
+  return response.data;
+};
 
-type NewGame = Omit<Game, 'id'>;
+export const getGame = async (id: number): Promise<Game> => {
+  const response = await api.get(`/games/${id}`);
+  return response.data;
+};
 
-export function listGames(): Promise<AxiosResponse<Game[]>> {
-  return api.get<Game[]>('/games');
-}
+export const createGame = async (game: GameCreate): Promise<Game> => {
+  const response = await api.post('/games', game);
+  return response.data;
+};
 
-export function getGame(id: number | string): Promise<AxiosResponse<Game>> {
-  return api.get<Game>(`/games/${id}`);
-}
+export const updateGame = async (id: number, game: GameUpdate): Promise<Game> => {
+  const response = await api.put(`/games/${id}`, game);
+  return response.data;
+};
 
-export function createGame(payload: NewGame): Promise<AxiosResponse<Game>> {
-  return api.post<Game>('/games/', payload);
-}
+export const deleteGame = async (id: number): Promise<void> => {
+  await api.delete(`/games/${id}`);
+};
 
-export function updateGame(
-  id: number,
-  payload: Partial<Omit<Game, 'id'>>
-): Promise<AxiosResponse<Game>> {
-  return api.put<Game>(`/games/${id}`, payload);
-}
+// —— Game Stats —————————————————————————————
 
-// —— Estatísticas —————————————————————————————
+export const getGameStats = async (gameId: number): Promise<GameStats[]> => {
+  const response = await api.get(`/estatisticas/stats/games/${gameId}`);
+  return response.data;
+};
 
-export interface Estatistica {
-  id: number;
-  jogadora_id: number;
-  jogo_id: number;
-  pontos: number;
-  assistencias: number;
-  rebotes: number;
-  roubos: number;
-  faltas: number;
-  interferencia: number;
-  quarto: number;
-}
+export const createGameStats = async (gameId: number, stats: GameStatsCreate): Promise<GameStats> => {
+  const response = await api.post(`/estatisticas/stats/games/${gameId}`, stats);
+  return response.data;
+};
 
-export interface EstatisticasQuarto {
-  quarto: number;
-  total_pontos: number;
-  total_assistencias: number;
-  total_rebotes: number;
-  total_roubos: number;
-  total_faltas: number;
-}
+export const updateGameStats = async (gameId: number, statsId: number, stats: GameStatsUpdate): Promise<GameStats> => {
+  const response = await api.put(`/estatisticas/stats/games/${gameId}/${statsId}`, stats);
+  return response.data;
+};
 
-export interface EstatisticasResumo {
-  total_pontos: number;
-  total_assistencias: number;
-  total_rebotes: number;
-  total_roubos: number;
-  total_faltas: number;
-  por_quarto: EstatisticasQuarto[];
-}
+export const deleteGameStats = async (gameId: number, statsId: number): Promise<void> => {
+  await api.delete(`/estatisticas/stats/games/${gameId}/${statsId}`);
+};
 
-export type EstatisticaCreatePayload = Omit<Estatistica, 'id'>;
+// —— Player Stats —————————————————————————————
 
-export function getEstatisticasByJogo(
-  jogoId: number | string
-): Promise<AxiosResponse<Estatistica[]>> {
-  return api.get<Estatistica[]>(`/estatisticas/jogo/${jogoId}`);
-}
+export const getPlayerStats = async (playerId: number): Promise<PlayerStats[]> => {
+  const response = await api.get(`/players/${playerId}/stats`);
+  return response.data;
+};
 
-export function getEstatisticasResumo(
-  jogoId: number | string
-): Promise<AxiosResponse<EstatisticasResumo>> {
-  return api.get<EstatisticasResumo>(`/estatisticas/jogo/${jogoId}/resumo`);
-}
-
-export function createEstatistica(
-  payload: Partial<EstatisticaCreatePayload>
-): Promise<AxiosResponse<Estatistica>> {
-  return api.post<Estatistica>('/estatisticas', payload);
-}
-
-export function undoLastEstatistica(
-  jogoId: number | string
-): Promise<AxiosResponse<void>> {
-  return api.delete<void>(`/estatisticas/ultimo/${jogoId}`);
-}
+export const getPlayerGameStats = async (playerId: number, gameId: number): Promise<PlayerStats> => {
+  const response = await api.get(`/players/${playerId}/games/${gameId}/stats`);
+  return response.data;
+};
 
 export const forgotPassword = async (email: string) => {
   return api.post('/auth/forgot-password', { email });
@@ -204,3 +173,5 @@ export const forgotPassword = async (email: string) => {
 export const resetPassword = async (token: string, newPassword: string) => {
   return api.post('/auth/reset-password', { token, new_password: newPassword });
 };
+
+export default api;

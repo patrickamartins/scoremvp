@@ -1,54 +1,99 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
-import { Card } from "./ui/Card";
-
-interface Player {
-  id: number;
-  nome: string;
-  numero: number;
-  posicao: string;
-}
-
-interface PlayerStats {
-  id: number;
-  jogadora_id: number;
-  jogo_id: number;
-  quarto: number;
-  pontos: number;
-  assistencias: number;
-  rebotes: number;
-  roubos: number;
-  faltas: number;
-  dois_tentativas: number;
-  dois_acertos: number;
-  tres_tentativas: number;
-  tres_acertos: number;
-  lance_tentativas: number;
-  lance_acertos: number;
-  interferencia: number;
-}
+import { api, getPlayers, getGameStats, updateGameStats } from '@/services/api';
+import { Card } from "./ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GameStats } from "@/types/game";
+import { Player } from "@/types/player";
+import { useToast } from "@/components/ui/use-toast";
 
 interface GameStatsTableProps {
   gameId: number;
+  stats: GameStats[];
+  onStatsUpdate: () => void;
 }
 
-export default function GameStatsTable({ gameId }: GameStatsTableProps) {
+export function GameStatsTable({ gameId, stats, onStatsUpdate }: GameStatsTableProps) {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [stats, setStats] = useState<PlayerStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [editingStats, setEditingStats] = useState<GameStats | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    Promise.all([
-      api.get('/jogadoras'),
-      api.get(`/jogos/${gameId}/stats/jogadoras`)
-    ]).then(([{ data: playersData }, { data: statsData }]) => {
-      setPlayers(playersData);
-      setStats(statsData);
-      setLoading(false);
-    });
-  }, [gameId]);
+    const fetchData = async () => {
+      try {
+        const [playersData, statsData] = await Promise.all([
+          getPlayers(),
+          getGameStats(gameId)
+        ]);
+        setPlayers(playersData);
+        onStatsUpdate();
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados",
+          variant: "destructive",
+        });
+      }
+    };
 
-  if (loading) {
+    fetchData();
+  }, [gameId, onStatsUpdate, toast]);
+
+  const handleEdit = (stat: GameStats) => {
+    setEditingStats({ ...stat });
+  };
+
+  const handleSave = async () => {
+    if (!editingStats) return;
+
+    try {
+      await updateGameStats(gameId, editingStats.id, {
+        points: editingStats.points,
+        rebounds: editingStats.rebounds,
+        assists: editingStats.assists,
+        steals: editingStats.steals,
+        blocks: editingStats.blocks,
+        fouls: editingStats.fouls,
+        turnovers: editingStats.turnovers,
+        minutes_played: editingStats.minutes_played,
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Estatísticas atualizadas com sucesso!",
+      });
+
+      setEditingStats(null);
+      onStatsUpdate();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar estatísticas",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingStats(null);
+  };
+
+  const handleInputChange = (field: keyof GameStats, value: number) => {
+    if (!editingStats) return;
+    setEditingStats((prev) => prev ? { ...prev, [field]: value } : null);
+  };
+
+  if (!players.length || !stats.length) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -56,104 +101,145 @@ export default function GameStatsTable({ gameId }: GameStatsTableProps) {
     );
   }
 
-  // Agrupar estatísticas por jogadora
-  const statsByPlayer = stats.reduce((acc, stat) => {
-    if (!acc[stat.jogadora_id]) {
-      acc[stat.jogadora_id] = {
-        pontos: 0,
-        assistencias: 0,
-        rebotes: 0,
-        roubos: 0,
-        faltas: 0,
-        dois_tentativas: 0,
-        dois_acertos: 0,
-        tres_tentativas: 0,
-        tres_acertos: 0,
-        lance_tentativas: 0,
-        lance_acertos: 0,
-        interferencia: 0
-      };
-    }
-    acc[stat.jogadora_id].pontos += stat.pontos;
-    acc[stat.jogadora_id].assistencias += stat.assistencias;
-    acc[stat.jogadora_id].rebotes += stat.rebotes;
-    acc[stat.jogadora_id].roubos += stat.roubos;
-    acc[stat.jogadora_id].faltas += stat.faltas;
-    acc[stat.jogadora_id].dois_tentativas += stat.dois_tentativas;
-    acc[stat.jogadora_id].dois_acertos += stat.dois_acertos;
-    acc[stat.jogadora_id].tres_tentativas += stat.tres_tentativas;
-    acc[stat.jogadora_id].tres_acertos += stat.tres_acertos;
-    acc[stat.jogadora_id].lance_tentativas += stat.lance_tentativas;
-    acc[stat.jogadora_id].lance_acertos += stat.lance_acertos;
-    acc[stat.jogadora_id].interferencia += stat.interferencia;
-    return acc;
-  }, {} as { [key: number]: Omit<PlayerStats, 'id' | 'jogadora_id' | 'jogo_id' | 'quarto'> });
-
   return (
-    <div className="p-4">
-      <Card title="Estatísticas por Jogadora">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr>
-                <th className="border px-4 py-2">#</th>
-                <th className="border px-4 py-2">Nome</th>
-                <th className="border px-4 py-2">Posição</th>
-                <th className="border px-4 py-2">Pontos</th>
-                <th className="border px-4 py-2">2PT</th>
-                <th className="border px-4 py-2">3PT</th>
-                <th className="border px-4 py-2">LL</th>
-                <th className="border px-4 py-2">AST</th>
-                <th className="border px-4 py-2">REB</th>
-                <th className="border px-4 py-2">ROUB</th>
-                <th className="border px-4 py-2">FAL</th>
-                <th className="border px-4 py-2">INT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((player) => {
-                const playerStats = statsByPlayer[player.id] || {
-                  pontos: 0,
-                  assistencias: 0,
-                  rebotes: 0,
-                  roubos: 0,
-                  faltas: 0,
-                  dois_tentativas: 0,
-                  dois_acertos: 0,
-                  tres_tentativas: 0,
-                  tres_acertos: 0,
-                  lance_tentativas: 0,
-                  lance_acertos: 0,
-                  interferencia: 0
-                };
-
-                return (
-                  <tr key={player.id}>
-                    <td className="border px-4 py-2 text-center">{player.numero}</td>
-                    <td className="border px-4 py-2">{player.nome}</td>
-                    <td className="border px-4 py-2">{player.posicao}</td>
-                    <td className="border px-4 py-2 text-center">{playerStats.pontos}</td>
-                    <td className="border px-4 py-2 text-center">
-                      {playerStats.dois_acertos}/{playerStats.dois_tentativas}
-                    </td>
-                    <td className="border px-4 py-2 text-center">
-                      {playerStats.tres_acertos}/{playerStats.tres_tentativas}
-                    </td>
-                    <td className="border px-4 py-2 text-center">
-                      {playerStats.lance_acertos}/{playerStats.lance_tentativas}
-                    </td>
-                    <td className="border px-4 py-2 text-center">{playerStats.assistencias}</td>
-                    <td className="border px-4 py-2 text-center">{playerStats.rebotes}</td>
-                    <td className="border px-4 py-2 text-center">{playerStats.roubos}</td>
-                    <td className="border px-4 py-2 text-center">{playerStats.faltas}</td>
-                    <td className="border px-4 py-2 text-center">{playerStats.interferencia}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Estatísticas do Jogo</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Jogador</TableHead>
+              <TableHead>Pontos</TableHead>
+              <TableHead>Rebotes</TableHead>
+              <TableHead>Assistências</TableHead>
+              <TableHead>Roubos</TableHead>
+              <TableHead>Bloqueios</TableHead>
+              <TableHead>Faltas</TableHead>
+              <TableHead>Perdas</TableHead>
+              <TableHead>Minutos</TableHead>
+              <TableHead>Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {stats.map((stat) => {
+              const player = players.find(p => p.id === stat.player_id);
+              return (
+                <TableRow key={stat.id}>
+                  <TableCell>{player?.name}</TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.points}
+                        onChange={(e) => handleInputChange("points", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.points
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.rebounds}
+                        onChange={(e) => handleInputChange("rebounds", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.rebounds
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.assists}
+                        onChange={(e) => handleInputChange("assists", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.assists
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.steals}
+                        onChange={(e) => handleInputChange("steals", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.steals
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.blocks}
+                        onChange={(e) => handleInputChange("blocks", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.blocks
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.fouls}
+                        onChange={(e) => handleInputChange("fouls", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.fouls
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.turnovers}
+                        onChange={(e) => handleInputChange("turnovers", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.turnovers
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <Input
+                        type="number"
+                        value={editingStats.minutes_played}
+                        onChange={(e) => handleInputChange("minutes_played", Number(e.target.value))}
+                        className="w-20"
+                      />
+                    ) : (
+                      stat.minutes_played
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingStats?.id === stat.id ? (
+                      <div className="flex space-x-2">
+                        <Button onClick={handleSave} size="sm">Salvar</Button>
+                        <Button onClick={handleCancel} variant="outline" size="sm">Cancelar</Button>
+                      </div>
+                    ) : (
+                      <Button onClick={() => handleEdit(stat)} size="sm">Editar</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 } 

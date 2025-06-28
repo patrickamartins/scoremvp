@@ -12,6 +12,7 @@ import logging
 router = APIRouter(
     prefix="/players",
     tags=["players"],
+    redirect_slashes=False,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def criar_jogadora(
     current_user: models.User = Depends(get_current_user),
 ):
     try:
-        nova = models.Jogadora(**player_in.dict())
+        nova = models.Player(**player_in.dict())
         db.add(nova)
         db.commit()
         db.refresh(nova)
@@ -39,7 +40,7 @@ def criar_jogadora(
         logger.error(f"Erro de integridade ao criar jogadora: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Já existe uma jogadora com esse nome. Escolha outro nome."
+            detail="Já existe uma jogadora com esse nome ou número. Escolha outro."
         )
     except Exception as e:
         db.rollback()
@@ -57,9 +58,25 @@ def criar_jogadora(
 )
 def listar_jogadoras(
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
-    jogadoras = db.query(models.Jogadora).all()
-    return [schemas.PlayerOut.from_orm(j) for j in jogadoras]
+    try:
+        jogadoras = db.query(models.Player).all()
+        return [schemas.PlayerOut.from_orm(j) for j in jogadoras]
+    except Exception as e:
+        logger.error(f"Erro ao listar jogadoras: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao listar jogadoras: {str(e)}"
+        )
+
+
+@router.get("", response_model=list[schemas.PlayerOut], include_in_schema=False)
+def listar_jogadoras_sem_barra(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return listar_jogadoras(db, current_user)
 
 
 @router.get(
@@ -71,7 +88,7 @@ def ler_jogadora(
     player_id: int,
     db: Session = Depends(get_db),
 ):
-    jog = db.query(models.Jogadora).filter(models.Jogadora.id == player_id).first()
+    jog = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not jog:
         raise HTTPException(status_code=404, detail="Jogadora não encontrada")
     return schemas.PlayerOut.from_orm(jog)
@@ -88,7 +105,7 @@ def atualizar_jogadora(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jog = db.query(models.Jogadora).filter(models.Jogadora.id == player_id).first()
+    jog = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not jog:
         raise HTTPException(status_code=404, detail="Jogadora não encontrada")
     for key, val in player_in.dict(exclude_unset=True).items():
@@ -108,8 +125,17 @@ def deletar_jogadora(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jog = db.query(models.Jogadora).filter(models.Jogadora.id == player_id).first()
+    jog = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not jog:
         raise HTTPException(status_code=404, detail="Jogadora não encontrada")
     db.delete(jog)
     db.commit()
+
+
+@router.post("", response_model=schemas.PlayerOut, include_in_schema=False)
+def criar_jogadora_sem_barra(
+    player_in: schemas.PlayerCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return criar_jogadora(player_in, db, current_user)

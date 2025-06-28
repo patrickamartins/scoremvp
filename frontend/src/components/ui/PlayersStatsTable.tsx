@@ -88,7 +88,7 @@ export function PlayersStatsTable({ data }: PlayersStatsTableProps) {
         </thead>
         <tbody>
           {data.map((player, idx) => (
-            <tr key={player.no} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+            <tr key={player.no + '-' + idx} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
               <td className="px-2 py-1 text-center font-bold">{player.no}</td>
               <td className="px-2 py-1 text-left whitespace-nowrap">{player.name}</td>
               <td className="px-2 py-1 text-center">{player.pos}</td>

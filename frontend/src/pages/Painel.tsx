@@ -1,28 +1,33 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { createGame, createEstatistica, getPlayers, getEstatisticasByJogo, updateGame } from "../services/api";
-import { toast } from "sonner";
+import { api, createGame, createGameStats, getPlayers, getGameStats, updateGame, createPlayer, getGames, getGame } from "../services/api";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Game, GameStats } from "@/types/game";
+import { Player } from "@/types/player";
 
 interface Player {
   id: number;
-  nome: string;
-  numero: number;
-  posicao: string;
-  categoria?: string;
+  name: string;
+  number: number;
+  position: string;
+  category?: string;
 }
 
-interface EstatisticasJogadora {
-  dois: { tentativas: number; acertos: number };
-  tres: { tentativas: number; acertos: number };
-  lance: { tentativas: number; acertos: number };
-  rebotes: number;
-  assistencias: number;
-  faltas: number;
-  tocos: number;
+interface PlayerStatistics {
+  two: { attempts: number; hits: number };
+  three: { attempts: number; hits: number };
+  freeThrow: { attempts: number; hits: number };
+  rebounds: number;
+  assists: number;
+  fouls: number;
+  blocks: number;
   turnovers: number;
-  roubos: number;
-  interferencia: number;
+  steals: number;
+  interference: number;
 }
 
 const categorias = ["sub-13", "sub-15", "sub-17", "sub-19"];
@@ -37,6 +42,15 @@ const quartos = [
 
 const Painel: React.FC = () => {
   usePageTitle("Painel");
+  const [games, setGames] = useState<Game[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [stats, setStats] = useState<GameStats[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   // Formulário do jogo
   const [gameForm, setGameForm] = useState({
     adversario: "",
@@ -55,19 +69,18 @@ const Painel: React.FC = () => {
   const [selectedQuarto, setSelectedQuarto] = useState(1);
 
   // Jogadores
-  const [players, setPlayers] = useState<Player[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [playerForm, setPlayerForm] = useState<Player & { categoria?: string }>({
     id: 0,
-    nome: "",
-    numero: 0,
-    posicao: "",
+    name: "",
+    number: 0,
+    position: "",
     categoria: categorias[0],
   });
   const [formError, setFormError] = useState("");
 
   // Estatísticas por quarto
-  const [stats, setStats] = useState<Record<number, Record<number, EstatisticasJogadora>>>({});
+  const [statistics, setStatistics] = useState<Record<number, Record<number, PlayerStatistics>>>({});
   const [history, setHistory] = useState<any[]>([]); // Para desfazer
 
   // Adicionar hooks para dupla verificação
@@ -87,20 +100,24 @@ const Painel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Player[]>([]);
 
-  // Buscar todas as jogadoras para autocomplete ao abrir modal
+  // Adicionar jogos pendentes ao montar o Painel
+  const [pendingGames, setPendingGames] = useState<Game[]>([]);
+  const [selectingDraft, setSelectingDraft] = useState(false);
+
+  // Buscar todas as jogadoras do banco para autocomplete ao abrir modal
   useEffect(() => {
     if (showModal) {
-      getPlayers().then(({ data }) => {
-        setAllPlayers(data.map((p: any) => ({
+      getPlayers().then((players) => {
+        setAllPlayers(players.map((p: any) => ({
           ...p,
-          posicao: p.posicao || '',
+          position: p.position || '',
           categoria: p.categoria || categorias[0],
         })));
       });
     }
   }, [showModal]);
 
-  // Filtrar jogadoras por nome ou categoria
+  // Corrigir filtro do autocomplete
   useEffect(() => {
     if (searchTerm.length === 0) {
       setSearchResults([]);
@@ -110,8 +127,8 @@ const Painel: React.FC = () => {
     setSearchResults(
       allPlayers.filter(
         (p) =>
-          p.nome.toLowerCase().includes(term) ||
-          (p.categoria && p.categoria.toLowerCase().includes(term))
+          (typeof p?.name === 'string' && p.name.toLowerCase().includes(term)) ||
+          (typeof p?.categoria === 'string' && p.categoria.toLowerCase().includes(term))
       )
     );
   }, [searchTerm, allPlayers]);
@@ -120,32 +137,44 @@ const Painel: React.FC = () => {
   useEffect(() => {
     if (gameId) {
       setLoadingStats(true);
-      getEstatisticasByJogo(gameId).then(({ data }) => {
-        const newStats = { ...stats };
-        data.forEach((estatistica) => {
-          const quarto = estatistica.quarto || 1;
-          if (!newStats[quarto]) {
-            newStats[quarto] = {};
+      getGameStats(gameId)
+        .then((stats) => {
+          const newStats = { ...statistics };
+          stats.forEach((estatistica) => {
+            const quarto = estatistica.quarter || 1;
+            if (!newStats[quarto]) {
+              newStats[quarto] = {};
+            }
+            newStats[quarto][estatistica.player_id] = {
+              two: { attempts: 0, hits: 0 },
+              three: { attempts: 0, hits: 0 },
+              freeThrow: { attempts: 0, hits: 0 },
+              rebounds: estatistica.rebounds,
+              assists: estatistica.assists,
+              fouls: estatistica.fouls,
+              blocks: 0,
+              turnovers: 0,
+              steals: estatistica.steals,
+              interference: estatistica.interference,
+            };
+          });
+          setStatistics(newStats);
+          setLoadingStats(false);
+        })
+        .catch((err) => {
+          if (err?.response?.status === 404) {
+            // Nenhuma estatística ainda, não é erro fatal
+            setLoadingStats(false);
+          } else {
+            // Só logue outros erros
+            toast({
+              title: "Erro",
+              description: "Não foi possível carregar as estatísticas",
+              variant: "destructive",
+            });
+            setLoadingStats(false);
           }
-          newStats[quarto][estatistica.jogadora_id] = {
-            dois: { tentativas: 0, acertos: 0 },
-            tres: { tentativas: 0, acertos: 0 },
-            lance: { tentativas: 0, acertos: 0 },
-            rebotes: estatistica.rebotes,
-            assistencias: estatistica.assistencias,
-            faltas: estatistica.faltas,
-            tocos: 0,
-            turnovers: 0,
-            roubos: estatistica.roubos,
-            interferencia: estatistica.interferencia,
-          };
         });
-        setStats(newStats);
-        setLoadingStats(false);
-      }).catch(() => {
-        toast.error("Erro ao carregar estatísticas do jogo.");
-        setLoadingStats(false);
-      });
     }
   }, [gameId]);
 
@@ -155,6 +184,63 @@ const Painel: React.FC = () => {
       nomeInputRef.current.focus();
     }
   }, [showModal]);
+
+  // Buscar jogadores vinculados ao jogo ao selecionar rascunho ou abrir jogo salvo
+  useEffect(() => {
+    if (gameId) {
+      setLoadingPlayers(true);
+      getGame(gameId).then((game) => {
+        // Garante que players é sempre um array
+        setPlayers(Array.isArray(game.players) ? game.players : []);
+      }).finally(() => setLoadingPlayers(false));
+    }
+  }, [gameId]);
+
+  // Buscar jogos pendentes ao montar o Painel
+  useEffect(() => {
+    getGames().then((games) => {
+      setPendingGames(games.filter(game => game.status === "PENDENTE"));
+    });
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [gamesData, playersData] = await Promise.all([
+          getGames(),
+          getPlayers()
+        ]);
+        setGames(gamesData);
+        setPlayers(playersData);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
+
+  useEffect(() => {
+    if (selectedGame) {
+      getGameStats(selectedGame.id)
+        .then(setStats)
+        .catch(error => {
+          console.error("Erro ao carregar estatísticas:", error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar as estatísticas",
+            variant: "destructive",
+          });
+        });
+    }
+  }, [selectedGame, toast]);
 
   const handleGameFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -170,40 +256,42 @@ const Painel: React.FC = () => {
 
   const handleAddPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!playerForm.nome || !playerForm.numero || !playerForm.posicao) {
-      setFormError("Preencha todos os campos");
+    if (!playerForm.name.trim()) {
+      setFormError("Nome é obrigatório");
       return;
     }
-    if (players.some((p) => p.numero === playerForm.numero)) {
-      setFormError("Já existe um jogador com esse número");
-      return;
-    }
+
     setSavingPlayer(true);
     try {
-      setPlayers((prev) => [...prev, playerForm]);
-      setStats((prev) => ({
-        ...prev,
-        [selectedQuarto]: {
-          ...prev[selectedQuarto],
-          [playerForm.id]: {
-            dois: { tentativas: 0, acertos: 0 },
-            tres: { tentativas: 0, acertos: 0 },
-            lance: { tentativas: 0, acertos: 0 },
-            rebotes: 0,
-            assistencias: 0,
-            faltas: 0,
-            tocos: 0,
-            turnovers: 0,
-            roubos: 0,
-            interferencia: 0,
-          },
-        },
-      }));
-      setPlayerForm({ id: 0, nome: "", numero: 0, posicao: "", categoria: categorias[0] });
+      const newPlayer = await createPlayer({
+        name: playerForm.name,
+        number: playerForm.number,
+        position: playerForm.position,
+        category: playerForm.categoria,
+      });
+
+      setPlayers((prev) => [...prev, newPlayer]);
+      setPlayerForm({
+        id: 0,
+        name: "",
+        number: 0,
+        position: "",
+        categoria: categorias[0],
+      });
+      setFormError("");
       setShowModal(false);
-      toast.success("Jogador adicionado com sucesso!");
-    } catch (err) {
-      toast.error("Erro ao adicionar jogador");
+      toast({
+        title: "Sucesso",
+        description: "Jogador adicionado com sucesso!",
+      });
+    } catch (err: any) {
+      if (err?.response?.status === 503) {
+        setFormError("Backend indisponível. Tente novamente em instantes.");
+      } else if (err?.response?.data?.detail) {
+        setFormError(err.response.data.detail);
+      } else {
+        setFormError("Erro ao adicionar jogador. Verifique sua conexão ou tente novamente.");
+      }
     } finally {
       setSavingPlayer(false);
     }
@@ -211,34 +299,47 @@ const Painel: React.FC = () => {
 
   const handleCreateGame = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!gameForm.adversario || !gameForm.data || !gameForm.horario || !gameForm.local || !gameForm.categoria) {
-      setGameFormError("Preencha todos os campos do jogo");
+    if (!gameForm.adversario.trim()) {
+      setGameFormError("Adversário é obrigatório");
       return;
     }
-    setGameFormError("");
+
     setSavingGame(true);
     try {
-      const payload = {
+      const newGame = await createGame({
         opponent: gameForm.adversario,
-        date: new Date(gameForm.data + 'T' + (gameForm.horario || '00:00')).toISOString(),
+        date: gameForm.data,
+        time: gameForm.horario,
         location: gameForm.local,
-        categoria: gameForm.categoria,
-        status: 'PENDENTE',
-        jogadoras: [],
-      };
-      const res = await createGame(payload);
-      setGameId(res.data.id);
-      setGameSaved(true);
-      setGameStatus('PENDENTE');
-      toast.success("Jogo salvo com sucesso!");
+        category: gameForm.categoria,
+        status: "PENDENTE",
+      });
+
+      if (newGame && newGame.id) {
+        setGameId(newGame.id);
+        setGameSaved(true);
+        setGameFormError("");  // Limpa qualquer erro anterior
+        toast({
+          title: "Sucesso",
+          description: "Jogo salvo com sucesso!",
+        });
+      } else {
+        throw new Error("Resposta inválida do servidor");
+      }
     } catch (err: any) {
       setGameSaved(false);
       if (err?.response?.status === 503) {
         setGameFormError("Backend indisponível. Tente novamente em instantes.");
+      } else if (err?.response?.data?.detail) {
+        setGameFormError(err.response.data.detail);
       } else {
         setGameFormError("Erro ao salvar o jogo. Verifique sua conexão ou tente novamente.");
       }
-      toast.error("Erro ao salvar o jogo");
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar o jogo",
+        variant: "destructive",
+      });
     } finally {
       setSavingGame(false);
     }
@@ -246,10 +347,39 @@ const Painel: React.FC = () => {
 
   // Atualizar status para EM_ANDAMENTO ao iniciar estatísticas
   useEffect(() => {
-    if (gameSaved && gameStatus === 'PENDENTE' && Object.values(stats[selectedQuarto] || {}).some(s => s.dois.tentativas > 0 || s.tres.tentativas > 0 || s.lance.tentativas > 0 || s.rebotes > 0 || s.assistencias > 0 || s.faltas > 0 || s.tocos > 0 || s.turnovers > 0 || s.roubos > 0 || s.interferencia > 0)) {
+    if (
+      gameSaved &&
+      gameStatus === 'PENDENTE' &&
+      Object.values(statistics[selectedQuarto] || {}).some((s) => {
+        const safe = s || {
+          two: { attempts: 0, hits: 0 },
+          three: { attempts: 0, hits: 0 },
+          freeThrow: { attempts: 0, hits: 0 },
+          rebounds: 0,
+          assists: 0,
+          fouls: 0,
+          blocks: 0,
+          turnovers: 0,
+          steals: 0,
+          interference: 0,
+        };
+        return (
+          safe.two.attempts > 0 ||
+          safe.three.attempts > 0 ||
+          safe.freeThrow.attempts > 0 ||
+          safe.rebounds > 0 ||
+          safe.assists > 0 ||
+          safe.fouls > 0 ||
+          safe.blocks > 0 ||
+          safe.turnovers > 0 ||
+          safe.steals > 0 ||
+          safe.interference > 0
+        );
+      })
+    ) {
       setGameStatus('EM_ANDAMENTO');
     }
-  }, [stats, gameSaved, gameStatus, selectedQuarto]);
+  }, [statistics, gameSaved, gameStatus, selectedQuarto]);
 
   // Função para finalizar partida
   const handleFinalizarPartida = async () => {
@@ -257,31 +387,55 @@ const Painel: React.FC = () => {
     try {
       await updateGame(gameId, { status: 'FINALIZADA' });
       setGameStatus('FINALIZADA');
-      toast.success('Partida finalizada!');
+      toast({
+        title: "Sucesso",
+        description: "Partida finalizada!",
+      });
     } catch {
-      toast.error('Erro ao finalizar partida.');
+      toast({
+        title: "Erro",
+        description: "Erro ao finalizar partida.",
+        variant: "destructive",
+      });
     }
   };
 
   function handleShot(playerId: number, tipo: 'dois' | 'tres' | 'lance') {
-    // Salvar estado atual no histórico antes de modificar
-    setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
+    const tipoMap = {
+      dois: 'two',
+      tres: 'three',
+      lance: 'freeThrow',
+    } as const;
+    const field = tipoMap[tipo];
+    setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(statistics)) }]);
 
     // Se já existe um pendingShot para esse jogador e tipo, registrar acerto
     if (pendingShot && pendingShot.playerId === playerId && pendingShot.tipo === tipo) {
       clearTimeout(pendingShot.timeout!);
-      setStats((prev) => {
+      setStatistics((prev) => {
         const quartoStats = { ...prev[selectedQuarto] };
-        const playerStats = { ...quartoStats[playerId] };
+        const playerStats = {
+          two: { attempts: 0, hits: 0 },
+          three: { attempts: 0, hits: 0 },
+          freeThrow: { attempts: 0, hits: 0 },
+          rebounds: 0,
+          assists: 0,
+          fouls: 0,
+          blocks: 0,
+          turnovers: 0,
+          steals: 0,
+          interference: 0,
+          ...quartoStats[playerId],
+        };
         return {
           ...prev,
           [selectedQuarto]: {
             ...quartoStats,
             [playerId]: {
               ...playerStats,
-              [tipo]: {
-                tentativas: (playerStats[tipo]?.tentativas ?? 0) + 1,
-                acertos: (playerStats[tipo]?.acertos ?? 0) + 1,
+              [field]: {
+                attempts: (playerStats[field]?.attempts ?? 0) + 1,
+                hits: (playerStats[field]?.hits ?? 0) + 1,
               },
             },
           },
@@ -293,18 +447,30 @@ const Painel: React.FC = () => {
 
     // Se não, registrar tentativa e aguardar 3s para acerto
     const timeout = setTimeout(() => {
-      setStats((prev) => {
+      setStatistics((prev) => {
         const quartoStats = { ...prev[selectedQuarto] };
-        const playerStats = { ...quartoStats[playerId] };
+        const playerStats = {
+          two: { attempts: 0, hits: 0 },
+          three: { attempts: 0, hits: 0 },
+          freeThrow: { attempts: 0, hits: 0 },
+          rebounds: 0,
+          assists: 0,
+          fouls: 0,
+          blocks: 0,
+          turnovers: 0,
+          steals: 0,
+          interference: 0,
+          ...quartoStats[playerId],
+        };
         return {
           ...prev,
           [selectedQuarto]: {
             ...quartoStats,
             [playerId]: {
               ...playerStats,
-              [tipo]: {
-                tentativas: (playerStats[tipo]?.tentativas ?? 0) + 1,
-                acertos: playerStats[tipo]?.acertos ?? 0,
+              [field]: {
+                attempts: (playerStats[field]?.attempts ?? 0) + 1,
+                hits: playerStats[field]?.hits ?? 0,
               },
             },
           },
@@ -315,19 +481,29 @@ const Painel: React.FC = () => {
     setPendingShot({ playerId, tipo, timeout });
   }
 
-  function handleStatButton(playerId: number, stat: keyof EstatisticasJogadora, delta: number) {
-    // Salvar estado atual no histórico antes de modificar
-    setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
+  function handleStatButton(playerId: number, stat: keyof PlayerStatistics, delta: number) {
+    setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(statistics)) }]);
 
-    setStats((prev) => {
+    setStatistics((prev) => {
       const quartoStats = { ...prev[selectedQuarto] };
-      const playerStats = { ...quartoStats[playerId] };
+      const playerStats = {
+        two: { attempts: 0, hits: 0 },
+        three: { attempts: 0, hits: 0 },
+        freeThrow: { attempts: 0, hits: 0 },
+        rebounds: 0,
+        assists: 0,
+        fouls: 0,
+        blocks: 0,
+        turnovers: 0,
+        steals: 0,
+        interference: 0,
+        ...quartoStats[playerId],
+      };
       // Só incrementa/decrementa se for campo numérico
       const isNumberField = [
-        'rebotes', 'assistencias', 'faltas', 'tocos', 'turnovers', 'roubos', 'interferencia'
+        'rebounds', 'assists', 'fouls', 'blocks', 'turnovers', 'steals', 'interference'
       ].includes(stat);
 
-      // Atualizar status do jogo para EM_ANDAMENTO se ainda estiver PENDENTE
       if (gameStatus === 'PENDENTE') {
         setGameStatus('EM_ANDAMENTO');
       }
@@ -349,80 +525,133 @@ const Painel: React.FC = () => {
 
   const handleUndo = () => {
     if (history.length === 0) {
-      toast.error("Não há ações para desfazer");
+      toast({
+        title: "Erro",
+        description: "Não há ações para desfazer",
+        variant: "destructive",
+      });
       return;
     }
     const last = history[history.length - 1];
-    setStats((prev) => ({
+    setStatistics((prev) => ({
       ...prev,
       [selectedQuarto]: last.stats[selectedQuarto],
     }));
     setHistory((prev) => prev.slice(0, -1));
-    toast.success("Ação desfeita com sucesso");
+    toast({
+      title: "Sucesso",
+      description: "Ação desfeita com sucesso",
+    });
   };
 
   const handleReset = () => {
-    if (Object.values(stats[selectedQuarto] || {}).every(s => 
-      s.dois.tentativas === 0 && s.tres.tentativas === 0 && s.lance.tentativas === 0 && 
-      s.rebotes === 0 && s.assistencias === 0 && s.faltas === 0 && 
-      s.tocos === 0 && s.turnovers === 0 && s.roubos === 0 && s.interferencia === 0
-    )) {
-      toast.error("Não há estatísticas para zerar");
+    if (
+      Object.values(statistics[selectedQuarto] || {}).every((s) => {
+        const safe = s || {
+          two: { attempts: 0, hits: 0 },
+          three: { attempts: 0, hits: 0 },
+          freeThrow: { attempts: 0, hits: 0 },
+          rebounds: 0,
+          assists: 0,
+          fouls: 0,
+          blocks: 0,
+          turnovers: 0,
+          steals: 0,
+          interference: 0,
+        };
+        return (
+          safe.two.attempts === 0 &&
+          safe.three.attempts === 0 &&
+          safe.freeThrow.attempts === 0 &&
+          safe.rebounds === 0 &&
+          safe.assists === 0 &&
+          safe.fouls === 0 &&
+          safe.blocks === 0 &&
+          safe.turnovers === 0 &&
+          safe.steals === 0 &&
+          safe.interference === 0
+        );
+      })
+    ) {
+      toast({
+        title: "Erro",
+        description: "Não há estatísticas para zerar",
+        variant: "destructive",
+      });
       return;
     }
 
-    setHistory((prev) => [...prev, { stats: JSON.parse(JSON.stringify(stats)) }]);
-    setStats((prev) => {
-      const reseted: Record<number, Record<number, EstatisticasJogadora>> = {};
+    setHistory((prev) => [...prev, { stats: JSON.parse(JSON.stringify(statistics)) }]);
+    setStatistics((prev) => {
+      const reseted: Record<number, Record<number, PlayerStatistics>> = {};
       Object.keys(prev).forEach((quarto) => {
         reseted[Number(quarto)] = {};
         Object.keys(prev[Number(quarto)]).forEach((id) => {
           reseted[Number(quarto)][Number(id)] = {
-            dois: { tentativas: 0, acertos: 0 },
-            tres: { tentativas: 0, acertos: 0 },
-            lance: { tentativas: 0, acertos: 0 },
-            rebotes: 0,
-            assistencias: 0,
-            faltas: 0,
-            tocos: 0,
+            two: { attempts: 0, hits: 0 },
+            three: { attempts: 0, hits: 0 },
+            freeThrow: { attempts: 0, hits: 0 },
+            rebounds: 0,
+            assists: 0,
+            fouls: 0,
+            blocks: 0,
             turnovers: 0,
-            roubos: 0,
-            interferencia: 0,
+            steals: 0,
+            interference: 0,
           };
         });
       });
       return reseted;
     });
-    toast.success("Estatísticas zeradas com sucesso");
+    toast({
+      title: "Sucesso",
+      description: "Estatísticas zeradas com sucesso",
+    });
   };
 
   const handleSaveStats = async () => {
     if (!gameId) {
-      toast.error("Salve o jogo antes de enviar as estatísticas!");
+      toast({
+        title: "Erro",
+        description: "Salve o jogo antes de enviar as estatísticas!",
+        variant: "destructive",
+      });
       return;
     }
-    setSavingGame(true);
+
     try {
-      for (const player of players) {
-        const playerStats = stats[selectedQuarto][player.id];
-        if (!playerStats) continue;
-        await createEstatistica({
-          jogadora_id: player.id,
-          jogo_id: gameId,
-          pontos: Number(playerStats.dois?.acertos || 0) * 2 + Number(playerStats.tres?.acertos || 0) * 3 + Number(playerStats.lance?.acertos || 0) as unknown as number,
-          assistencias: playerStats.assistencias,
-          rebotes: playerStats.rebotes,
-          roubos: playerStats.roubos,
-          faltas: playerStats.faltas,
-          quarto: selectedQuarto,
-          interferencia: playerStats.interferencia,
-        });
+      const statsToSave = Object.entries(statistics[selectedQuarto] || {}).map(([playerId, stats]) => ({
+        game_id: gameId,
+        player_id: parseInt(playerId),
+        points: (stats.two.hits * 2) + (stats.three.hits * 3) + stats.freeThrow.hits,
+        rebounds: stats.rebounds,
+        assists: stats.assists,
+        steals: stats.steals,
+        blocks: stats.blocks,
+        fouls: stats.fouls,
+        quarter: selectedQuarto,
+        two_attempts: stats.two.attempts,
+        two_made: stats.two.hits,
+        three_attempts: stats.three.attempts,
+        three_made: stats.three.hits,
+        free_throw_attempts: stats.freeThrow.attempts,
+        free_throw_made: stats.freeThrow.hits,
+        interference: stats.interference,
+      }));
+
+      for (const stat of statsToSave) {
+        await createGameStats(gameId, stat);
       }
-      toast.success("Estatísticas salvas com sucesso!");
-    } catch (err) {
-      toast.error("Erro ao salvar estatísticas");
-    } finally {
-      setSavingGame(false);
+      toast({
+        title: "Sucesso",
+        description: "Estatísticas salvas com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar estatísticas",
+        variant: "destructive",
+      });
     }
   };
 
@@ -434,36 +663,119 @@ const Painel: React.FC = () => {
     }
   }, [showModal]);
 
-  // Função para adicionar jogadora existente
-  function handleAddExistingPlayer(player: Player) {
+  // Função para adicionar jogadora existente ao jogo atual e backend
+  async function handleAddExistingPlayer(player: Player) {
     if (players.some((p) => p.id === player.id)) {
-      toast.error("Jogadora já adicionada à partida");
+      toast({
+        title: "Erro",
+        description: "Jogadora já adicionada à partida",
+        variant: "destructive",
+      });
       return;
     }
-    setPlayers((prev) => [...prev, player]);
-    // Inicializa stats para todos os quartos
-    setStats((prev) => {
-      const newStats = { ...prev };
-      quartos.forEach((q) => {
-        if (!newStats[q.value]) newStats[q.value] = {};
-        newStats[q.value][player.id] = {
-          dois: { tentativas: 0, acertos: 0 },
-          tres: { tentativas: 0, acertos: 0 },
-          lance: { tentativas: 0, acertos: 0 },
-          rebotes: 0,
-          assistencias: 0,
-          faltas: 0,
-          tocos: 0,
-          turnovers: 0,
-          roubos: 0,
-          interferencia: 0,
-        };
+
+    if (!gameId) {
+      toast({
+        title: "Erro",
+        description: "Salve o jogo antes de adicionar jogadoras!",
+        variant: "destructive",
       });
-      return newStats;
-    });
-    setSearchTerm("");
-    setSearchResults([]);
-    toast.success("Jogadora adicionada à partida!");
+      return;
+    }
+
+    try {
+      // Vincular jogador ao jogo
+      const updatedGame = await api.put(`/games/${gameId}`, {
+        players: [...players.map(p => p.id), player.id]
+      });
+
+      if (updatedGame.data) {
+        setPlayers((prev) => [...prev, player]);
+        setSearchTerm("");
+        setSearchResults([]);
+        toast({
+          title: "Sucesso",
+          description: "Jogadora adicionada à partida!",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao vincular jogadora ao jogo!",
+        variant: "destructive",
+      });
+    }
+  }
+
+  // Função para selecionar um rascunho e preencher o formulário
+  function handleSelectDraft(game: Game) {
+    setSelectedGame(game);
+    setGameId(game.id);
+    setGameSaved(true);
+    setGameStatus(game.status as 'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA');
+    setSelectingDraft(false);
+
+    // Carregar jogadores do rascunho
+    if (game.players && Array.isArray(game.players)) {
+      setPlayers(game.players);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar jogadores do rascunho",
+        variant: "destructive",
+      });
+    }
+  }
+
+  const handleGameSelect = (gameId: string) => {
+    setSelectedGame(games.find(g => g.id === parseInt(gameId)) || null);
+  };
+
+  const handlePlayerSelect = (playerId: string) => {
+    setSelectedPlayer(players.find(p => p.id === parseInt(playerId)) || null);
+  };
+
+  const handleCreateStats = async () => {
+    if (!selectedGame || !selectedPlayer) {
+      toast({
+        title: "Erro",
+        description: "Selecione um jogo e um jogador",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await createGameStats(selectedGame.id, [{
+        game_id: selectedGame.id,
+        player_id: selectedPlayer.id,
+        points: 0,
+        rebounds: 0,
+        assists: 0,
+        steals: 0,
+        blocks: 0,
+        fouls: 0,
+        quarter: 1,
+      }]);
+      toast({
+        title: "Sucesso",
+        description: "Estatísticas criadas com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar estatísticas",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
@@ -593,202 +905,126 @@ const Painel: React.FC = () => {
                   <th className="border px-2 py-1">Rebotes</th>
                   <th className="border px-2 py-1">Roubos</th>
                   <th className="border px-2 py-1">Faltas</th>
+                  <th className="border px-2 py-1">Tocos</th>
+                  <th className="border px-2 py-1">TO</th>
+                  <th className="border px-2 py-1">Interf</th>
                   <th className="border px-2 py-1">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {players.map((p) => {
-                  const s = stats[selectedQuarto]?.[p.id] || {
-                    dois: { tentativas: 0, acertos: 0 },
-                    tres: { tentativas: 0, acertos: 0 },
-                    lance: { tentativas: 0, acertos: 0 },
-                    rebotes: 0,
-                    assistencias: 0,
-                    faltas: 0,
-                    tocos: 0,
+                  const s = (statistics[selectedQuarto] && statistics[selectedQuarto][p.id]) ? statistics[selectedQuarto][p.id] : {
+                    two: { attempts: 0, hits: 0 },
+                    three: { attempts: 0, hits: 0 },
+                    freeThrow: { attempts: 0, hits: 0 },
+                    rebounds: 0,
+                    assists: 0,
+                    fouls: 0,
+                    blocks: 0,
                     turnovers: 0,
-                    roubos: 0,
-                    interferencia: 0,
+                    steals: 0,
+                    interference: 0,
                   };
-                  const faltas = s.faltas || 0;
+                  const fouls = s.fouls || 0;
                   return (
                     <tr key={p.id}>
-                      <td className="border px-2 py-1">{p.nome}</td>
-                      <td className="border px-2 py-1">{p.numero}</td>
+                      <td className="border px-2 py-1">{p.name}</td>
+                      <td className="border px-2 py-1">{p.number}</td>
                       <td className="border px-2 py-1">
                         <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
-                                pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois'
-                                  ? 'bg-blue-500 text-white scale-105 shadow-lg'
-                                  : 'bg-blue-100 text-blue-900 hover:bg-blue-200'
-                              }`}
-                              onClick={() => handleShot(p.id, 'dois')}
-                              type="button"
-                              title="Clique para registrar tentativa de 2 pontos. Clique novamente em 3 segundos para marcar acerto."
-                              aria-label={`Registrar arremesso de 2 pontos para ${p.nome}`}
-                            >
-                              2PT ({s.dois.tentativas}/{s.dois.acertos})
-                            </button>
-                            <button
-                              className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
-                                pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres'
-                                  ? 'bg-green-500 text-white scale-105 shadow-lg'
-                                  : 'bg-green-100 text-green-900 hover:bg-green-200'
-                              }`}
-                              onClick={() => handleShot(p.id, 'tres')}
-                              type="button"
-                              title="Clique para registrar tentativa de 3 pontos. Clique novamente em 3 segundos para marcar acerto."
-                              aria-label={`Registrar arremesso de 3 pontos para ${p.nome}`}
-                            >
-                              3PT ({s.tres.tentativas}/{s.tres.acertos})
-                            </button>
-                            <button
-                              className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
-                                pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance'
-                                  ? 'bg-yellow-500 text-white scale-105 shadow-lg'
-                                  : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'
-                              }`}
-                              onClick={() => handleShot(p.id, 'lance')}
-                              type="button"
-                              title="Clique para registrar tentativa de lance livre. Clique novamente em 3 segundos para marcar acerto."
-                              aria-label={`Registrar lance livre para ${p.nome}`}
-                            >
-                              LL ({s.lance.tentativas}/{s.lance.acertos})
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'assistencias', 1)}
-                              type="button"
-                              title="Adicionar assistência"
-                              aria-label={`Adicionar assistência para ${p.nome}`}
-                            >
-                              +1
-                            </button>
-                            <span className="mx-2 font-medium">{s.assistencias}</span>
-                            <button
-                              className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'assistencias', -1)}
-                              type="button"
-                              title="Remover assistência"
-                              aria-label={`Remover assistência de ${p.nome}`}
-                            >
-                              -1
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'rebotes', 1)}
-                              type="button"
-                              title="Adicionar rebote"
-                              aria-label={`Adicionar rebote para ${p.nome}`}
-                            >
-                              +1
-                            </button>
-                            <span className="mx-2 font-medium">{s.rebotes}</span>
-                            <button
-                              className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'rebotes', -1)}
-                              type="button"
-                              title="Remover rebote"
-                              aria-label={`Remover rebote de ${p.nome}`}
-                            >
-                              -1
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'roubos', 1)}
-                              type="button"
-                              title="Adicionar roubo de bola"
-                              aria-label={`Adicionar roubo de bola para ${p.nome}`}
-                            >
-                              +1
-                            </button>
-                            <span className="mx-2 font-medium">{s.roubos}</span>
-                            <button
-                              className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'roubos', -1)}
-                              type="button"
-                              title="Remover roubo de bola"
-                              aria-label={`Remover roubo de bola de ${p.nome}`}
-                            >
-                              -1
-                            </button>
-                          </div>
-                          <div className={`flex items-center gap-2 ${faltas === 3 ? 'bg-yellow-100' : ''} ${faltas >= 4 ? 'bg-red-100' : ''} p-1 rounded`}>
-                            <button
-                              className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'faltas', 1)}
-                              type="button"
-                              title="Adicionar falta"
-                              aria-label={`Adicionar falta para ${p.nome}`}
-                            >
-                              +1
-                            </button>
-                            <span className="mx-2 font-medium">{faltas}</span>
-                            <button
-                              className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'faltas', -1)}
-                              type="button"
-                              title="Remover falta"
-                              aria-label={`Remover falta de ${p.nome}`}
-                            >
-                              -1
-                            </button>
-                            {faltas === 3 && (
-                              <span className="ml-2 text-yellow-700 font-bold flex items-center">
-                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                3 Faltas
-                              </span>
-                            )}
-                            {faltas === 4 && (
-                              <span className="ml-2 text-red-700 font-bold flex items-center">
-                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                4 Faltas
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <button
-                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'tocos', 1)}
-                              type="button"
-                              title="Adicionar toco"
-                              aria-label={`Adicionar toco para ${p.nome}`}
-                            >
-                              Toco +1
-                            </button>
-                            <button
-                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'turnovers', 1)}
-                              type="button"
-                              title="Adicionar turnover"
-                              aria-label={`Adicionar turnover para ${p.nome}`}
-                            >
-                              TO +1
-                            </button>
-                            <button
-                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold transition-colors"
-                              onClick={() => handleStatButton(p.id, 'interferencia', 1)}
-                              type="button"
-                              title="Adicionar interferência"
-                              aria-label={`Adicionar interferência para ${p.nome}`}
-                            >
-                              Interf +1
-                            </button>
-                          </div>
+                          <button
+                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
+                              pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois'
+                                ? 'bg-blue-500 text-white scale-105 shadow-lg'
+                                : 'bg-blue-100 text-blue-900 hover:bg-blue-200'
+                            }`}
+                            onClick={() => handleShot(p.id, 'dois')}
+                            type="button"
+                            title="Registrar tentativa/acerto de 2 pontos"
+                            aria-label={`Registrar arremesso de 2 pontos para ${p.name}`}
+                          >
+                            2PT ({(s.two?.attempts ?? 0)}/{(s.two?.hits ?? 0)})
+                          </button>
+                          <button
+                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
+                              pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres'
+                                ? 'bg-green-500 text-white scale-105 shadow-lg'
+                                : 'bg-green-100 text-green-900 hover:bg-green-200'
+                            }`}
+                            onClick={() => handleShot(p.id, 'tres')}
+                            type="button"
+                            title="Registrar tentativa/acerto de 3 pontos"
+                            aria-label={`Registrar arremesso de 3 pontos para ${p.name}`}
+                          >
+                            3PT ({(s.three?.attempts ?? 0)}/{(s.three?.hits ?? 0)})
+                          </button>
+                          <button
+                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
+                              pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance'
+                                ? 'bg-yellow-500 text-white scale-105 shadow-lg'
+                                : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'
+                            }`}
+                            onClick={() => handleShot(p.id, 'lance')}
+                            type="button"
+                            title="Registrar tentativa/acerto de lance livre"
+                            aria-label={`Registrar lance livre para ${p.name}`}
+                          >
+                            LL ({(s.freeThrow?.attempts ?? 0)}/{(s.freeThrow?.hits ?? 0)})
+                          </button>
                         </div>
                       </td>
+                      <td className="border px-2 py-1">
+                        <div className="flex items-center gap-2 justify-center">
+                          <button className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', 1)} type="button">+1</button>
+                          <span>{s.assists}</span>
+                          <button className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', -1)} type="button">-1</button>
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <div className="flex items-center gap-2 justify-center">
+                          <button className="px-2 py-1 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebounds', 1)} type="button">+1</button>
+                          <span>{s.rebounds}</span>
+                          <button className="px-2 py-1 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebounds', -1)} type="button">-1</button>
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <div className="flex items-center gap-2 justify-center">
+                          <button className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', 1)} type="button">+1</button>
+                          <span>{s.steals}</span>
+                          <button className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', -1)} type="button">-1</button>
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <div className={`flex items-center gap-2 justify-center ${fouls === 3 ? 'bg-yellow-100' : ''} ${fouls >= 4 ? 'bg-red-100' : ''} p-1 rounded`}>
+                          <button className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', 1)} type="button">+1</button>
+                          <span>{fouls}</span>
+                          <button className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', -1)} type="button">-1</button>
+                          {fouls === 3 && (<span className="ml-2 text-yellow-700 font-bold">3 Faltas</span>)}
+                          {fouls === 4 && (<span className="ml-2 text-red-700 font-bold">4 Faltas</span>)}
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <div className="flex items-center gap-2 justify-center">
+                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', 1)} type="button">+1</button>
+                          <span>{s.blocks}</span>
+                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', -1)} type="button">-1</button>
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <div className="flex items-center gap-2 justify-center">
+                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', 1)} type="button">+1</button>
+                          <span>{s.turnovers}</span>
+                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', -1)} type="button">-1</button>
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <div className="flex items-center gap-2 justify-center">
+                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', 1)} type="button">+1</button>
+                          <span>{s.interference}</span>
+                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', -1)} type="button">-1</button>
+                        </div>
+                      </td>
+                      <td className="border px-2 py-1 text-center">-</td>
                     </tr>
                   );
                 })}
@@ -802,39 +1038,6 @@ const Painel: React.FC = () => {
           </div>
         </Card>
       )}
-
-      {/* Lista de jogadores cadastrados */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Jogadores da Partida</h2>
-        {loadingPlayers ? (
-          <div className="animate-pulse space-y-2">
-            <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-8 bg-gray-200 rounded w-full mb-2"></div>
-            <div className="h-8 bg-gray-200 rounded w-full mb-2"></div>
-          </div>
-        ) : players.length === 0 ? (
-          <div className="text-gray-400">Nenhum jogador cadastrado ainda.</div>
-        ) : (
-          <table className="min-w-full text-sm border">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-2 py-1">Nome</th>
-                <th className="border px-2 py-1">Número</th>
-                <th className="border px-2 py-1">Posição</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p, idx) => (
-                <tr key={idx}>
-                  <td className="border px-2 py-1">{p.nome}</td>
-                  <td className="border px-2 py-1">{p.numero}</td>
-                  <td className="border px-2 py-1">{p.posicao}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
 
       {/* Botão flutuante */}
       {gameSaved && (
@@ -887,7 +1090,7 @@ const Painel: React.FC = () => {
                       className="px-3 py-2 cursor-pointer hover:bg-blue-100"
                       onClick={() => handleAddExistingPlayer(p)}
                     >
-                      {p.nome} <span className="text-xs text-gray-500">({p.categoria || 'Sem categoria'})</span>
+                      {p.name} <span className="text-xs text-gray-500">({p.categoria || 'Sem categoria'})</span>
                     </li>
                   ))}
                 </ul>
@@ -896,11 +1099,11 @@ const Painel: React.FC = () => {
             {/* Formulário para nova jogadora */}
             <form onSubmit={handleAddPlayer} className="space-y-4">
               <div>
-                <Label htmlFor="nome">Nome</Label>
+                <Label htmlFor="name">Nome</Label>
                 <Input
-                  id="nome"
-                  name="nome"
-                  value={playerForm.nome}
+                  id="name"
+                  name="name"
+                  value={playerForm.name}
                   onChange={handlePlayerFormChange}
                   placeholder="Nome do jogador"
                   ref={nomeInputRef}
@@ -911,11 +1114,11 @@ const Painel: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="numero">Número</Label>
+                <Label htmlFor="number">Número</Label>
                 <Input
-                  id="numero"
-                  name="numero"
-                  value={playerForm.numero}
+                  id="number"
+                  name="number"
+                  value={playerForm.number}
                   onChange={handlePlayerFormChange}
                   placeholder="Número"
                   type="number"
@@ -925,11 +1128,11 @@ const Painel: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="posicao">Posição</Label>
+                <Label htmlFor="position">Posição</Label>
                 <Input
-                  id="posicao"
-                  name="posicao"
-                  value={playerForm.posicao}
+                  id="position"
+                  name="position"
+                  value={playerForm.position}
                   onChange={handlePlayerFormChange}
                   placeholder="Posição"
                   tabIndex={0}
@@ -1006,6 +1209,85 @@ const Painel: React.FC = () => {
           {gameStatus === 'FINALIZADA' && (
             <div className="text-green-700 font-bold mt-2">Partida Finalizada</div>
           )}
+        </Card>
+      )}
+
+      {/* Exibir jogos pendentes (rascunhos) */}
+      {pendingGames.length > 0 && !gameSaved && !gameId && (
+        <div className="mb-6">
+          <div className="font-semibold mb-2">Você possui jogos em rascunho:</div>
+          <ul className="space-y-2">
+            {pendingGames.map((game) => (
+              <li key={game.id} className="flex items-center gap-2">
+                <span>{game.opponent} - {game.date?.slice(0, 10)} - {game.categoria}</span>
+                <button
+                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  onClick={() => handleSelectDraft(game)}
+                >
+                  Continuar preenchimento
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Adicionar Estatísticas */}
+      <Card className="p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Adicionar Estatísticas</h2>
+        <Button onClick={handleCreateStats} disabled={!selectedGame || !selectedPlayer}>
+          Adicionar Estatísticas
+        </Button>
+      </Card>
+
+      {/* Lista de Estatísticas */}
+      {selectedGame && (
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Estatísticas do Jogo</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Jogador
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Pontos
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rebotes
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assistências
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {stats.map((stat) => (
+                  <tr key={stat.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {players.find(p => p.id === stat.player_id)?.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{stat.points}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{stat.rebounds}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{stat.assists}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/games/${selectedGame.id}/stats/${stat.id}`)}
+                      >
+                        Editar
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
     </div>

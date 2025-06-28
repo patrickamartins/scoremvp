@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Rada
 import axios from 'axios';
 import { AlertCircle } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const categorias = [
   { label: 'Todas', value: '' },
@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const [playersStats, setPlayersStats] = useState<any[]>([]);
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<any>({ preset: 'today' });
+  const [dateFilter, setDateFilter] = useState<any>({ preset: 'this_year' });
   const [search, setSearch] = useState('');
   const [selectedGame, setSelectedGame] = useState<any>(null);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -170,7 +170,7 @@ export default function DashboardPage() {
 
   // Dados para o gráfico
   const playersChart = filteredPlayersStats.map((p) => ({
-    name: p.nome,
+    name: p.name,
     Pontos: p.total_pontos,
     Rebotes: p.total_rebotes,
     Assistências: p.total_assistencias,
@@ -178,9 +178,9 @@ export default function DashboardPage() {
 
   // Dados para a tabela
   const playersTable = filteredPlayersStats.map((p, idx) => ({
-    no: p.numero,
-    name: p.nome,
-    pos: p.posicao,
+    no: p.number,
+    name: p.name,
+    pos: p.position,
     min: '-',
     pts: p.total_pontos,
     aq: '-',
@@ -440,7 +440,9 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="overflow-x-auto rounded-lg shadow mb-8">
+          {/* Box Score */}
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">Box Score</h2>
             <PlayersStatsTable data={playersTable} />
           </div>
         </>

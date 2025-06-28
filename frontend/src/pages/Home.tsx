@@ -18,6 +18,7 @@ export default function Home() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('Home handleSubmit chamado');
     e.preventDefault();
     
     if (!validateEmail(formData.email)) {

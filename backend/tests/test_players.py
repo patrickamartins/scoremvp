@@ -201,4 +201,9 @@ def test_delete_player(client, test_user):
         f"/api/players/{player_id}",
         headers={"Authorization": f"Bearer {token}"}
     )
-    assert get_response.status_code == status.HTTP_404_NOT_FOUND 
+    assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
+headers = {
+    "Authorization": f"Bearer {create_test_token(test_user.email)}",
+    "Content-Type": "application/json"
+} 

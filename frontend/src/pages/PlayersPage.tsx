@@ -9,9 +9,9 @@ const PlayersPage: React.FC = () => {
   usePageTitle("Jogadores");
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayer, setNewPlayer] = useState<Partial<Player>>({
-    nome: "",
-    numero: 0,
-    posicao: ""
+    name: "",
+    number: 0,
+    position: ""
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,7 +27,7 @@ const PlayersPage: React.FC = () => {
         return;
       }
       const response = await getPlayers();
-      setPlayers(response.data);
+      setPlayers(response);
     } catch (error) {
       setError("Erro ao carregar jogadores");
       toast.error("Erro ao carregar jogadores");
@@ -41,19 +41,19 @@ const PlayersPage: React.FC = () => {
   }, []);
 
   const handleAddPlayer = async () => {
-    if (!newPlayer.nome || !newPlayer.numero) {
+    if (!newPlayer.name || !newPlayer.number) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
     try {
       await createPlayer({
-        nome: newPlayer.nome,
-        numero: newPlayer.numero,
-        posicao: newPlayer.posicao
+        name: newPlayer.name,
+        number: newPlayer.number,
+        position: newPlayer.position || ""
       });
       toast.success("Jogador adicionado com sucesso!");
-      setNewPlayer({ nome: "", numero: 0, posicao: "" });
+      setNewPlayer({ name: "", number: 0, position: "" });
       fetchPlayers();
     } catch (error: any) {
       toast.error(error.response?.data?.detail || "Erro ao adicionar jogador");
@@ -80,30 +80,30 @@ const PlayersPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">Adicionar Novo Jogador</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="nome">Nome</Label>
+              <Label htmlFor="name">Nome</Label>
               <Input
-                id="nome"
-                value={newPlayer.nome}
-                onChange={(e) => setNewPlayer({ ...newPlayer, nome: e.target.value })}
+                id="name"
+                value={newPlayer.name}
+                onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
                 placeholder="Nome do jogador"
               />
             </div>
             <div>
-              <Label htmlFor="numero">Número</Label>
+              <Label htmlFor="number">Número</Label>
               <Input
-                id="numero"
+                id="number"
                 type="number"
-                value={newPlayer.numero || ""}
-                onChange={(e) => setNewPlayer({ ...newPlayer, numero: parseInt(e.target.value) })}
+                value={newPlayer.number || ""}
+                onChange={(e) => setNewPlayer({ ...newPlayer, number: parseInt(e.target.value) })}
                 placeholder="Número"
               />
             </div>
             <div>
-              <Label htmlFor="posicao">Posição</Label>
+              <Label htmlFor="position">Posição</Label>
               <Input
-                id="posicao"
-                value={newPlayer.posicao}
-                onChange={(e) => setNewPlayer({ ...newPlayer, posicao: e.target.value })}
+                id="position"
+                value={newPlayer.position}
+                onChange={(e) => setNewPlayer({ ...newPlayer, position: e.target.value })}
                 placeholder="Posição"
               />
             </div>
@@ -112,30 +112,29 @@ const PlayersPage: React.FC = () => {
         </Card>
 
         {/* Feedback visual */}
-        {loading && <div className="text-center text-gray-500">Carregando jogadores...</div>}
-        {error && <div className="text-center text-red-500 mb-4">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
 
-        {/* Lista de Jogadores */}
-        {!loading && !error && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Lista de Jogadores</h2>
-            <div className="grid gap-4">
-              {players.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-semibold">{player.nome}</p>
-                    <p className="text-sm text-gray-600">#{player.numero} - {player.posicao}</p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleRemovePlayer(player.id)}
-                  >
-                    Remover
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </Card>
+        {loading && players.length === 0 ? (
+          <div className="text-center py-4">Carregando...</div>
+        ) : (
+          <ul>
+            {players.map((p) => (
+              <li key={p.id} className="flex justify-between mb-2 p-2 hover:bg-gray-50 rounded">
+                <span>{p.name} #{p.number} — {p.position}</span>
+                <button
+                  onClick={() => handleRemovePlayer(p.id)}
+                  className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                  disabled={loading}
+                >
+                  🗑
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>

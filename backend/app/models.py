@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
 
-# Tabela de associação entre jogos e jogadoras
+# Tabela de associacao entre jogos e jogadoras
 jogo_jogadora = Table(
     'jogo_jogadora',
     Base.metadata,
@@ -38,7 +38,7 @@ class Jogadora(Base):
     posicao = Column(String(50))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    estatisticas = relationship("Estatistica", back_populates="jogadora")
+    statistics = relationship("Statistic", back_populates="player")
     jogos = relationship("Jogo", secondary=jogo_jogadora, back_populates="jogadoras")
 
 class Jogo(Base):
@@ -54,26 +54,26 @@ class Jogo(Base):
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     owner = relationship("User", back_populates="jogos")
-    estatisticas = relationship("Estatistica", back_populates="jogo")
+    statistics = relationship("Statistic", back_populates="game")
     jogadoras = relationship("Jogadora", secondary=jogo_jogadora, back_populates="jogos")
 
-class Estatistica(Base):
-    __tablename__ = "estatisticas"
+class Statistic(Base):
+    __tablename__ = "statistics"
 
     id = Column(Integer, primary_key=True, index=True)
-    jogadora_id = Column(Integer, ForeignKey("jogadoras.id"), nullable=False)
-    jogo_id = Column(Integer, ForeignKey("jogos.id"), nullable=False)
-    pontos = Column(Integer, default=0)
-    assistencias = Column(Integer, default=0)
-    rebotes = Column(Integer, default=0)
-    roubos = Column(Integer, default=0)
-    faltas = Column(Integer, default=0)
-    interferencia = Column(Integer, default=0)
-    quarto = Column(Integer, nullable=False)
+    player_id = Column(Integer, ForeignKey("jogadoras.id"), nullable=False)
+    game_id = Column(Integer, ForeignKey("jogos.id"), nullable=False)
+    points = Column(Integer, default=0)
+    assists = Column(Integer, default=0)
+    rebounds = Column(Integer, default=0)
+    steals = Column(Integer, default=0)
+    fouls = Column(Integer, default=0)
+    interference = Column(Integer, default=0)
+    quarter = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    jogadora = relationship("Jogadora", back_populates="estatisticas")
-    jogo = relationship("Jogo", back_populates="estatisticas")
+    player = relationship("Jogadora", back_populates="statistics")
+    game = relationship("Jogo", back_populates="statistics")
 
 class Lead(Base):
     __tablename__ = "leads"

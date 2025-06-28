@@ -1,7 +1,7 @@
 # backend/app/routes/games.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
 
@@ -13,11 +13,12 @@ from app.schemas import GameOut
 router = APIRouter(
     prefix="/games",
     tags=["games"],
+    redirect_slashes=False,
 )
 
 
 @router.post(
-    "/",
+    "",
     response_model=schemas.GameOut,
     status_code=status.HTTP_201_CREATED,
     summary="Cria um novo jogo",
@@ -25,6 +26,7 @@ router = APIRouter(
 def criar_jogo(
     game_in: schemas.GameCreate,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
     data = game_in.dict()
     novo = models.Game(
@@ -32,18 +34,19 @@ def criar_jogo(
         date=data['date'],
         location=data.get('location'),
         categoria=data.get('categoria'),
-        status="PENDENTE"
+        status="PENDENTE",
+        owner_id=current_user.id
     )
     db.add(novo)
     db.commit()
     db.refresh(novo)
 
-    # Adiciona as jogadoras selecionadas
-    if data.get('jogadoras'):
-        for jogadora_id in data['jogadoras']:
-            jogadora = db.query(models.Jogadora).filter(models.Jogadora.id == jogadora_id).first()
-            if jogadora:
-                novo.jogadoras.append(jogadora)
+    # Adiciona os jogadores selecionados
+    if data.get('players'):
+        for player_id in data['players']:
+            player = db.query(models.Player).filter(models.Player.id == player_id).first()
+            if player:
+                novo.players.append(player)
         db.commit()
         db.refresh(novo)
 
@@ -51,7 +54,7 @@ def criar_jogo(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[schemas.GameOut],
     summary="Lista todos os jogos",
 )
@@ -86,13 +89,21 @@ def ler_jogo(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jogo = db.query(models.Game).filter(
+    jogo = db.query(models.Game).options(joinedload(models.Game.players)).filter(
         models.Game.id == game_id,
         models.Game.owner_id == current_user.id
     ).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-    return jogo
+    return {
+        "id": jogo.id,
+        "opponent": jogo.opponent,
+        "date": jogo.date,
+        "location": jogo.location,
+        "status": jogo.status,
+        "created_at": jogo.created_at,
+        "players": [schemas.PlayerOut.from_orm(p) for p in jogo.players],
+    }
 
 
 @router.put(
@@ -106,19 +117,41 @@ def atualizar_jogo(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    jogo = db.query(models.Game).filter(
+    jogo = db.query(models.Game).options(joinedload(models.Game.players)).filter(
         models.Game.id == game_id,
         models.Game.owner_id == current_user.id
     ).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-    
-    for field, value in game_in.dict(exclude_unset=True).items():
-        setattr(jogo, field, value)
-    
+
+    data = game_in.dict(exclude_unset=True)
+    for field, value in data.items():
+        if field != "players":
+            setattr(jogo, field, value)
+
+    # Atualizar jogadores associados
+    if "players" in data and data["players"] is not None:
+        # Pega a lista de IDs de jogadores já associados
+        current_player_ids = {p.id for p in jogo.players}
+        
+        for player_id in data["players"]:
+            # Adiciona apenas se o jogador não estiver associado
+            if player_id not in current_player_ids:
+                player = db.query(models.Player).filter(models.Player.id == player_id).first()
+                if player:
+                    jogo.players.append(player)
+
     db.commit()
     db.refresh(jogo)
-    return jogo
+    return {
+        "id": jogo.id,
+        "opponent": jogo.opponent,
+        "date": jogo.date,
+        "location": jogo.location,
+        "status": jogo.status,
+        "created_at": jogo.created_at,
+        "players": [schemas.PlayerOut.from_orm(p) for p in jogo.players],
+    }
 
 
 @router.delete(

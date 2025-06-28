@@ -20,12 +20,13 @@ interface MenuItem {
 }
 
 interface AdminLayoutProps {
-  user?: { username: string; email: string; role: string };
+  children: React.ReactNode;
+  user?: { name: string; email: string; role: string };
 }
 
 export function AdminLayout({ user: userProp }: AdminLayoutProps) {
   const storeUser = useAuthStore(state => state.user);
-  const user = userProp || storeUser || { username: 'Admin', email: '', role: 'superadmin' };
+  const user = userProp || storeUser || { name: 'Admin', email: '', role: 'superadmin' };
   const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
 
@@ -158,7 +159,7 @@ export function AdminLayout({ user: userProp }: AdminLayoutProps) {
         <header className="flex items-center justify-end bg-white h-16 px-8 border-b border-[#E3E3E3] fixed top-0 left-64 right-0 z-30">
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end mr-2">
-              <span className="font-semibold text-[#7B8BB2]">{user.username}</span>
+              <span className="font-semibold text-[#7B8BB2]">{user.name}</span>
               <span className="text-xs text-gray-400">{user.email}</span>
               <span className="text-xs text-blue-600 font-bold capitalize">{planoPorRole[user.role]}</span>
             </div>

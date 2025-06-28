@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine, Table, Column, Integer, ForeignKey, MetaData
-from app.core.settings import settings
+from app.core.config import settings
 
 # Criar engine
-engine = create_engine(settings.database_url)
+engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
 
 # Criar metadata
 metadata = MetaData()

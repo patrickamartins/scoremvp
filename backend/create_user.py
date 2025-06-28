@@ -1,26 +1,26 @@
 from app.database import SessionLocal
-from app.models import User
+from app.models.user import User
 from app.core.security import get_password_hash
 
-def create_test_user():
+def create_admin_user():
     db = SessionLocal()
-    username = "ek9bsb"
-    password = "ek9bsb"
-
-    # Verifica se já existe
-    existing_user = db.query(User).filter(User.username == username).first()
+    email = "admin@scoremvp.com"
+    
+    existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
-        print("Usuário já existe.")
+        print(f"User with email {email} already exists")
         return
 
     user = User(
-        username=username,
-        hashed_password=get_password_hash(password)
+        name="Admin",
+        email=email,
+        hashed_password=get_password_hash("admin123"),
+        role="superadmin"
     )
+    
     db.add(user)
     db.commit()
-    db.close()
-    print("Usuário criado com sucesso.")
+    print(f"Admin user created successfully with email {email}")
 
 if __name__ == "__main__":
-    create_test_user()
+    create_admin_user()

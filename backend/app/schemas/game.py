@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+from app.schemas.player import PlayerOut
 
 class GameCreate(BaseModel):
     opponent: str
@@ -20,6 +21,7 @@ class GameUpdate(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     owner_id: Optional[int] = None
+    players: Optional[List[int]] = None
     # Adicione outros campos necessários para atualização
 
 class GameOut(BaseModel):
@@ -30,8 +32,9 @@ class GameOut(BaseModel):
     location: Optional[str] = None
     category: Optional[str] = None
     status: str
-    owner_id: int
+    owner_id: Optional[int] = None
     created_at: datetime
+    players: List[PlayerOut] = []
     # Adicione outros campos/relacionamentos se necessário
 
     class Config:

@@ -1,22 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
 import { toast } from 'sonner';
-
-// Mock de dados do usuário
-const mockUser = {
-  name: 'João Silva',
-  email: 'joao@email.com',
-  phone: '(11) 99999-9999',
-  cpf: '123.456.789-00',
-  favoriteTeam: 'São Paulo',
-  playingTeam: 'São Paulo',
-  plan: 'premium',
-  avatar: 'https://github.com/shadcn.png',
-};
 
 const plans = [
   { value: 'free', label: 'Gratuito' },
@@ -26,21 +14,69 @@ const plans = [
 
 export default function ConfiguracoesPessoaisPage() {
   const [form, setForm] = useState({
-    name: mockUser.name,
-    email: mockUser.email,
-    phone: mockUser.phone,
-    cpf: mockUser.cpf,
-    favoriteTeam: mockUser.favoriteTeam,
-    playingTeam: mockUser.playingTeam,
-    plan: mockUser.plan,
-    avatar: mockUser.avatar,
+    name: '',
+    email: '',
+    phone: '',
+    cpf: '',
+    favoriteTeam: '',
+    playingTeam: '',
+    plan: '',
+    avatar: '',
     profileImage: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
   const [saving, setSaving] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState(mockUser.avatar);
+  const [loading, setLoading] = useState(true);
+  const [avatarPreview, setAvatarPreview] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token'); // Assumindo que o token está no localStorage
+        const response = await fetch('http://localhost:8000/api/profile/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('A resposta da rede não foi ok.');
+        }
+
+        const user = await response.json();
+
+        console.log('Dados do perfil recebidos da API (com fetch):', user);
+
+        try {
+          setForm(prev => ({
+            ...prev,
+            name: user.name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            cpf: user.cpf || '',
+            favoriteTeam: user.favorite_team || '',
+            playingTeam: user.playing_team || '',
+            plan: user.plan || 'free',
+            avatar: user.profile_image || '',
+          }));
+          setAvatarPreview(user.profile_image || '');
+        } catch (stateError) {
+          console.error('Erro ao atualizar o estado do componente:', stateError);
+          toast.error('Erro ao processar dados do perfil.');
+        }
+
+      } catch (error) {
+        console.error('Erro ao buscar perfil na API:', error);
+        toast.error('Erro ao carregar dados do perfil.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleFormChange = (e: any) => {
     const { name, value } = e.target;
@@ -51,33 +87,55 @@ export default function ConfiguracoesPessoaisPage() {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarPreview(URL.createObjectURL(file));
+      setForm(prev => ({ ...prev, profileImage: file as any }));
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('email', form.email);
+      formData.append('phone', form.phone);
+      formData.append('favorite_team', form.favoriteTeam);
+      formData.append('playing_team', form.playingTeam);
+      
+      if (form.profileImage) {
+        formData.append('profile_image', form.profileImage);
+      }
+      
+      await fetch('http://localhost:8000/api/profile/me', {
+        method: 'PUT',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       toast.success('Configurações salvas com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao salvar configurações.');
+    } finally {
       setSaving(false);
-    }, 1000);
+    }
   };
 
   const handleCancel = () => {
     setForm({
-      name: mockUser.name,
-      email: mockUser.email,
-      phone: mockUser.phone,
-      cpf: mockUser.cpf,
-      favoriteTeam: mockUser.favoriteTeam,
-      playingTeam: mockUser.playingTeam,
-      plan: mockUser.plan,
-      avatar: mockUser.avatar,
+      name: '',
+      email: '',
+      phone: '',
+      cpf: '',
+      favoriteTeam: '',
+      playingTeam: '',
+      plan: 'free',
+      avatar: '',
       profileImage: '',
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     });
-    setAvatarPreview(mockUser.avatar);
+    setAvatarPreview('');
   };
 
   const handleCancelAccount = () => {
@@ -85,6 +143,10 @@ export default function ConfiguracoesPessoaisPage() {
       toast.success('Conta cancelada com sucesso!');
     }
   };
+
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
 
   return (
     <div className="p-8 mt-16">
@@ -95,7 +157,7 @@ export default function ConfiguracoesPessoaisPage() {
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
               <img
-                src={avatarPreview}
+                src={avatarPreview || 'https://github.com/shadcn.png'}
                 alt="Avatar"
                 className="w-24 h-24 rounded-full object-cover"
               />

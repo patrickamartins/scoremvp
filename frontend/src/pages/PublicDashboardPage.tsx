@@ -15,7 +15,7 @@ export function PublicDashboardPage() {
 
   const fetchGames = async () => {
     try {
-      const response = await fetch('/api/games');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/games`);
       if (!response.ok) throw new Error('Failed to fetch games');
       const data = await response.json();
       setGames(data);

@@ -1,10 +1,12 @@
+import sys
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import User
-from app.core.settings import settings
+from app.core.config import settings
 
 # Criar conexão com o banco de dados
-engine = create_engine(settings.database_url)
+engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db = SessionLocal()
 
@@ -18,14 +20,14 @@ def list_users():
             return
         
         print("\nLista de Usuários:")
-        print("-" * 80)
-        print(f"{'ID':<5} {'Username':<20} {'Email':<30} {'Nível':<10} {'Ativo':<8}")
-        print("-" * 80)
+        print("-" * 75)
+        print(f"{'ID':<5} {'Name':<20} {'Email':<30} {'Role':<10} {'Active':<8}")
+        print("-" * 75)
         
         for user in users:
-            print(f"{user.id:<5} {user.username:<20} {user.email:<30} {user.nivel:<10} {user.is_active}")
+            print(f"{user.id:<5} {user.name:<20} {user.email:<30} {user.role:<10} {user.is_active}")
         
-        print("-" * 80)
+        print("-" * 75)
         print(f"Total de usuários: {len(users)}")
     
     except Exception as e:

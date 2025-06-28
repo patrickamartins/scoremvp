@@ -7,13 +7,13 @@ from pydantic import BaseModel, Field, validator, root_validator, EmailStr
 
 # --- Usuário e Token (já existentes) ---
 class UserCreate(BaseModel):
-    username: str = Field(..., min_length=3, max_length=32)
+    name: str = Field(..., min_length=3, max_length=100)
     email: str = Field(..., pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     password: str = Field(..., min_length=6)
 
 class UserOut(BaseModel):
     id: int
-    username: str
+    name: str
     email: str
     is_active: bool
     created_at: datetime
@@ -54,6 +54,7 @@ class GameCreate(BaseModel):
     date: datetime = Field(default_factory=datetime.now)
     location: Optional[str] = Field(None, max_length=100)
     categoria: Optional[str] = Field(None)
+    category: Optional[str] = Field(None)  # Campo alternativo para compatibilidade
     status: str = Field(default="pendente")
     jogadoras: Optional[List[int]] = Field(None)
 
@@ -66,11 +67,19 @@ class GameCreate(BaseModel):
         return v
 
     @root_validator(pre=True)
-    def ensure_status_upper(cls, values):
+    def ensure_status_and_category(cls, values):
         try:
+            # Garante status em maiúsculo
             status = values.get("status", "pendente")
-            print("STATUS RECEBIDO NO Pydantic:", status)
             values["status"] = status.upper()
+            
+            # Unifica category/categoria
+            category = values.get("category")
+            categoria = values.get("categoria")
+            if category and not categoria:
+                values["categoria"] = category
+            values.pop("category", None)  # Remove o campo category após processamento
+            
             return values
         except Exception as e:
             print("ERRO NO ROOT VALIDATOR:", e)
@@ -89,8 +98,7 @@ class GameOut(BaseModel):
     location: Optional[str] = None
     status: str
     created_at: datetime
-    estatisticas: List["EstatisticaOut"] = []
-    jogadoras: List[PlayerOut] = []
+    players: List[PlayerOut] = []
 
     class Config:
         from_attributes = True

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scoremvp"
+version = "0.1.0"
+authors = [
+    { name = "Patrick Martins" },
+]
+description = "Score MVP - Sistema de Gerenciamento de Jogos"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "alembic",
+    "psycopg2-binary",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-multipart",
+    "email-validator",
+    "pydantic[email]",
+]
+
+[tool.setuptools]
+packages = ["app"] 

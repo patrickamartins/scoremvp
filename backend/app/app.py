@@ -9,13 +9,12 @@ from pydantic import ValidationError
 from app.routes.auth import router as auth_router
 from app.routes.players import router as players_router
 from app.routes.games import router as games_router
-from app.routes.estatisticas import router as estatisticas_router
-from app.core.settings import settings
+from app.routes.estatisticas import router as estatisticas_router, stats_router
+from app.core.config import settings
 from app.api.v1 import auth
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
+    title=settings.project_name,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
@@ -33,6 +32,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(players_router, prefix="/api")
 app.include_router(games_router, prefix="/api")
 app.include_router(estatisticas_router, prefix="/api")
+app.include_router(stats_router, prefix="/api")
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 
 # Tratamento de erros de validação

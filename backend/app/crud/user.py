@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import List, Optional
 from app.models.user import User, UserRole, UserPlan
-from app.schemas.user import UserCreate, UserUpdate, UserSearchParams
+from app.schemas.user import UserCreate, UserUpdate, UserFilter, UserPagination
 from app.core.security import get_password_hash
 from app.core.email import email_service
 
@@ -14,32 +14,29 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
 
 def get_users(
     db: Session,
-    params: UserSearchParams
+    filters: UserFilter,
+    pagination: UserPagination
 ) -> tuple[List[User], int]:
     query = db.query(User)
 
-    if params.search:
-        search = f"%{params.search}%"
-        query = query.filter(
-            or_(
-                User.name.ilike(search),
-                User.email.ilike(search)
-            )
-        )
+    if filters.name:
+        search = f"%{filters.name}%"
+        query = query.filter(User.name.ilike(search))
 
-    if params.role:
-        query = query.filter(User.role == params.role)
+    if filters.email:
+        search = f"%{filters.email}%"
+        query = query.filter(User.email.ilike(search))
 
-    if params.plan:
-        query = query.filter(User.plan == params.plan)
+    if filters.role:
+        query = query.filter(User.role == filters.role)
 
-    if params.is_active is not None:
-        query = query.filter(User.is_active == params.is_active)
+    if filters.is_active is not None:
+        query = query.filter(User.is_active == filters.is_active)
 
     total = query.count()
     users = query.order_by(desc(User.created_at))\
-        .offset(params.skip)\
-        .limit(params.limit)\
+        .offset(pagination.skip)\
+        .limit(pagination.limit)\
         .all()
 
     return users, total

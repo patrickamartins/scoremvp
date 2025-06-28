@@ -3,17 +3,21 @@ from typing import Optional
 from datetime import datetime
 
 class PlayerBase(BaseModel):
-    nome: str
-    numero: int
-    posicao: Optional[str] = None
+    name: str
+    number: int
+    position: Optional[str] = None
+    active: Optional[bool] = True
+    categoria: Optional[str] = None
 
 class PlayerCreate(PlayerBase):
     pass
 
 class PlayerUpdate(BaseModel):
-    nome: Optional[str] = None
-    numero: Optional[int] = None
-    posicao: Optional[str] = None
+    name: Optional[str] = None
+    number: Optional[int] = None
+    position: Optional[str] = None
+    active: Optional[bool] = None
+    categoria: Optional[str] = None
 
 class PlayerOut(PlayerBase):
     id: int

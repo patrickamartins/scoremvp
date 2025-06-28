@@ -8,5 +8,5 @@ from .profile import *
 from .token import *
 from .game import GameOut, GameCreate, GameUpdate
 from .player import PlayerOut, PlayerCreate, PlayerUpdate
-from .estatistica import EstatisticaOut, EstatisticaCreate, EstatisticaUpdate, EstatisticasResumo
-from .lead import LeadCreate, LeadOut 
+from .estatistica import StatisticOut, StatisticCreate, StatisticUpdate, StatisticsSummary
+from .lead import LeadCreate, Lead 

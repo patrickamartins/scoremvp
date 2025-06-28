@@ -81,7 +81,7 @@ export const useGameStats = () => {
     };
 
     try {
-      const response = await fetch('/api/games', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/games`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

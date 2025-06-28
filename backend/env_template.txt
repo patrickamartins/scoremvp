@@ -1,0 +1,26 @@
+# Database Configuration
+POSTGRES_SERVER=localhost
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=admin123
+POSTGRES_DB=scoremvp
+
+# API Configuration
+API_V1_STR=/api/v1
+SECRET_KEY=your-secret-key-here-change-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=11520
+
+# CORS Configuration
+BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"]
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+
+# Environment
+ENVIRONMENT=development
+
+# Email Configuration
+MAILERSEND_API_KEY=your-mailersend-api-key
+MAILERSEND_SMTP_USERNAME=MS_2OIjID@test-r83ql3pewnpgzw1j.mlsender.net
+MAILERSEND_SMTP_PASSWORD=your-smtp-password
+MAILERSEND_SENDER_EMAIL=no-reply@scoremvp.com.br
+MAILERSEND_SENDER_NAME=ScoreMVP 
