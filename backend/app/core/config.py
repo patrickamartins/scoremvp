@@ -34,10 +34,18 @@ class Settings(BaseSettings):
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
-        return (
+        # SEMPRE priorizar DATABASE_URL do ambiente (usado pelo Render)
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            print(f"Usando DATABASE_URL do ambiente: {database_url}")
+            return database_url
+        # Fallback para configuração local apenas se DATABASE_URL não existir
+        local_url = (
             f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}"
             f"@{values.get('POSTGRES_SERVER')}:5432/{values.get('POSTGRES_DB')}"
         )
+        print(f"Usando configuração local: {local_url}")
+        return local_url
 
     # Stripe settings
     STRIPE_API_KEY: str = ""
