@@ -1,14 +1,20 @@
 import { BrowserRouter } from 'react-router-dom'
 import { AppRoutes } from './routes'
-import { ToastProvider } from '@/components/ui/use-toast'
+import { Toaster } from 'sonner'
 
 function App() {
   return (
-    <ToastProvider value={{ toast: (options: any) => alert(options.title) }}>
+    <>
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
-    </ToastProvider>
+      <Toaster 
+        position="top-right"
+        richColors
+        closeButton
+        duration={5000}
+      />
+    </>
   )
 }
 
