@@ -3,21 +3,18 @@ import api from '../lib/axios'; // Importa a instância do axios
 
 const API_URL = 'https://scoremvp-backend.onrender.com/api';
 
-export const profileSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  email: z.string().email(),
-  phone: z.string().nullable().optional(),
-  cpf: z.string().nullable().optional(),
-  favorite_team: z.string().nullable().optional(),
-  playing_team: z.string().nullable().optional(),
-  plan: z.string(),
-  profile_image: z.string().nullable().optional(),
-  is_active: z.boolean(),
-  role: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
+const profileSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  email: z.string().email('E-mail inválido'),
+  phone: z.string().optional(),
+  bio: z.string().max(500, 'Bio deve ter no máximo 500 caracteres'),
 });
+
+export type ProfileFormData = z.infer<typeof profileSchema>;
+
+export const validateProfile = (data: unknown) => {
+  return profileSchema.safeParse(data);
+};
 
 export const statsSchema = z.object({
   evolution: z.array(z.object({ month: z.number(), points: z.number() })),

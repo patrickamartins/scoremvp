@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -20,7 +20,7 @@ interface MenuItem {
 }
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   user?: { name: string; email: string; role: string };
 }
 

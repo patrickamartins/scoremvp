@@ -47,4 +47,62 @@ export interface GameAction {
   statType: keyof GameStats;
   value: number;
   timestamp: number;
+}
+
+// Tipos para criação e atualização
+export interface GameCreate {
+  opponent: string;
+  date: string;
+  location?: string;
+  category?: GameCategory;
+  time?: string;
+}
+
+export interface GameUpdate {
+  opponent?: string;
+  date?: string;
+  location?: string;
+  category?: GameCategory;
+  time?: string;
+  status?: string;
+}
+
+export interface GameStatsCreate {
+  player_id: number;
+  game_id: number;
+  points?: number;
+  rebounds?: number;
+  assists?: number;
+  steals?: number;
+  blocks?: number;
+  fouls?: number;
+  turnovers?: number;
+  minutes_played?: number;
+  quarter?: number;
+  two_attempts?: number;
+  two_made?: number;
+  three_attempts?: number;
+  three_made?: number;
+  free_throw_attempts?: number;
+  free_throw_made?: number;
+  interference?: number;
+}
+
+export interface GameStatsUpdate {
+  points?: number;
+  rebounds?: number;
+  assists?: number;
+  steals?: number;
+  blocks?: number;
+  fouls?: number;
+  turnovers?: number;
+  minutes_played?: number;
+  quarter?: number;
+  two_attempts?: number;
+  two_made?: number;
+  three_attempts?: number;
+  three_made?: number;
+  free_throw_attempts?: number;
+  free_throw_made?: number;
+  interference?: number;
 } 
