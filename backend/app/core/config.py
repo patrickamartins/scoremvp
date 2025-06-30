@@ -36,6 +36,9 @@ class Settings(BaseSettings):
             return v
         # SEMPRE priorizar DATABASE_URL do ambiente (usado pelo Render)
         database_url = os.getenv("DATABASE_URL")
+        print(f"DEBUG: DATABASE_URL do ambiente: {database_url}")
+        print(f"DEBUG: Todas as variáveis de ambiente: {dict(os.environ)}")
+        
         if database_url:
             print(f"Usando DATABASE_URL do ambiente: {database_url}")
             return database_url
