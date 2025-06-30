@@ -59,7 +59,7 @@ app.include_router(estatisticas_router, prefix="/api")
 app.include_router(stats_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
-app.include_router(leads_router)  # Sem prefix pois a rota já inclui /leads
+app.include_router(leads_router, prefix="/api")  # Adicionar prefix /api
 
 # Montar arquivos estáticos
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
