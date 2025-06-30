@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
@@ -10,8 +10,11 @@ class LeadBase(BaseModel):
 class LeadCreate(LeadBase):
     pass
 
-class Lead(LeadBase):
+class Lead(BaseModel):
     id: int
+    nome: str
+    email: EmailStr
+    telefone: str  # Campo do banco
     created_at: datetime
 
     class Config:
