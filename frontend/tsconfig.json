@@ -22,8 +22,7 @@
     "allowJs": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["react", "react-dom", "node"]
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src", "src/**/*"],
   "exclude": ["node_modules"],
