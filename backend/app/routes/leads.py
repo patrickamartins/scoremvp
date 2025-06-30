@@ -15,22 +15,27 @@ def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
     """
     Cria um novo lead a partir dos dados do formulário da página inicial.
     """
-    logger.info(f"Recebido: {lead}")
-    db_lead = Lead(
-        nome=lead.nome,
-        email=lead.email,
-        whatsapp=lead.whatsapp
-    )
-    db.add(db_lead)
+    logger.info(f"Recebido lead: {lead}")
+    logger.info(f"Tipo do lead: {type(lead)}")
+    logger.info(f"Lead nome: {lead.nome}, email: {lead.email}, whatsapp: {lead.whatsapp}")
+    
     try:
+        db_lead = Lead(
+            nome=lead.nome,
+            email=lead.email,
+            telefone=lead.whatsapp  # Mapear whatsapp para telefone
+        )
+        logger.info(f"Lead criado: {db_lead}")
+        db.add(db_lead)
         db.commit()
         db.refresh(db_lead)
+        logger.info(f"Lead salvo com sucesso: {db_lead}")
+        return db_lead
     except Exception as e:
         db.rollback()
         logger.error(f"Erro ao salvar lead: {e}")
+        logger.error(f"Tipo do erro: {type(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-    logger.info(f"Salvo: {db_lead}")
-    return db_lead
 
 @router.get("/leads", response_model=List[LeadSchema])
 def list_leads(db: Session = Depends(get_db)):
