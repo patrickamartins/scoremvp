@@ -37,11 +37,10 @@ class Settings(BaseSettings):
         # SEMPRE priorizar DATABASE_URL do ambiente (usado pelo Render)
         database_url = os.getenv("DATABASE_URL")
         print(f"DEBUG: DATABASE_URL do ambiente: {database_url}")
-        print(f"DEBUG: Todas as variáveis de ambiente: {dict(os.environ)}")
         
         if database_url:
             print(f"Usando DATABASE_URL do ambiente: {database_url}")
-            return database_url
+            return str(database_url)  # Forçar conversão para string
         # Fallback para configuração local apenas se DATABASE_URL não existir
         local_url = (
             f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}"
