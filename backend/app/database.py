@@ -3,8 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# URL de conexao com usuario admin
-DATABASE_URL = "postgresql://admin:admin123@localhost:5432/scoremvp"
+# Usar a configuração do settings que prioriza DATABASE_URL do ambiente
+DATABASE_URL = settings.SQLALCHEMY_DATABASE_URI
 
 # Configuracao do engine
 engine = create_engine(
