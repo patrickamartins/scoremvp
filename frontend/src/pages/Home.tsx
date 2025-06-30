@@ -30,12 +30,38 @@ export default function Home() {
 
     try {
       await api.post('/leads', formData);
-      toast.success("Cadastro realizado com sucesso! Entraremos em contato em breve.");
+      
+      // Sucesso - mostrar popup e limpar formulário
+      toast.success("🎉 Cadastro realizado com sucesso!", {
+        description: "Entraremos em contato em breve através do email ou WhatsApp informado.",
+        duration: 5000,
+      });
+      
+      // Limpar formulário
       setFormData({ nome: '', email: '', whatsapp: '' });
       setEmailError('');
+      
     } catch (error: any) {
       console.error("Erro ao cadastrar:", error);
-      toast.error(error.response?.data?.detail || "Erro ao realizar cadastro");
+      
+      // Tratar erros específicos
+      let errorMessage = "Erro ao realizar cadastro";
+      
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        
+        if (detail.includes("duplicate key value violates unique constraint") && detail.includes("leads_email_key")) {
+          errorMessage = "❌ Este email já está cadastrado. Tente com outro email.";
+        } else if (detail.includes("UniqueViolation")) {
+          errorMessage = "❌ Este email já está cadastrado em nossa base de dados.";
+        } else {
+          errorMessage = `❌ ${detail}`;
+        }
+      }
+      
+      toast.error(errorMessage, {
+        duration: 6000,
+      });
     } finally {
       setLoading(false);
     }
