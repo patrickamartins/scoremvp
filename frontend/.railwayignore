@@ -1,0 +1,12 @@
+# Ignorar arquivos do backend
+../backend/
+*.py
+*.pyc
+__pycache__/
+venv/
+.env
+*.sql
+alembic/
+requirements.txt
+Procfile
+uvicorn 
