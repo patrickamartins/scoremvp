@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npm run preview"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
@@ -10,3 +10,5 @@ restartPolicyMaxRetries = 10
 
 [env]
 NODE_VERSION = "20" 
+
+web: uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1 
