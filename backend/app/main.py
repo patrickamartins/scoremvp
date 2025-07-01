@@ -52,7 +52,9 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "https://scoremvp.com.br",
         "https://www.scoremvp.com.br",
-        "https://scoremvp-frontend.onrender.com"
+        "https://scoremvp-frontend.onrender.com",
+        "https://scoremvp-backend-production.up.railway.app",
+        "https://scoremvp-frontend-production.up.railway.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],

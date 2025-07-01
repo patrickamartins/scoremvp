@@ -1,0 +1,27 @@
+                                              Table "public.users"
+         Column         |            Type             | Collation | Nullable |              Default              
+------------------------+-----------------------------+-----------+----------+-----------------------------------
+ id                     | integer                     |           | not null | nextval('users_id_seq'::regclass)
+ name                   | character varying           |           | not null | 
+ email                  | character varying           |           | not null | 
+ hashed_password        | character varying           |           | not null | 
+ role                   | userrole                    |           | not null | 
+ is_active              | boolean                     |           |          | 
+ created_at             | timestamp without time zone |           |          | 
+ plan                   | userplan                    |           | not null | 
+ stripe_customer_id     | character varying           |           |          | 
+ stripe_subscription_id | character varying           |           |          | 
+ last_payment_date      | timestamp without time zone |           |          | 
+ next_payment_date      | timestamp without time zone |           |          | 
+ card_last4             | character varying           |           |          | 
+ card_brand             | character varying           |           |          | 
+ profile_image          | character varying           |           |          | 
+Indexes:
+    "users_pkey" PRIMARY KEY, btree (id)
+    "ix_users_email" UNIQUE, btree (email)
+    "ix_users_id" btree (id)
+Referenced by:
+    TABLE "games" CONSTRAINT "games_owner_id_fkey" FOREIGN KEY (owner_id) REFERENCES users(id)
+    TABLE "notifications" CONSTRAINT "notifications_created_by_fkey" FOREIGN KEY (created_by) REFERENCES users(id)
+    TABLE "user_notifications" CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id)
+
