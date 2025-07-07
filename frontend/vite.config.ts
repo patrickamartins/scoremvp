@@ -17,7 +17,8 @@ export default defineConfig({
     port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
     allowedHosts: [
       'healthcheck.railway.app',
-      'scoremvp-production.up.railway.app'
+      'scoremvp-production.up.railway.app',
+      'scoremvp.com.br'
     ]
   },
   resolve: {
