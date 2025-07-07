@@ -33,7 +33,7 @@ def criar_jogo(
         opponent=data['opponent'],
         date=data['date'],
         location=data.get('location'),
-        categoria=data.get('categoria'),
+        categoria=data.get('category'),
         status="PENDENTE",
         owner_id=current_user.id
     )
