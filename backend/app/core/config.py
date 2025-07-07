@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = None
     ALGORITHM: str = "HS256"
     ENVIRONMENT: str = "development"
+    TIMEZONE: str = "America/Sao_Paulo"
     
     class Config:
         case_sensitive = True

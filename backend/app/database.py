@@ -11,7 +11,10 @@ DATABASE_URL = os.getenv("DATABASE_URL") or settings.SQLALCHEMY_DATABASE_URI
 engine = create_engine(
     DATABASE_URL, 
     pool_pre_ping=True,
-    echo=False  # Set to True for SQL debugging
+    echo=False,  # Set to True for SQL debugging
+    connect_args={
+        "options": f"-c timezone={settings.TIMEZONE}"
+    }
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

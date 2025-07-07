@@ -65,21 +65,19 @@ def forgot_password(
     if not user:
         # Não revelamos se o email existe ou não por questões de segurança
         return {"message": "Se o email existir, você receberá as instruções de recuperação de senha."}
-    
+
     token = generate_reset_token(user.email)
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-    
     try:
         email_service.send_password_reset_email(
-            email_to=user.email,
-            reset_url=reset_url
+            email=user.email,
+            reset_token=token
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao enviar email de recuperação de senha"
         )
-    
+
     return {"message": "Se o email existir, você receberá as instruções de recuperação de senha."}
 
 @router.post("/reset-password", response_model=dict)
