@@ -308,7 +308,7 @@ const Painel: React.FC = () => {
     try {
       const newGame = await createGame({
         opponent: gameForm.adversario,
-        date: gameForm.data,
+        date: `${gameForm.data}T${gameForm.horario || '00:00'}`,
         time: gameForm.horario,
         location: gameForm.local,
         category: gameForm.category,
@@ -331,7 +331,14 @@ const Painel: React.FC = () => {
       if (err?.response?.status === 503) {
         setGameFormError("Backend indisponível. Tente novamente em instantes.");
       } else if (err?.response?.data?.detail) {
-        setGameFormError(err.response.data.detail);
+        const detail = err.response.data.detail;
+        setGameFormError(
+          typeof detail === 'string'
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map((d: any) => d.msg || JSON.stringify(d)).join('; ')
+              : JSON.stringify(detail)
+        );
       } else {
         setGameFormError("Erro ao salvar o jogo. Verifique sua conexão ou tente novamente.");
       }
