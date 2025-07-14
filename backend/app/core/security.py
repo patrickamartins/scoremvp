@@ -7,13 +7,13 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from app import models
+from app.models import User
 from app.database import get_db
 from app.core.config import settings
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 ALGORITHM = "HS256"
 
@@ -51,7 +51,7 @@ def verify_access_token(token: str) -> str:
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
-) -> models.User:
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",
@@ -61,17 +61,17 @@ def get_current_user(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         print("[DEBUG] Payload decodificado:", payload)
-        email: str = payload.get("sub")
-        if email is None:
+        user_id: str = payload.get("sub")
+        if user_id is None:
             print("[DEBUG] Payload sem 'sub'")
             raise credentials_exception
     except JWTError as e:
         print("[DEBUG] Erro ao decodificar JWT:", e)
         raise credentials_exception
 
-    user = db.query(models.User).filter(models.User.email == email).first()
+    user = db.query(User).filter(User.id == int(user_id)).first()
     print("[DEBUG] Usuário encontrado:", user)
     if user is None:
-        print("[DEBUG] Usuário não encontrado para email:", email)
+        print("[DEBUG] Usuário não encontrado para ID:", user_id)
         raise credentials_exception
     return user

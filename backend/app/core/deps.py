@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import ALGORITHM
 from app.database import SessionLocal
-from app.models.user import User
-from app.services.user_service import UserService
+from app.models import User
+# from app.services.user_service import UserService
 from app.schemas.token import TokenPayload
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -30,14 +30,13 @@ def get_current_user(
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[ALGORITHM]
         )
-        token_data = TokenPayload(**payload)
+        token_data = TokenPayload.from_payload(payload)
     except (JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user_service = UserService(db)
-    user = user_service.get_user_by_id(token_data.sub)
+    user = db.query(User).filter(User.id == token_data.sub).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

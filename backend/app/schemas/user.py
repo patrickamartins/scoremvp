@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
-from app.models import UserRole, UserPlan
+from app.models.user import UserRole, UserPlan
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -51,11 +51,16 @@ class UserUpdate(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: EmailStr
-    full_name: str
+    name: str
     role: UserRole
     is_active: bool
     number: Optional[str] = None
     position: Optional[str] = None
+    profile_image: Optional[str] = None
+    phone: Optional[str] = None
+    cpf: Optional[str] = None
+    favorite_team: Optional[str] = None
+    playing_team: Optional[str] = None
 
     class Config:
         from_attributes = True

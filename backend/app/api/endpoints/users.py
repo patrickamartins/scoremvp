@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from typing import List
-from app.models.user import User
+from app.models import User
 from app.schemas.user import UserOut, UserCreate, UserUpdate
 from app.core.deps import get_db, get_current_active_superadmin
 from sqlalchemy.orm import Session
-from app.services.user_service import UserService
+# from app.services.user_service import UserService
 import os
 
 router = APIRouter()
@@ -16,7 +16,7 @@ def user_to_out(user: User) -> dict:
     return {
         "id": user.id,
         "email": user.email,
-        "full_name": user.name,
+        "name": user.name,
         "role": user.role,
         "is_active": user.is_active,
         "number": str(user.number) if user.number is not None else None,
@@ -36,16 +36,37 @@ def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), cu
 
 @router.post("/", response_model=UserOut)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_superadmin)):
-    user_service = UserService(db)
-    user = user_service.create_user(user_in)
+    from app.core.security import get_password_hash
+    user = User(
+        email=user_in.email,
+        name=user_in.name,
+        hashed_password=get_password_hash(user_in.password),
+        role=user_in.role,
+        plan=user_in.plan,
+        is_active=user_in.is_active,
+        profile_image=user_in.profile_image
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return user_to_out(user)
 
 @router.put("/{user_id}", response_model=UserOut)
 def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_superadmin)):
-    user_service = UserService(db)
-    user = user_service.update_user(user_id, user_in)
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = user_in.dict(exclude_unset=True)
+    if "password" in update_data:
+        from app.core.security import get_password_hash
+        update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+    
+    for field, value in update_data.items():
+        setattr(user, field, value)
+    
+    db.commit()
+    db.refresh(user)
     return user_to_out(user)
 
 @router.post("/{user_id}/photo")

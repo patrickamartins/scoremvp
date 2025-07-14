@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ENVIRONMENT: str = "development"
     TIMEZONE: str = "America/Sao_Paulo"
+    SECURITY_PASSWORD_SALT: str = "scoremvp-salt-2024"
     
     class Config:
         case_sensitive = True
