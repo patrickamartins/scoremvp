@@ -50,6 +50,7 @@ app.add_middleware(
         "https://www.scoremvp.com.br",
         "https://scoremvp-production.up.railway.app",
         "https://scoremvp-frontend-production.up.railway.app",
+        "https://scoremvpback-production.up.railway.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
