@@ -48,11 +48,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
-        "http://172.26.235.108:3000",
-        "https://scoremvp-production.up.railway.app",
-        "https://scoremvp-frontend-production.up.railway.app",
         "https://scoremvp.com.br",
-        "https://www.scoremvp.com.br"
+        "https://www.scoremvp.com.br",
+        "https://scoremvp-production.up.railway.app",
+        "https://scoremvp-frontend-production.up.railway.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
