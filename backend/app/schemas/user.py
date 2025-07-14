@@ -26,6 +26,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     send_activation_email: Optional[bool] = False
+    number: Optional[int] = None
+    position: Optional[str] = None
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None

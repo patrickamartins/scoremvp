@@ -27,6 +27,10 @@ export function BoxScoreTable({ gameId, stats, onStatsUpdate }: BoxScoreTablePro
   const [selectedPeriod, setSelectedPeriod] = useState<'total' | number>('total');
 
   useEffect(() => {
+    if (!gameId) {
+      setPlayers([]);
+      return;
+    }
     const fetchData = async () => {
       try {
         const playersData = await getPlayers();
@@ -41,6 +45,15 @@ export function BoxScoreTable({ gameId, stats, onStatsUpdate }: BoxScoreTablePro
     };
     fetchData();
   }, [gameId, toast]);
+
+  // Se não houver jogo selecionado, exibe mensagem amigável
+  if (!gameId) {
+    return (
+      <Card className="p-6 text-center text-gray-500">
+        Nenhum jogo cadastrado ou selecionado. Cadastre ou selecione um jogo para visualizar o box score.
+      </Card>
+    );
+  }
 
   // Debug temporário
   console.log('BoxScoreTable stats:', stats);

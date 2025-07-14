@@ -1,13 +1,14 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+from app.schemas.user import UserOut
 
 class PlayerBase(BaseModel):
     name: str
-    number: int
+    number: Optional[int] = None
     position: Optional[str] = None
-    active: Optional[bool] = True
     categoria: Optional[str] = None
+    active: Optional[bool] = True
 
 class PlayerCreate(PlayerBase):
     pass
@@ -21,7 +22,8 @@ class PlayerUpdate(BaseModel):
 
 class PlayerOut(PlayerBase):
     id: int
-    created_at: datetime
+    created_at: Optional[str]
+    user: Optional[UserOut] = None
 
     class Config:
         from_attributes = True 

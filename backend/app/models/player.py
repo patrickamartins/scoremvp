@@ -12,7 +12,9 @@ class Player(Base):
     categoria = Column(String, nullable=True)
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default="now()")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relacionamentos
+    user = relationship("User", back_populates="player_profile", uselist=False)
     games = relationship("Game", secondary=game_player, back_populates="players")
     statistics = relationship("Statistic", back_populates="player") 

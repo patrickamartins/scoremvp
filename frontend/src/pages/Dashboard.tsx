@@ -8,6 +8,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Rada
 import axios from 'axios';
 import { getGameStats } from '../services/api';
 import { AlertCircle } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -146,7 +148,7 @@ export default function DashboardPage() {
         title: "PONTOS",
         value: leader?.total_pontos ?? '-',
         playerName: leader?.name || leader?.nome || '-',
-        playerImage: leader?.photoUrl || `/images/players/${(leader?.name || leader?.nome || 'default').toLowerCase().replace(/ /g, '-')}.jpg`,
+        playerImage: leader?.user?.profile_image || leader?.photoUrl || `/images/players/default.jpg`,
         legend: leader?.name || leader?.nome || '-',
       };
     })(),
@@ -156,7 +158,7 @@ export default function DashboardPage() {
         title: "TOTAL DE REBOTES",
         value: leader?.total_rebotes ?? '-',
         playerName: leader?.name || leader?.nome || '-',
-        playerImage: leader?.photoUrl || `/images/players/${(leader?.name || leader?.nome || 'default').toLowerCase().replace(/ /g, '-')}.jpg`,
+        playerImage: leader?.user?.profile_image || leader?.photoUrl || `/images/players/default.jpg`,
         legend: leader?.name || leader?.nome || '-',
       };
     })(),
@@ -166,7 +168,7 @@ export default function DashboardPage() {
         title: "ASSISTÊNCIAS",
         value: leader?.total_assistencias ?? '-',
         playerName: leader?.name || leader?.nome || '-',
-        playerImage: leader?.photoUrl || `/images/players/${(leader?.name || leader?.nome || 'default').toLowerCase().replace(/ /g, '-')}.jpg`,
+        playerImage: leader?.user?.profile_image || leader?.photoUrl || `/images/players/default.jpg`,
         legend: leader?.name || leader?.nome || '-',
       };
     })(),
@@ -215,6 +217,11 @@ export default function DashboardPage() {
     plusMinus: 0,
     ef: 0,
   }));
+
+  const handleExportPDF = async () => {
+    alert('Exportação em PDF mockada! Implemente a lógica real aqui.');
+    // Lógica real de exportação usando jsPDF/html2canvas
+  };
 
   return (
     <div className="p-4 md:p-8 mt-16">
@@ -335,6 +342,14 @@ export default function DashboardPage() {
               <div className="text-4xl font-bold text-red-600">{overview?.estatisticas_gerais?.total_faltas ?? '-'}</div>
               <div className="text-gray-500 mt-2">Faltas</div>
             </Card>
+          </div>
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleExportPDF}
+              className="bg-blue-700 text-white px-4 py-2 rounded shadow hover:bg-blue-800 transition"
+            >
+              Exportar PDF
+            </button>
           </div>
           <div className="flex flex-wrap gap-4 mb-8 justify-center">
             {highlights.map((h) => (

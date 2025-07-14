@@ -6,6 +6,13 @@ export interface Player {
   active: boolean;
   created_at: string;
   updated_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    profile_image?: string;
+    // outros campos relevantes do usuário
+  };
 }
 
 export interface PlayerCreate {

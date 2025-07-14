@@ -51,5 +51,6 @@ class User(Base):
     sent_notifications = relationship("Notification", back_populates="creator")
     notifications = relationship("UserNotification", back_populates="user")
     games = relationship("Game", back_populates="owner")
+    player_profile = relationship("Player", back_populates="user", uselist=False)
     # teams = relationship("Team", secondary="user_teams", back_populates="members")
     # created_teams = relationship("Team", back_populates="creator") 
