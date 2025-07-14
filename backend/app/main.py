@@ -61,8 +61,8 @@ app.add_middleware(
     allow_headers=["*"]  # Inclui Authorization para permitir JWT
 )
 
-# Adicionar middleware para forçar HTTPS
-app.add_middleware(HTTPSRedirectMiddleware)
+# Remover ou comentar a linha abaixo:
+# app.add_middleware(HTTPSRedirectMiddleware)
 
 # Incluir routers
 app.include_router(auth_router, prefix="/api")
