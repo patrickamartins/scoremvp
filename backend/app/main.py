@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.players import router as players_router
 from app.routes.games import router as games_router
@@ -48,9 +49,8 @@ app.add_middleware(
     allow_origins=[
         "https://scoremvp.com.br",
         "https://www.scoremvp.com.br",
-        "https://scoremvp-production.up.railway.app",
-        "https://scoremvp-frontend-production.up.railway.app",
         "https://scoremvpback-production.up.railway.app",
+        "https://scoremvp-frontend-production.up.railway.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
@@ -60,6 +60,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]  # Inclui Authorization para permitir JWT
 )
+
+# Adicionar middleware para forçar HTTPS
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Incluir routers
 app.include_router(auth_router, prefix="/api")
@@ -95,4 +98,10 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     logger.info(f"Starting server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=port,
+        log_level="debug",
+        forwarded_allow_ips="*"
+    )
