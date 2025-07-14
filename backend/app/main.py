@@ -2,7 +2,6 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.players import router as players_router
 from app.routes.games import router as games_router
@@ -58,11 +57,8 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]  # Inclui Authorization para permitir JWT
+    allow_headers=["*"]
 )
-
-# Remover ou comentar a linha abaixo:
-# app.add_middleware(HTTPSRedirectMiddleware)
 
 # Incluir routers
 app.include_router(auth_router, prefix="/api")
