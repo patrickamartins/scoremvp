@@ -14,6 +14,11 @@ class Statistic(Base):
     assists = Column(Integer, default=0)
     steals = Column(Integer, default=0)
     blocks = Column(Integer, default=0)
+    turnovers = Column(Integer, default=0)  # Turnovers (erros)
+    rebo_ofensivo = Column(Integer, default=0)  # Rebotes ofensivos
+    rebo_defensivo = Column(Integer, default=0)  # Rebotes defensivos
+    fr = Column(Integer, default=0)  # Faltas recebidas
+    fp = Column(Integer, default=0)  # Faltas pessoais
     fouls = Column(Integer, default=0)
     minutes_played = Column(Float, default=0.0)
     quarter = Column(Integer, nullable=True)

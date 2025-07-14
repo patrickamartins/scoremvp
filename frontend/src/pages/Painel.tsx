@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { Game, GameStats } from "@/types/game";
 import { Player } from "@/types/player";
+import { Trash2 } from 'lucide-react';
 
 interface Player {
   id: number;
@@ -30,7 +31,9 @@ interface PlayerStatistics {
   interference: number;
 }
 
-const categorias = ["sub-13", "sub-15", "sub-17", "sub-19"];
+const categorias = [
+  'Sub-10', 'Sub-12', 'Sub-13', 'Sub-14', 'Sub-15', 'Sub-17', 'Sub-19', 'Sub-23', 'Adulto'
+];
 
 const quartos = [
   { value: 1, label: '1º Quarto' },
@@ -39,6 +42,12 @@ const quartos = [
   { value: 4, label: '4º Quarto' },
   { value: 5, label: 'Prorrogação' },
 ];
+
+const horarios = Array.from({length: 24 * 2}, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, '0');
+  const m = i % 2 === 0 ? '00' : '30';
+  return `${h}:${m}`;
+});
 
 const Painel: React.FC = () => {
   usePageTitle("Painel");
@@ -104,6 +113,9 @@ const Painel: React.FC = () => {
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
   const [selectingDraft, setSelectingDraft] = useState(false);
 
+  // Adicionar campo de análise do jogo
+  const [analise, setAnalise] = useState("");
+
   // Buscar todas as jogadoras do banco para autocomplete ao abrir modal
   useEffect(() => {
     if (showModal) {
@@ -156,6 +168,9 @@ const Painel: React.FC = () => {
               turnovers: 0,
               steals: estatistica.steals,
               interference: estatistica.interference,
+              rebo_ofensivo: estatistica.rebo_ofensivo || 0,
+              rebo_defensivo: estatistica.rebo_defensivo || 0,
+              fr: estatistica.fr || 0,
             };
           });
           setStatistics(newStats);
@@ -303,7 +318,7 @@ const Painel: React.FC = () => {
       setGameFormError("Adversário é obrigatório");
       return;
     }
-
+    // Remover checagem de análise aqui
     setSavingGame(true);
     try {
       const newGame = await createGame({
@@ -313,8 +328,8 @@ const Painel: React.FC = () => {
         location: gameForm.local,
         category: gameForm.category,
         status: "PENDENTE",
+        analysis: analise, // pode ser vazio
       });
-
       if (newGame && newGame.id) {
         setGameId(newGame.id);
         setGameSaved(true);
@@ -391,8 +406,16 @@ const Painel: React.FC = () => {
   // Função para finalizar partida
   const handleFinalizarPartida = async () => {
     if (!gameId) return;
+    if (!analise.trim()) {
+      toast({
+        title: "Preencha a análise do jogo",
+        description: "Antes de finalizar a partida, escreva a análise do jogo.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
-      await updateGame(gameId, { status: 'FINALIZADA' });
+      await updateGame(gameId, { status: 'FINALIZADA', analysis: analise });
       setGameStatus('FINALIZADA');
       toast({
         title: "Sucesso",
@@ -488,133 +511,54 @@ const Painel: React.FC = () => {
     setPendingShot({ playerId, tipo, timeout });
   }
 
-  function handleStatButton(playerId: number, stat: keyof PlayerStatistics, delta: number) {
+  function handleStatButton(playerId: number, stat: keyof PlayerStatistics | 'rebo_ofensivo' | 'rebo_defensivo' | 'fr', delta: number) {
     setHistory(prev => [...prev, { stats: JSON.parse(JSON.stringify(statistics)) }]);
 
     setStatistics((prev) => {
       const quartoStats = { ...prev[selectedQuarto] };
       const playerStats = {
-        two: { attempts: 0, hits: 0 },
-        three: { attempts: 0, hits: 0 },
-        freeThrow: { attempts: 0, hits: 0 },
-        rebounds: 0,
-        assists: 0,
-        fouls: 0,
-        blocks: 0,
-        turnovers: 0,
-        steals: 0,
-        interference: 0,
+        ...initialPlayerStats,
         ...quartoStats[playerId],
       };
-      // Só incrementa/decrementa se for campo numérico
-      const isNumberField = [
-        'rebounds', 'assists', 'fouls', 'blocks', 'turnovers', 'steals', 'interference'
-      ].includes(stat);
-
-      if (gameStatus === 'PENDENTE') {
-        setGameStatus('EM_ANDAMENTO');
-      }
-
-      return {
-        ...prev,
-        [selectedQuarto]: {
-          ...quartoStats,
-          [playerId]: {
-            ...playerStats,
-            [stat]: isNumberField
-              ? Math.max(0, Number(playerStats[stat] || 0) + delta)
-              : playerStats[stat],
+      // Permitir atualização dos campos extras
+      if ([
+        'rebounds', 'assists', 'fouls', 'blocks', 'turnovers', 'steals', 'interference',
+        'rebo_ofensivo', 'rebo_defensivo', 'fr'
+      ].includes(stat)) {
+        return {
+          ...prev,
+          [selectedQuarto]: {
+            ...quartoStats,
+            [playerId]: {
+              ...playerStats,
+              [stat]: Math.max(0, Number(playerStats[stat] || 0) + delta),
+            },
           },
-        },
-      };
+        };
+      }
+      // fallback para outros campos
+      return prev;
     });
   }
 
-  const handleUndo = () => {
-    if (history.length === 0) {
-      toast({
-        title: "Erro",
-        description: "Não há ações para desfazer",
-        variant: "destructive",
-      });
-      return;
-    }
-    const last = history[history.length - 1];
-    setStatistics((prev) => ({
-      ...prev,
-      [selectedQuarto]: last.stats[selectedQuarto],
-    }));
-    setHistory((prev) => prev.slice(0, -1));
-    toast({
-      title: "Sucesso",
-      description: "Ação desfeita com sucesso",
-    });
-  };
+  // Remover funções handleUndo e handleReset e os botões correspondentes do painel de estatísticas.
 
-  const handleReset = () => {
-    if (
-      Object.values(statistics[selectedQuarto] || {}).every((s) => {
-        const safe = s || {
-          two: { attempts: 0, hits: 0 },
-          three: { attempts: 0, hits: 0 },
-          freeThrow: { attempts: 0, hits: 0 },
-          rebounds: 0,
-          assists: 0,
-          fouls: 0,
-          blocks: 0,
-          turnovers: 0,
-          steals: 0,
-          interference: 0,
-        };
-        return (
-          safe.two.attempts === 0 &&
-          safe.three.attempts === 0 &&
-          safe.freeThrow.attempts === 0 &&
-          safe.rebounds === 0 &&
-          safe.assists === 0 &&
-          safe.fouls === 0 &&
-          safe.blocks === 0 &&
-          safe.turnovers === 0 &&
-          safe.steals === 0 &&
-          safe.interference === 0
-        );
-      })
-    ) {
-      toast({
-        title: "Erro",
-        description: "Não há estatísticas para zerar",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setHistory((prev) => [...prev, { stats: JSON.parse(JSON.stringify(statistics)) }]);
-    setStatistics((prev) => {
-      const reseted: Record<number, Record<number, PlayerStatistics>> = {};
-      Object.keys(prev).forEach((quarto) => {
-        reseted[Number(quarto)] = {};
-        Object.keys(prev[Number(quarto)]).forEach((id) => {
-          reseted[Number(quarto)][Number(id)] = {
-            two: { attempts: 0, hits: 0 },
-            three: { attempts: 0, hits: 0 },
-            freeThrow: { attempts: 0, hits: 0 },
-            rebounds: 0,
-            assists: 0,
-            fouls: 0,
-            blocks: 0,
-            turnovers: 0,
-            steals: 0,
-            interference: 0,
-          };
-        });
-      });
-      return reseted;
+  // Função utilitária para checar se há alguma estatística diferente de zero no quarto atual
+  function hasStatsToSave() {
+    const statsQ = statistics[selectedQuarto] || {};
+    return Object.values(statsQ).some((s: any) => {
+      if (!s) return false;
+      return (
+        (s.two?.attempts ?? 0) > 0 || (s.two?.hits ?? 0) > 0 ||
+        (s.three?.attempts ?? 0) > 0 || (s.three?.hits ?? 0) > 0 ||
+        (s.freeThrow?.attempts ?? 0) > 0 || (s.freeThrow?.hits ?? 0) > 0 ||
+        (s.rebo_ofensivo ?? 0) > 0 || (s.rebo_defensivo ?? 0) > 0 ||
+        (s.rebounds ?? 0) > 0 || (s.assists ?? 0) > 0 || (s.fouls ?? 0) > 0 ||
+        (s.blocks ?? 0) > 0 || (s.turnovers ?? 0) > 0 || (s.steals ?? 0) > 0 ||
+        (s.interference ?? 0) > 0 || (s.fr ?? 0) > 0
+      );
     });
-    toast({
-      title: "Sucesso",
-      description: "Estatísticas zeradas com sucesso",
-    });
-  };
+  }
 
   const handleSaveStats = async () => {
     if (!gameId) {
@@ -631,11 +575,12 @@ const Painel: React.FC = () => {
         game_id: gameId,
         player_id: parseInt(playerId),
         points: (stats.two.hits * 2) + (stats.three.hits * 3) + stats.freeThrow.hits,
-        rebounds: stats.rebounds,
+        rebounds: (stats.rebo_ofensivo || 0) + (stats.rebo_defensivo || 0),
         assists: stats.assists,
         steals: stats.steals,
         blocks: stats.blocks,
-        fouls: stats.fouls,
+        fp: stats.fouls, // falta pessoal
+        fouls: stats.fouls, // total de faltas (mesmo valor de fp por enquanto)
         quarter: selectedQuarto,
         two_attempts: stats.two.attempts,
         two_made: stats.two.hits,
@@ -644,14 +589,25 @@ const Painel: React.FC = () => {
         free_throw_attempts: stats.freeThrow.attempts,
         free_throw_made: stats.freeThrow.hits,
         interference: stats.interference,
+        rebo_ofensivo: stats.rebo_ofensivo || 0,
+        rebo_defensivo: stats.rebo_defensivo || 0,
+        fr: stats.fr || 0,
+        turnovers: stats.turnovers || 0,
       }));
 
       for (const stat of statsToSave) {
         await createGameStats(gameId, stat);
       }
+      // Notificação visual
       toast({
         title: "Sucesso",
         description: "Estatísticas salvas com sucesso!",
+      });
+      // Zerar apenas o quarto atual (deep clone)
+      setStatistics((prev) => {
+        const newStats = { ...prev };
+        newStats[selectedQuarto] = {};
+        return { ...newStats };
       });
     } catch (error) {
       toast({
@@ -777,6 +733,21 @@ const Painel: React.FC = () => {
     }
   };
 
+  // Função para deletar um rascunho
+  async function handleDeleteDraftGame() {
+    if (window.confirm('Tem certeza que deseja deletar este jogo?')) {
+      if (gameId) {
+        await api.delete(`/games/${gameId}`); // Chame o serviço de deleção do backend
+      }
+      setGameId(null);
+      setGameForm({ adversario: '', data: '', local: '', category: categorias[0], horario: '', campeonato: '' });
+      setGameSaved(false);
+      setSelectedGame(null);
+      setPlayers([]);
+      setStatistics({});
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -785,90 +756,166 @@ const Painel: React.FC = () => {
     );
   }
 
+  // Adicionar campos ao objeto inicial de estatísticas
+  const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defensivo?: number; fr?: number } = {
+    two: { attempts: 0, hits: 0 },
+    three: { attempts: 0, hits: 0 },
+    freeThrow: { attempts: 0, hits: 0 },
+    rebounds: 0,
+    assists: 0,
+    fouls: 0,
+    blocks: 0,
+    turnovers: 0,
+    steals: 0,
+    interference: 0,
+    rebo_ofensivo: 0,
+    rebo_defensivo: 0,
+    fr: 0,
+  };
+
   return (
     <div className="p-8 mt-16 space-y-8 relative">
       <h1 className="text-3xl font-bold text-eerieblack">Painel da Partida</h1>
 
       {/* Formulário do Jogo */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Informações do Jogo</h2>
-        <form onSubmit={handleCreateGame} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="adversario">Adversário</Label>
-            <Input
-              id="adversario"
-              name="adversario"
-              value={gameForm.adversario}
-              onChange={handleGameFormChange}
-              placeholder="Nome do adversário"
-            />
+      {!gameSaved ? (
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Informações do Jogo</h2>
+          <form onSubmit={handleCreateGame} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="adversario">Adversário</Label>
+              <Input
+                id="adversario"
+                name="adversario"
+                value={gameForm.adversario}
+                onChange={handleGameFormChange}
+                placeholder="Nome do adversário"
+              />
+            </div>
+            <div>
+              <Label htmlFor="category">Categoria</Label>
+              <select
+                id="category"
+                name="category"
+                value={gameForm.category}
+                onChange={handleGameFormChange}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+              >
+                {categorias.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="data">Data</Label>
+              <Input
+                id="data"
+                name="data"
+                type="date"
+                value={gameForm.data}
+                onChange={handleGameFormChange}
+              />
+            </div>
+            <div>
+              <Label htmlFor="horario">Horário</Label>
+              <select
+                name="horario"
+                value={gameForm.horario}
+                onChange={handleGameFormChange}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+              >
+                {horarios.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+            <div className="md:col-span-1">
+              <Label htmlFor="local">Local</Label>
+              <Input
+                id="local"
+                name="local"
+                value={gameForm.local}
+                onChange={handleGameFormChange}
+                placeholder="Local do jogo"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <Label htmlFor="campeonato">Campeonato</Label>
+              <Input
+                id="campeonato"
+                name="campeonato"
+                value={gameForm.campeonato}
+                onChange={handleGameFormChange}
+                placeholder="Nome do campeonato"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="analise">Análise do Jogo <span className="text-red-500">*</span></Label>
+              <textarea
+                id="analise"
+                name="analise"
+                value={analise}
+                onChange={e => setAnalise(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 min-h-[80px]"
+                placeholder="Descreva a análise do jogo..."
+              />
+            </div>
+            {gameFormError && <div className="text-red-500 text-sm md:col-span-2">{gameFormError}</div>}
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2 disabled:opacity-50"
+                disabled={savingGame}
+              >
+                {savingGame ? "Salvando..." : "Salvar Jogo"}
+              </button>
+            </div>
+          </form>
+        </Card>
+      ) : (
+        <Card className="p-6 mb-8">
+          <div className="flex items-center gap-2 relative">
+            <h2 className="text-xl font-semibold mb-4">Informações do Jogo</h2>
+            {gameId && (
+              <button onClick={handleDeleteDraftGame} className="text-red-500 hover:text-red-700 absolute top-2 right-2">
+                <Trash2 size={20} />
+              </button>
+            )}
           </div>
-          <div>
-            <Label htmlFor="category">Category</Label>
-            <select
-              id="category"
-              name="category"
-              value={gameForm.category}
-              onChange={handleGameFormChange}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
-            >
-              {categorias.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+            <div>
+              <span className="font-bold">Adversário:</span> {gameForm.adversario}
+            </div>
+            <div>
+              <span className="font-bold">Categoria:</span> {gameForm.category}
+            </div>
+            <div>
+              <span className="font-bold">Data:</span> {gameForm.data}
+            </div>
+            <div>
+              <span className="font-bold">Horário:</span> {gameForm.horario}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold">Local:</span> {gameForm.local}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold">Campeonato:</span> {gameForm.campeonato}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold">Status:</span> {gameStatus === 'PENDENTE' ? 'Pendente' : gameStatus === 'EM_ANDAMENTO' ? 'Em andamento' : 'Partida Finalizada'}
+            </div>
           </div>
-          <div>
-            <Label htmlFor="data">Data</Label>
-            <Input
-              id="data"
-              name="data"
-              type="date"
-              value={gameForm.data}
-              onChange={handleGameFormChange}
-            />
-          </div>
-          <div>
-            <Label htmlFor="horario">Horário</Label>
-            <Input
-              id="horario"
-              name="horario"
-              type="time"
-              value={gameForm.horario}
-              onChange={handleGameFormChange}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <Label htmlFor="local">Local</Label>
-            <Input
-              id="local"
-              name="local"
-              value={gameForm.local}
-              onChange={handleGameFormChange}
-              placeholder="Local do jogo"
-            />
-          </div>
-          <div className="md:col-span-1">
-            <Label htmlFor="campeonato">Campeonato</Label>
-            <Input
-              id="campeonato"
-              name="campeonato"
-              value={gameForm.campeonato}
-              onChange={handleGameFormChange}
-              placeholder="Nome do campeonato"
-            />
-          </div>
-          {gameFormError && <div className="text-red-500 text-sm md:col-span-2">{gameFormError}</div>}
-          <div className="md:col-span-2">
+          {gameStatus !== 'FINALIZADA' && (
             <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2 disabled:opacity-50"
-              disabled={savingGame}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2"
+              onClick={handleFinalizarPartida}
             >
-              {savingGame ? "Salvando..." : "Salvar Jogo"}
+              Finalizar Partida
             </button>
-          </div>
-        </form>
-      </Card>
+          )}
+          {gameStatus === 'FINALIZADA' && (
+            <div className="text-green-700 font-bold mt-2">Partida Finalizada</div>
+          )}
+        </Card>
+      )}
 
       {/* Dropdown de quarto */}
       {gameSaved && (
@@ -905,46 +952,36 @@ const Painel: React.FC = () => {
             <table className="min-w-full text-sm border mb-4">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border px-2 py-1">Nome</th>
-                  <th className="border px-2 py-1">Número</th>
-                  <th className="border px-2 py-1">Pontos</th>
-                  <th className="border px-2 py-1">Assistências</th>
-                  <th className="border px-2 py-1">Rebotes</th>
-                  <th className="border px-2 py-1">Roubos</th>
-                  <th className="border px-2 py-1">Faltas</th>
-                  <th className="border px-2 py-1">Tocos</th>
-                  <th className="border px-2 py-1">TO</th>
-                  <th className="border px-2 py-1">Interf</th>
-                  <th className="border px-2 py-1">Ações</th>
+                  <th className="border px-2 py-1 text-center">Nome</th>
+                  <th className="border px-2 py-1 text-center">Pontos</th>
+                  <th className="border px-2 py-1 text-center">Rebote</th>
+                  <th className="border px-2 py-1 text-center">Assistências</th>
+                  <th className="border px-2 py-1 text-center">Turn</th>
+                  <th className="border px-2 py-1 text-center">Roubo</th>
+                  <th className="border px-2 py-1 text-center">Toco</th>
+                  <th className="border px-2 py-1 text-center">Faltas</th>
+                  <th className="border px-2 py-1 text-center">Interf</th>
                 </tr>
               </thead>
               <tbody>
-                {players.map((p) => {
-                  const s = (statistics[selectedQuarto] && statistics[selectedQuarto][p.id]) ? statistics[selectedQuarto][p.id] : {
-                    two: { attempts: 0, hits: 0 },
-                    three: { attempts: 0, hits: 0 },
-                    freeThrow: { attempts: 0, hits: 0 },
-                    rebounds: 0,
-                    assists: 0,
-                    fouls: 0,
-                    blocks: 0,
-                    turnovers: 0,
-                    steals: 0,
-                    interference: 0,
-                  };
+                {players.map((p, idx) => {
+                  const s = (statistics[selectedQuarto] && statistics[selectedQuarto][p.id]) ? statistics[selectedQuarto][p.id] : initialPlayerStats;
                   const fouls = s.fouls || 0;
+                  const fr = s.fr || 0;
+                  const rebo_ofensivo = s.rebo_ofensivo || 0;
+                  const rebo_defensivo = s.rebo_defensivo || 0;
+                  const isEliminado = fouls >= 5;
+                  const rowClass = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                   return (
-                    <tr key={p.id}>
-                      <td className="border px-2 py-1">{p.name}</td>
-                      <td className="border px-2 py-1">{p.number}</td>
-                      <td className="border px-2 py-1">
-                        <div className="flex flex-col gap-2">
+                    <tr key={p.id} className={rowClass}>
+                      <td className="border px-2 py-1 text-center font-semibold">{p.name}</td>
+                      {/* Pontos: 2PT, 3PT, LL */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex flex-col gap-1 items-center">
+                          {/* 2PT */}
                           <button
-                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
-                              pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois'
-                                ? 'bg-blue-500 text-white scale-105 shadow-lg'
-                                : 'bg-blue-100 text-blue-900 hover:bg-blue-200'
-                            }`}
+                            disabled={isEliminado}
+                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois' ? 'bg-blue-500 text-white scale-105 shadow-lg' : 'bg-blue-100 text-blue-900 hover:bg-blue-200'}`}
                             onClick={() => handleShot(p.id, 'dois')}
                             type="button"
                             title="Registrar tentativa/acerto de 2 pontos"
@@ -952,12 +989,10 @@ const Painel: React.FC = () => {
                           >
                             2PT ({(s.two?.attempts ?? 0)}/{(s.two?.hits ?? 0)})
                           </button>
+                          {/* 3PT */}
                           <button
-                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
-                              pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres'
-                                ? 'bg-green-500 text-white scale-105 shadow-lg'
-                                : 'bg-green-100 text-green-900 hover:bg-green-200'
-                            }`}
+                            disabled={isEliminado}
+                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres' ? 'bg-green-500 text-white scale-105 shadow-lg' : 'bg-green-100 text-green-900 hover:bg-green-200'}`}
                             onClick={() => handleShot(p.id, 'tres')}
                             type="button"
                             title="Registrar tentativa/acerto de 3 pontos"
@@ -965,73 +1000,91 @@ const Painel: React.FC = () => {
                           >
                             3PT ({(s.three?.attempts ?? 0)}/{(s.three?.hits ?? 0)})
                           </button>
+                          {/* LL */}
                           <button
-                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${
-                              pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance'
-                                ? 'bg-yellow-500 text-white scale-105 shadow-lg'
-                                : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'
-                            }`}
+                            disabled={isEliminado}
+                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance' ? 'bg-yellow-500 text-white scale-105 shadow-lg' : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'}`}
                             onClick={() => handleShot(p.id, 'lance')}
                             type="button"
-                            title="Registrar tentativa/acerto de lance livre"
+                            title="Registrar lance livre"
                             aria-label={`Registrar lance livre para ${p.name}`}
                           >
                             LL ({(s.freeThrow?.attempts ?? 0)}/{(s.freeThrow?.hits ?? 0)})
                           </button>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', 1)} type="button">+1</button>
-                          <span>{s.assists}</span>
-                          <button className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', -1)} type="button">-1</button>
+                      {/* Rebote: REBO e REBD */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex flex-col gap-1 items-center">
+                          <div className="flex items-center gap-1">
+                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-100 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_ofensivo', -1)}>-1</button>
+                            <span className="px-2">REBO {s.rebo_ofensivo || 0}</span>
+                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-100 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_ofensivo', 1)}>+1</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_defensivo', -1)}>-1</button>
+                            <span className="px-2">REBD {s.rebo_defensivo || 0}</span>
+                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_defensivo', 1)}>+1</button>
+                          </div>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button className="px-2 py-1 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebounds', 1)} type="button">+1</button>
-                          <span>{s.rebounds}</span>
-                          <button className="px-2 py-1 bg-pink-100 hover:bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebounds', -1)} type="button">-1</button>
+                      {/* Assistências */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button disabled={isEliminado} className="px-2 py-1 bg-purple-100 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', -1)}>-1</button>
+                          <span className="px-2">{s.assists}</span>
+                          <button disabled={isEliminado} className="px-2 py-1 bg-purple-100 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', 1)}>+1</button>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', 1)} type="button">+1</button>
-                          <span>{s.steals}</span>
-                          <button className="px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', -1)} type="button">-1</button>
+                      {/* Turnovers */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', -1)}>-1</button>
+                          <span className="px-2">{s.turnovers}</span>
+                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', 1)}>+1</button>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className={`flex items-center gap-2 justify-center ${fouls === 3 ? 'bg-yellow-100' : ''} ${fouls >= 4 ? 'bg-red-100' : ''} p-1 rounded`}>
-                          <button className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', 1)} type="button">+1</button>
-                          <span>{fouls}</span>
-                          <button className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', -1)} type="button">-1</button>
-                          {fouls === 3 && (<span className="ml-2 text-yellow-700 font-bold">3 Faltas</span>)}
-                          {fouls === 4 && (<span className="ml-2 text-red-700 font-bold">4 Faltas</span>)}
+                      {/* Roubo */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button disabled={isEliminado} className="px-2 py-1 bg-orange-100 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', -1)}>-1</button>
+                          <span className="px-2">{s.steals}</span>
+                          <button disabled={isEliminado} className="px-2 py-1 bg-orange-100 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', 1)}>+1</button>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', 1)} type="button">+1</button>
-                          <span>{s.blocks}</span>
-                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', -1)} type="button">-1</button>
+                      {/* Toco */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', -1)}>-1</button>
+                          <span className="px-2">{s.blocks}</span>
+                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', 1)}>+1</button>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', 1)} type="button">+1</button>
-                          <span>{s.turnovers}</span>
-                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', -1)} type="button">-1</button>
+                      {/* Faltas (FP e FR) */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex flex-col gap-1 items-center">
+                          <div className={`flex items-center gap-1 justify-center ${fouls === 3 ? 'bg-yellow-100' : ''} ${fouls === 4 ? 'bg-red-100' : ''} p-1 rounded`}>
+                            <button disabled={isEliminado} className="px-2 py-1 bg-red-100 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', -1)}>-1</button>
+                            <span className="px-2">FP {fouls}</span>
+                            <button disabled={isEliminado} className="px-2 py-1 bg-red-100 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', 1)}>+1</button>
+                            {fouls === 3 && (<span className="ml-2 text-yellow-700 font-bold" title="Atenção: 3 faltas">⚠️</span>)}
+                            {fouls === 4 && (<span className="ml-2 text-red-700 font-bold" title="Atenção: 4 faltas">⚠️</span>)}
+                          </div>
+                          <div className="flex items-center gap-1 justify-center">
+                            <button disabled={isEliminado} className="px-2 py-1 bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fr', -1)}>-1</button>
+                            <span className="px-2">FR {fr}</span>
+                            <button disabled={isEliminado} className="px-2 py-1 bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fr', 1)}>+1</button>
+                          </div>
                         </div>
                       </td>
-                      <td className="border px-2 py-1">
-                        <div className="flex items-center gap-2 justify-center">
-                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', 1)} type="button">+1</button>
-                          <span>{s.interference}</span>
-                          <button className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', -1)} type="button">-1</button>
+                      {/* Interferência */}
+                      <td className="border px-2 py-1 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', -1)}>-1</button>
+                          <span className="px-2">{s.interference}</span>
+                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', 1)}>+1</button>
                         </div>
                       </td>
-                      <td className="border px-2 py-1 text-center">-</td>
                     </tr>
                   );
                 })}
@@ -1039,9 +1092,7 @@ const Painel: React.FC = () => {
             </table>
           )}
           <div className="flex gap-4 mt-4">
-            <button onClick={handleUndo} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded font-bold">Desfazer</button>
-            <button onClick={handleReset} className="bg-yellow-400 hover:bg-yellow-500 text-white px-4 py-2 rounded font-bold">Zerar</button>
-            <button onClick={handleSaveStats} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">Salvar Estatísticas</button>
+            <button onClick={handleSaveStats} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold" disabled={!hasStatsToSave()}>Salvar Estatísticas</button>
           </div>
         </Card>
       )}
@@ -1086,7 +1137,7 @@ const Painel: React.FC = () => {
                 name="busca-jogadora"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Digite nome ou category"
+                placeholder="Digite nome"
                 autoComplete="off"
               />
               {searchResults.length > 0 && (
@@ -1136,19 +1187,26 @@ const Painel: React.FC = () => {
               </div>
               <div>
                 <Label htmlFor="position">Posição</Label>
-                <Input
+                <select
                   id="position"
                   name="position"
                   value={playerForm.position}
                   onChange={handlePlayerFormChange}
-                  placeholder="Posição"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
                   tabIndex={0}
                   disabled={savingPlayer}
                   required
-                />
+                >
+                  <option value="">Selecione a posição</option>
+                  <option value="Armador">Armador</option>
+                  <option value="Ala">Ala</option>
+                  <option value="Ala-Armador">Ala-Armador</option>
+                  <option value="Ala-Pivô">Ala-Pivô</option>
+                  <option value="Pivô">Pivô</option>
+                </select>
               </div>
               <div>
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Categoria</Label>
                 <select
                   id="category"
                   name="category"
@@ -1179,46 +1237,6 @@ const Painel: React.FC = () => {
         </div>
       )}
 
-      {/* Exibir cabeçalho não editável após salvar */}
-      {gameSaved && (
-        <Card className="p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-            <div>
-              <span className="font-bold">Adversário:</span> {gameForm.adversario}
-            </div>
-            <div>
-              <span className="font-bold">Category:</span> {gameForm.category}
-            </div>
-            <div>
-              <span className="font-bold">Data:</span> {gameForm.data}
-            </div>
-            <div>
-              <span className="font-bold">Horário:</span> {gameForm.horario}
-            </div>
-            <div className="md:col-span-2">
-              <span className="font-bold">Local:</span> {gameForm.local}
-            </div>
-            <div className="md:col-span-2">
-              <span className="font-bold">Campeonato:</span> {gameForm.campeonato}
-            </div>
-            <div className="md:col-span-2">
-              <span className="font-bold">Status:</span> {gameStatus === 'PENDENTE' ? 'Pendente' : gameStatus === 'EM_ANDAMENTO' ? 'Em andamento' : 'Partida Finalizada'}
-            </div>
-          </div>
-          {gameStatus !== 'FINALIZADA' && (
-            <button
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2"
-              onClick={handleFinalizarPartida}
-            >
-              Finalizar Partida
-            </button>
-          )}
-          {gameStatus === 'FINALIZADA' && (
-            <div className="text-green-700 font-bold mt-2">Partida Finalizada</div>
-          )}
-        </Card>
-      )}
-
       {/* Exibir jogos pendentes (rascunhos) */}
       {pendingGames.length > 0 && !gameSaved && !gameId && (
         <div className="mb-6">
@@ -1237,65 +1255,6 @@ const Painel: React.FC = () => {
             ))}
           </ul>
         </div>
-      )}
-
-      {/* Adicionar Estatísticas */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Adicionar Estatísticas</h2>
-        <Button onClick={handleCreateStats} disabled={!selectedGame || !selectedPlayer}>
-          Adicionar Estatísticas
-        </Button>
-      </Card>
-
-      {/* Lista de Estatísticas */}
-      {selectedGame && (
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Estatísticas do Jogo</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Jogador
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pontos
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rebotes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assistências
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {stats.map((stat) => (
-                  <tr key={stat.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {players.find(p => p.id === stat.player_id)?.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{stat.points}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{stat.rebounds}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{stat.assists}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/games/${selectedGame.id}/stats/${stat.id}`)}
-                      >
-                        Editar
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
       )}
     </div>
   );

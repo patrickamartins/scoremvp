@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import GameStats from '../components/GameStats';
-import { GameStatsTable } from '../components/GameStatsTable';
+import { BoxScoreTable } from '../components/BoxScoreTable';
 import { GameStatsForm } from '../components/GameStatsForm';
 
 interface Game {
@@ -69,7 +69,7 @@ export default function GameStatsPage() {
         <div className="lg:col-span-2">
           <GameStats key={refreshKey} gameId={game.id} />
           <div className="mt-8">
-            <GameStatsTable key={refreshKey} gameId={game.id} />
+            <BoxScoreTable key={refreshKey} gameId={game.id} />
           </div>
         </div>
         <div>

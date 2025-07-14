@@ -44,6 +44,8 @@ class User(Base):
     cpf = Column(String, nullable=True)
     favorite_team = Column(String, nullable=True)
     playing_team = Column(String, nullable=True)
+    number = Column(Integer, nullable=True)
+    position = Column(String, nullable=True)
     
     # Relationships
     sent_notifications = relationship("Notification", back_populates="creator")

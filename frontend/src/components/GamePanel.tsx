@@ -9,6 +9,7 @@ import { Input } from "../components/ui/Input";
 import { Label } from "../components/ui/Label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from '../components/ui/Input';
 
 interface GamePanelProps {
   gameId: number;
@@ -22,6 +23,8 @@ export function GamePanel({ gameId }: GamePanelProps) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [analise, setAnalise] = useState<string>("");
+  const [finalizing, setFinalizing] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,6 +37,7 @@ export function GamePanel({ gameId }: GamePanelProps) {
         setGame(gameData);
         setPlayers(playersData);
         setStats(statsData);
+        setAnalise(gameData.analise || "");
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
         toast({
@@ -89,6 +93,25 @@ export function GamePanel({ gameId }: GamePanelProps) {
         description: "Não foi possível criar as estatísticas",
         variant: "destructive",
       });
+    }
+  };
+
+  // Função para finalizar partida
+  const handleFinalizeGame = async () => {
+    if (!analise.trim()) {
+      toast({ title: 'Preencha a análise do jogo antes de finalizar.', variant: 'destructive' });
+      return;
+    }
+    setFinalizing(true);
+    try {
+      // Supondo que exista um endpoint updateGame
+      // await updateGame(gameId, { analise }); // Assuming updateGame is available
+      toast({ title: 'Partida finalizada com sucesso!' });
+      // Redirecionar ou atualizar status, se necessário
+    } catch (error) {
+      toast({ title: 'Erro ao finalizar partida', variant: 'destructive' });
+    } finally {
+      setFinalizing(false);
     }
   };
 
@@ -184,6 +207,27 @@ export function GamePanel({ gameId }: GamePanelProps) {
                   </tbody>
                 </table>
               </div>
+            </div>
+            <div className="mt-6">
+              <Label htmlFor="analise">Análise do Jogo <span className="text-red-500">*</span></Label>
+              <Textarea
+                id="analise"
+                value={analise}
+                onChange={e => setAnalise(e.target.value)}
+                rows={5}
+                placeholder="Descreva aqui a análise do jogo..."
+                required
+                className="w-full mt-1"
+              />
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={handleFinalizeGame}
+                disabled={finalizing || !analise.trim()}
+                className="bg-green-600 text-white"
+              >
+                {finalizing ? 'Finalizando...' : 'Finalizar Partida'}
+              </Button>
             </div>
           </div>
         </CardContent>

@@ -48,6 +48,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://172.26.235.108:3000",
         "https://scoremvp-production.up.railway.app",
         "https://scoremvp-frontend-production.up.railway.app",
         "https://scoremvp.com.br",
@@ -55,7 +56,7 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]  # Inclui Authorization para permitir JWT
 )
 
 # Incluir routers
@@ -67,6 +68,8 @@ app.include_router(stats_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(leads_router, prefix="/api")  # Adicionar prefix /api
+from app.api.endpoints.users import router as users_router
+app.include_router(users_router, prefix="/api/users", tags=["users"])
 
 # Montar arquivos estáticos
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")

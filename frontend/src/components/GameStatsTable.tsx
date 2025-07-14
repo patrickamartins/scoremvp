@@ -22,7 +22,7 @@ interface GameStatsTableProps {
   onStatsUpdate: () => void;
 }
 
-export function GameStatsTable({ gameId, stats, onStatsUpdate }: GameStatsTableProps) {
+export function BoxScoreTable({ gameId, stats, onStatsUpdate }: GameStatsTableProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [editingStats, setEditingStats] = useState<GameStats | null>(null);
   const { toast } = useToast();
@@ -112,6 +112,9 @@ export function GameStatsTable({ gameId, stats, onStatsUpdate }: GameStatsTableP
             <TableRow>
               <TableHead>Jogador</TableHead>
               <TableHead>Pontos</TableHead>
+              <TableHead>2PT (A/M)</TableHead>
+              <TableHead>3PT (A/M)</TableHead>
+              <TableHead>LL (A/M)</TableHead>
               <TableHead>Rebotes</TableHead>
               <TableHead>Assistências</TableHead>
               <TableHead>Roubos</TableHead>
@@ -128,111 +131,19 @@ export function GameStatsTable({ gameId, stats, onStatsUpdate }: GameStatsTableP
               return (
                 <TableRow key={stat.id}>
                   <TableCell>{player?.name}</TableCell>
+                  <TableCell>{stat.points}</TableCell>
+                  <TableCell>{stat.two_attempts} / {stat.two_made}</TableCell>
+                  <TableCell>{stat.three_attempts} / {stat.three_made}</TableCell>
+                  <TableCell>{stat.free_throw_attempts} / {stat.free_throw_made}</TableCell>
+                  <TableCell>{stat.rebounds}</TableCell>
+                  <TableCell>{stat.assists}</TableCell>
+                  <TableCell>{stat.steals}</TableCell>
+                  <TableCell>{stat.blocks}</TableCell>
+                  <TableCell>{stat.fouls}</TableCell>
+                  <TableCell>{stat.turnovers}</TableCell>
+                  <TableCell>{stat.minutes_played}</TableCell>
                   <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.points}
-                        onChange={(e) => handleInputChange("points", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.points
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.rebounds}
-                        onChange={(e) => handleInputChange("rebounds", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.rebounds
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.assists}
-                        onChange={(e) => handleInputChange("assists", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.assists
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.steals}
-                        onChange={(e) => handleInputChange("steals", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.steals
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.blocks}
-                        onChange={(e) => handleInputChange("blocks", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.blocks
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.fouls}
-                        onChange={(e) => handleInputChange("fouls", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.fouls
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.turnovers}
-                        onChange={(e) => handleInputChange("turnovers", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.turnovers
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <Input
-                        type="number"
-                        value={editingStats.minutes_played}
-                        onChange={(e) => handleInputChange("minutes_played", Number(e.target.value))}
-                        className="w-20"
-                      />
-                    ) : (
-                      stat.minutes_played
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingStats?.id === stat.id ? (
-                      <div className="flex space-x-2">
-                        <Button onClick={handleSave} size="sm">Salvar</Button>
-                        <Button onClick={handleCancel} variant="outline" size="sm">Cancelar</Button>
-                      </div>
-                    ) : (
-                      <Button onClick={() => handleEdit(stat)} size="sm">Editar</Button>
-                    )}
+                    <Button onClick={() => handleEdit(stat)} size="sm">Editar</Button>
                   </TableCell>
                 </TableRow>
               );

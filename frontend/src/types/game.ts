@@ -20,6 +20,17 @@ export interface GameStats {
   minutes_played: number;
   created_at: string;
   updated_at: string;
+  quarter: number;
+  two_attempts?: number;
+  two_made?: number;
+  three_attempts?: number;
+  three_made?: number;
+  free_throw_attempts?: number;
+  free_throw_made?: number;
+  interference?: number;
+  rebo_ofensivo?: number;
+  rebo_defensivo?: number;
+  fr?: number;
 }
 
 export interface PlayerGameStats {

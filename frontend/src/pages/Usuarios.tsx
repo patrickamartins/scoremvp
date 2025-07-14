@@ -1,297 +1,635 @@
-import { useEffect, useState, ChangeEvent } from 'react';
-import { toast } from 'sonner';
-import { Input, Label, Button } from '../components/ui';
+import React, { useState, useEffect } from "react";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Label } from "../components/ui/Label";
+import { Card } from "../components/ui/Card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui";
+import debounce from "lodash/debounce";
+import { toast } from "sonner";
+import api from '../services/api';
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  type: string;
-  plan: string;
-  status: string;
-  lastCharge?: string;
-  nextCharge?: string;
-  card?: string;
-  cardBrand?: string;
-  favoriteTeam?: string;
-  team?: string;
-  document?: string;
-};
+// Remover mockUsers e auto-replacement
 
-type FormData = {
-  name: string;
-  email: string;
-  type: string;
-  plan: string;
-  status: string;
-  favoriteTeam: string;
-  team: string;
-  document: string;
-  lastCharge?: string;
-  nextCharge?: string;
-  card?: string;
-  cardBrand?: string;
-  password?: string;
-};
+const plans = [
+  { value: 'free', label: 'Gratuito' },
+  { value: 'premium', label: 'Premium' },
+  { value: 'pro', label: 'Profissional' },
+];
 
-const tiposUsuario = [
+const statuses = [
+  { value: 'active', label: 'Ativo' },
+  { value: 'inactive', label: 'Inativo' },
+  { value: 'blocked', label: 'Bloqueado' },
+];
+
+const types = [
   { value: 'player', label: 'Atleta' },
   { value: 'coach', label: 'Técnico' },
   { value: 'analyst', label: 'Analista' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'team', label: 'Time' },
+  { value: 'admin', label: 'Administrador' },
 ];
-const planos = [
-  { value: 'free', label: 'Grátis' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'team', label: 'Time' },
-];
-
-function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
-  let timer: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'edit' | 'create'>('edit');
-  const [form, setForm] = useState<FormData>({
-    name: '',
-    email: '',
-    type: 'player',
-    plan: 'free',
-    status: 'ativo',
-    favoriteTeam: '',
-    team: '',
-    document: ''
-  });
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [form, setForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string>("");
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
-  // Simulação de busca e paginação
+  // Buscar usuários reais do backend
   useEffect(() => {
     setLoading(true);
-    setTimeout(() => {
-      // Simula 30 usuários
-      let all = Array.from({ length: 30 }).map((_, i) => ({
-        id: i + 1,
-        name: `Usuário ${i + 1}`,
-        email: `user${i + 1}@mail.com`,
-        type: tiposUsuario[i % tiposUsuario.length].value,
-        plan: planos[i % planos.length].value,
-        status: i % 2 === 0 ? 'ativo' : 'inativo',
-        lastCharge: '2024-06-01',
-        nextCharge: '2024-07-01',
-        card: '**** **** **** 1234',
-        cardBrand: 'Visa',
-        favoriteTeam: `Time do Coração ${i + 1}`,
-        team: `Time que Joga ${i + 1}`,
-        document: i % 2 === 0 ? `123.456.789-0${i}` : `12.345.678/0001-0${i}`,
-      }));
-      if (search) {
-        all = all.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
-      }
-      setTotalPages(Math.ceil(all.length / 10));
-      setUsers(all.slice((page - 1) * 10, page * 10));
-      setLoading(false);
-    }, 400);
-  }, [search, page]);
+    const params: any = { skip: 0, limit: 100 };
+    if (search.trim()) params.name = search.trim();
+    api.get('/users', { params })
+      .then(res => {
+        setUsers(res.data);
+        setTotalPages(Math.ceil(res.data.length / itemsPerPage));
+      })
+      .catch(() => {
+        setUsers([]);
+        setTotalPages(1);
+        toast.error('Erro ao carregar usuários do banco.');
+      })
+      .finally(() => setLoading(false));
+  }, [search]);
 
+  // Seleção em massa
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) setSelectedUsers(users.map((u) => u.id));
+    else setSelectedUsers([]);
+  };
+
+  const handleSelectUser = (id: number, checked: boolean) => {
+    setSelectedUsers((prev) =>
+      checked ? [...prev, id] : prev.filter((uid) => uid !== id)
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedUsers.length === 0) return;
+    if (
+      window.confirm("Tem certeza que deseja deletar os usuários selecionados?")
+    ) {
+      setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u.id)));
+      setSelectedUsers([]);
+      toast.success('Usuários excluídos com sucesso!');
+    }
+  };
+
+  // Busca (mock)
   const handleSearch = debounce((val: string) => setSearch(val), 400);
 
-  const openEditModal = (user: any) => {
-    setForm({ ...user });
-    setModalMode('edit');
-    setShowModal(true);
+  // Edição e criação
+  const handleEdit = (user: any) => {
+    setSelectedUser(user);
+    setForm(user);
+    setPhoto(null);
+    setPhotoPreview(user.photoUrl || null);
   };
-  const openCreateModal = () => {
-    setForm({ name: '', email: '', type: 'player', plan: 'free', status: 'ativo', favoriteTeam: '', team: '', document: '' });
-    setModalMode('create');
-    setShowModal(true);
+
+  const handleCreate = () => {
+    setSelectedUser(null);
+    setForm({
+      name: '',
+      email: '',
+      phone: '',
+      cpf: '',
+      favoriteTeam: '',
+      playingTeam: '',
+      plan: 'free',
+      status: 'active',
+      type: 'player',
+      last_payment_date: '',
+      next_payment_date: '',
+      card_last4: '',
+      card_brand: '',
+      photoUrl: '',
+    });
+    setPhoto(null);
+    setPhotoPreview(null);
   };
-  const closeModal = () => {
-    setShowModal(false);
-  };
-  const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+
+  const handleFormChange = (e: any) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev: any) => ({ ...prev, [name]: value }));
   };
-  const handleSave = () => {
-    toast.success('Usuário salvo!');
-    closeModal();
+
+  // Upload de foto
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setPhotoError('O arquivo deve ser uma imagem');
+        setPhoto(null);
+        setPhotoPreview(null);
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setPhotoError('A foto deve ter no máximo 2MB.');
+        setPhoto(null);
+        setPhotoPreview(null);
+        return;
+      }
+      setPhotoError('');
+      setPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    } else {
+      setPhoto(null);
+      setPhotoPreview(null);
+      setPhotoError('');
+    }
   };
-  const handleCancel = () => closeModal();
-  const handleCancelSubscription = () => toast.info('Assinatura cancelada!');
-  const handleChangeCard = () => toast.info('Trocar método de pagamento!');
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      let userId = selectedUser ? selectedUser.id : null;
+      let photoUrl = form.photoUrl;
+      let userResponse;
+      if (selectedUser) {
+        // PUT para editar usuário
+        const payload = {
+          ...form,
+          number: form.number ? parseInt(form.number, 10) : null,
+        };
+        userResponse = await api.put(`/users/${selectedUser.id}`, payload);
+        userId = selectedUser.id;
+        toast.success('Usuário atualizado com sucesso!');
+      } else {
+        // POST para criar usuário
+        const payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password || 'SenhaForte123!', // ajuste conforme fluxo real
+          role: form.role || 'player',
+          plan: form.plan || 'free',
+          is_active: form.status === 'active',
+          phone: form.phone,
+          cpf: form.cpf,
+          favorite_team: form.favoriteTeam,
+          playing_team: form.playingTeam,
+          profile_image: form.photoUrl || '',
+          send_activation_email: false,
+          number: form.number ? parseInt(form.number, 10) : null,
+          position: form.position || '',
+        };
+        userResponse = await api.post('/users/', payload);
+        userId = userResponse.data.id;
+        toast.success('Usuário criado com sucesso!');
+      }
+      // Upload da foto, se houver
+      if (photo && userId) {
+        const formData = new FormData();
+        formData.append('file', photo);
+        const res = await api.post(`/users/${userId}/photo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        photoUrl = res.data.url;
+        // Atualiza o usuário com a URL persistente
+        await api.put(`/users/${userId}`, { ...form, photoUrl });
+      }
+      // Refazer fetch dos usuários após salvar
+      const params: any = { skip: 0, limit: 100 };
+      if (search.trim()) params.name = search.trim();
+      const res = await api.get('/users', { params });
+      setUsers(res.data);
+      setTotalPages(Math.ceil(res.data.length / itemsPerPage));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Erro ao salvar usuário ou foto.');
+    } finally {
+      setSaving(false);
+      setSelectedUser(null);
+      setForm({});
+      setPhoto(null);
+      setPhotoPreview(null);
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
+      api.delete(`/users/${id}`)
+        .then(() => {
+          toast.success('Usuário excluído com sucesso!');
+          const params: any = { skip: 0, limit: 100 };
+          if (search.trim()) params.name = search.trim();
+          return api.get('/users', { params });
+        })
+        .then(res => {
+          setUsers(res.data);
+          setTotalPages(Math.ceil(res.data.length / itemsPerPage));
+        })
+        .catch(() => toast.error('Erro ao excluir usuário.'));
+    }
+  };
+
+  const paginatedUsers = users.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <div className="p-8 mt-16">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-[#2563eb]">Usuários</h1>
-          <Button onClick={openCreateModal}>Novo Usuário</Button>
+          <Button onClick={handleCreate}>Novo Usuário</Button>
         </div>
-        <div className="mb-4">
-          <Input
-            type="text"
-            placeholder="Buscar por nome ou e-mail..."
-            onChange={e => handleSearch(e.target.value)}
-            className="max-w-md"
-          />
-        </div>
-        {loading ? (
-          <div className="text-center text-gray-500">Carregando usuários...</div>
-        ) : (
-          <div className="overflow-x-auto bg-white rounded shadow">
-            <table className="min-w-full text-sm border border-gray-300">
-              <thead className="bg-gray-200">
-                <tr>
-                  <th className="border px-2 py-2">Nome</th>
-                  <th className="border px-2 py-2">E-mail</th>
-                  <th className="border px-2 py-2">Tipo</th>
-                  <th className="border px-2 py-2">Plano</th>
-                  <th className="border px-2 py-2">Status</th>
-                  <th className="border px-2 py-2">Time do coração</th>
-                  <th className="border px-2 py-2">Time que joga</th>
-                  <th className="border px-2 py-2">CPF/CNPJ</th>
-                  <th className="border px-2 py-2">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-blue-50 cursor-pointer">
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{u.name}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{u.email}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{tiposUsuario.find(t => t.value === u.type)?.label}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{planos.find(p => p.value === u.plan)?.label}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{u.status}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{u.favoriteTeam}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{u.team}</td>
-                    <td className="border px-2 py-2" onClick={() => openEditModal(u)}>{u.document}</td>
-                    <td className="border px-2 py-2">
-                      <Button variant="link" onClick={() => openEditModal(u)}>Editar</Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {/* Paginação simples */}
-            <div className="flex justify-end gap-2 p-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Anterior</Button>
-              <span className="self-center">Página {page} de {totalPages}</span>
-              <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Próxima</Button>
+
+        <Card className="p-6 mb-8">
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar por nome, email ou CPF..."
+                onChange={(e) => handleSearch(e.target.value)}
+              />
             </div>
           </div>
-        )}
-      </div>
-      {/* Modal de edição/criação */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" tabIndex={-1} onKeyDown={(e) => { if (e.key === 'Escape') closeModal(); }}>
-          <div className="bg-white rounded shadow w-full max-w-2xl max-h-[90vh] flex flex-col relative">
-            <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
-              onClick={closeModal}
-              title="Fechar"
-              type="button"
-            >
-              ×
-            </button>
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-bold">{modalMode === 'edit' ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+
+          <Button
+            onClick={handleDeleteSelected}
+            disabled={selectedUsers.length === 0}
+            className="mb-4 bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            Deletar Selecionados ({selectedUsers.length})
+          </Button>
+
+          {loading ? (
+            <div className="text-center text-gray-500">Carregando usuários...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border border-gray-300">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th>
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedUsers.length === users.length && users.length > 0
+                        }
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                      />
+                    </th>
+                    <th className="border px-4 py-2 text-left">Nome</th>
+                    <th className="border px-4 py-2 text-left">Email</th>
+                    <th className="border px-4 py-2 text-left">CPF/CNPJ</th>
+                    <th className="border px-4 py-2 text-left">Time</th>
+                    <th className="border px-4 py-2 text-left">Plano</th>
+                    <th className="border px-4 py-2 text-left">Status</th>
+                    <th className="border px-4 py-2 text-left">Tipo</th>
+                    <th className="border px-4 py-2 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.includes(user.id)}
+                          onChange={(e) =>
+                            handleSelectUser(user.id, e.target.checked)
+                          }
+                        />
+                      </td>
+                      <td className="border px-4 py-2">
+                        {user.photoUrl ? (
+                          <img src={user.photoUrl} alt={user.name} className="w-8 h-8 rounded-full object-cover inline-block mr-2" />
+                        ) : (
+                          <span className="inline-block w-8 h-8 rounded-full bg-gray-200 mr-2" />
+                        )}
+                        {user.name}
+                      </td>
+                      <td className="border px-4 py-2">{user.email}</td>
+                      <td className="border px-4 py-2">{user.cpf}</td>
+                      <td className="border px-4 py-2">{user.playingTeam}</td>
+                      <td className="border px-4 py-2">{plans.find(p => p.value === user.plan)?.label}</td>
+                      <td className="border px-4 py-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          user.status === 'active' ? 'bg-green-100 text-green-800' :
+                          user.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {statuses.find(s => s.value === user.status)?.label}
+                        </span>
+                      </td>
+                      <td className="border px-4 py-2">{types.find(t => t.value === user.type)?.label}</td>
+                      <td className="border px-4 py-2 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(user)}
+                          className="mr-2"
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(user.id)}
+                        >
+                          Excluir
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="p-6 overflow-y-auto">
-              <form className="space-y-4">
-                <div>
-                  <Label>Nome</Label>
-                  <Input type="text" name="name" value={form.name} onChange={handleFormChange} />
+          )}
+
+          {/* Paginação */}
+          <div className="flex justify-center gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </Button>
+            <span className="px-4 py-2">
+              Página {page} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </Card>
+
+        {/* Modal de edição/criação */}
+        {form && Object.keys(form).length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Overlay escurecido */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => {
+                setForm({});
+                setSelectedUser(null);
+                setPhoto(null);
+                setPhotoPreview(null);
+              }}
+            />
+            <div className="relative z-10 w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-8 animate-fade-in">
+              {/* Botão de fechar */}
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold focus:outline-none"
+                onClick={() => {
+                  setForm({});
+                  setSelectedUser(null);
+                  setPhoto(null);
+                  setPhotoPreview(null);
+                }}
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+              <h2 className="text-2xl font-bold mb-6 text-center">
+                {selectedUser ? 'Editar Usuário' : 'Novo Usuário'}
+              </h2>
+              <form
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleSave();
+                }}
+              >
+                <div className="md:col-span-2 flex flex-col items-center mb-2">
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="w-24 h-24 object-cover rounded-full mb-2" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mb-2 text-gray-400">Foto</div>
+                  )}
+                  <input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="block mt-1"
+                  />
+                  {photoError && <div className="text-red-500 text-xs mt-1">{photoError}</div>}
                 </div>
-                <div>
-                  <Label>E-mail</Label>
-                  <Input type="email" name="email" value={form.email} onChange={handleFormChange} />
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome completo</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={form.name}
+                    onChange={handleFormChange}
+                    required
+                  />
                 </div>
-                <div>
-                  <Label>Tipo de usuário</Label>
-                  <select name="type" value={form.type} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
-                    {tiposUsuario.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleFormChange}
+                    required
+                  />
                 </div>
-                <div>
-                  <Label>Plano</Label>
-                  <select name="plan" value={form.plan} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
-                    {planos.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </select>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleFormChange}
+                  />
                 </div>
-                <div>
-                  <Label>Status</Label>
-                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border rounded px-3 py-2">
-                    <option value="ativo">Ativo</option>
-                    <option value="inativo">Inativo</option>
-                  </select>
+                <div className="space-y-2">
+                  <Label htmlFor="number">Número</Label>
+                  <Input
+                    id="number"
+                    name="number"
+                    type="number"
+                    value={form.number || ''}
+                    onChange={handleFormChange}
+                  />
                 </div>
-                <div>
-                  <Label>Time do coração</Label>
-                  <Input type="text" name="favoriteTeam" value={form.favoriteTeam} onChange={handleFormChange} />
+                {/* Agrupar campos em grid para evitar sobreposição de dropdowns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Campo de posição usando <select> nativo */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="position">Posição</Label>
+                    <select
+                      id="position"
+                      name="position"
+                      value={form.position || ''}
+                      onChange={handleFormChange}
+                      className="w-full rounded border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione a posição</option>
+                      <option value="Armador">Armador</option>
+                      <option value="Ala">Ala</option>
+                      <option value="Ala-Armador">Ala-Armador</option>
+                      <option value="Ala-Pivô">Ala-Pivô</option>
+                      <option value="Pivô">Pivô</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF/CNPJ</Label>
+                    <Input
+                      id="cpf"
+                      name="cpf"
+                      value={form.cpf}
+                      onChange={handleFormChange}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Time que joga</Label>
-                  <Input type="text" name="team" value={form.team} onChange={handleFormChange} />
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="favoriteTeam">Time do coração</Label>
+                  <Input
+                    id="favoriteTeam"
+                    name="favoriteTeam"
+                    value={form.favoriteTeam}
+                    onChange={handleFormChange}
+                  />
                 </div>
-                <div>
-                  <Label>CPF/CNPJ</Label>
-                  <Input type="text" name="document" value={form.document} onChange={handleFormChange} />
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="playingTeam">Time que joga</Label>
+                  <Input
+                    id="playingTeam"
+                    name="playingTeam"
+                    value={form.playingTeam}
+                    onChange={handleFormChange}
+                  />
                 </div>
-                {modalMode === 'edit' && (
-                  <>
-                    <div className="pt-4 border-t mt-4">
-                      <h3 className="font-semibold mb-2">Assinatura</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                          <span className="text-xs text-gray-500">Plano atual:</span>
-                          <div className="font-bold">{planos.find(p => p.value === form.plan)?.label}</div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-500">Última cobrança:</span>
-                          <div>{form.lastCharge}</div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-500">Próxima cobrança:</span>
-                          <div>{form.nextCharge}</div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-500">Cartão cadastrado:</span>
-                          <div>{form.cardBrand} {form.card}</div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Button variant="destructive" size="sm" type="button" onClick={handleCancelSubscription}>Cancelar assinatura</Button>
-                        <Button variant="outline" size="sm" type="button" onClick={handleChangeCard}>Trocar método de pagamento</Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {modalMode === 'create' && (
-                  <>
-                    <div>
-                      <Label>Senha inicial</Label>
-                      <Input type="password" name="password" value={form.password || ''} onChange={handleFormChange} />
-                    </div>
-                  </>
-                )}
-                <div className="flex gap-4 mt-6">
-                  <Button type="button" onClick={handleSave}>Salvar alterações</Button>
-                  <Button type="button" variant="outline" onClick={handleCancel}>Cancelar</Button>
+                <div className="space-y-2">
+                  <Label htmlFor="plan">Plano</Label>
+                  <Select
+                    name="plan"
+                    value={form.plan}
+                    onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, plan: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map(p => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    name="status"
+                    value={form.status}
+                    onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statuses.map(s => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Tipo</Label>
+                  <Select
+                    name="type"
+                    value={form.type}
+                    onValueChange={(value: any) => setForm((prev: any) => ({ ...prev, type: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {types.map(t => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2 flex justify-end gap-4 mt-6">
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setForm({});
+                      setSelectedUser(null);
+                      setPhoto(null);
+                      setPhotoPreview(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Modal de assinatura */}
+        {showSubscriptionModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Detalhes da Assinatura</h2>
+                <button
+                  onClick={() => setShowSubscriptionModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>Plano Atual</Label>
+                  <p className="mt-1 text-gray-900">{plans.find(p => p.value === selectedUser.plan)?.label}</p>
+                </div>
+                <div>
+                  <Label>Última Cobrança</Label>
+                  <p className="mt-1 text-gray-900">{selectedUser.last_payment_date || '-'}</p>
+                </div>
+                <div>
+                  <Label>Próxima Cobrança</Label>
+                  <p className="mt-1 text-gray-900">{selectedUser.next_payment_date || '-'}</p>
+                </div>
+                {selectedUser.card_last4 && (
+                  <div>
+                    <Label>Cartão Cadastrado</Label>
+                    <p className="mt-1 text-gray-900">{selectedUser.card_brand} terminando em {selectedUser.card_last4}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="outline" onClick={() => setShowSubscriptionModal(false)}>Fechar</Button>
+                {selectedUser.plan !== 'free' && (
+                  <Button variant="destructive" onClick={() => { toast.success('Assinatura cancelada (mock)'); setShowSubscriptionModal(false); }}>Cancelar Assinatura</Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

@@ -57,15 +57,21 @@ def get_current_user(
         detail="Not authenticated",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    print("[DEBUG] Token recebido:", token)
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        print("[DEBUG] Payload decodificado:", payload)
         email: str = payload.get("sub")
         if email is None:
+            print("[DEBUG] Payload sem 'sub'")
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print("[DEBUG] Erro ao decodificar JWT:", e)
         raise credentials_exception
 
     user = db.query(models.User).filter(models.User.email == email).first()
+    print("[DEBUG] Usuário encontrado:", user)
     if user is None:
+        print("[DEBUG] Usuário não encontrado para email:", email)
         raise credentials_exception
     return user

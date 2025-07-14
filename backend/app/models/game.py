@@ -13,6 +13,7 @@ class Game(Base):
     location = Column(String, nullable=True)
     categoria = Column(String, nullable=True)
     status = Column(String, default="PENDING")
+    analise = Column(String, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, server_default="now()")
 

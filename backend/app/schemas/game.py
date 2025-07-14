@@ -11,6 +11,7 @@ class GameCreate(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     owner_id: Optional[int] = None
+    analise: Optional[str] = None
     # Adicione outros campos necessários para criação
 
 class GameUpdate(BaseModel):
@@ -22,6 +23,7 @@ class GameUpdate(BaseModel):
     status: Optional[str] = None
     owner_id: Optional[int] = None
     players: Optional[List[int]] = None
+    analise: Optional[str] = None
     # Adicione outros campos necessários para atualização
 
 class GameOut(BaseModel):
@@ -35,6 +37,7 @@ class GameOut(BaseModel):
     owner_id: Optional[int] = None
     created_at: datetime
     players: List[PlayerOut] = []
+    analise: Optional[str] = None
     # Adicione outros campos/relacionamentos se necessário
 
     class Config:

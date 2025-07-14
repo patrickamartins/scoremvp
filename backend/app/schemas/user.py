@@ -14,6 +14,8 @@ class UserBase(BaseModel):
     cpf: Optional[str] = None
     favorite_team: Optional[str] = None
     playing_team: Optional[str] = None
+    number: Optional[int] = None
+    position: Optional[str] = None
 
     @field_validator('name')
     def name_must_not_be_empty(cls, v):
@@ -37,12 +39,26 @@ class UserUpdate(BaseModel):
     cpf: Optional[str] = None
     favorite_team: Optional[str] = None
     playing_team: Optional[str] = None
+    number: Optional[int] = None
+    position: Optional[str] = None
 
     @field_validator('name')
     def name_must_not_be_empty(cls, v):
         if v is not None and not v.strip():
             raise ValueError('Name cannot be empty')
         return v.strip() if v else v
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    role: UserRole
+    is_active: bool
+    number: Optional[str] = None
+    position: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class UserInDBBase(UserBase):
     id: int

@@ -7,6 +7,12 @@ class StatisticBase(BaseModel):
     assists: int
     rebounds: int
     steals: int
+    blocks: int
+    turnovers: int  # Turnovers (erros)
+    rebo_ofensivo: int  # Rebotes ofensivos
+    rebo_defensivo: int  # Rebotes defensivos
+    fr: int  # Faltas recebidas
+    fp: int  # Faltas pessoais
     fouls: int
     two_attempts: int
     two_made: int
@@ -26,6 +32,12 @@ class StatisticUpdate(BaseModel):
     assists: Optional[int] = None
     rebounds: Optional[int] = None
     steals: Optional[int] = None
+    blocks: Optional[int] = None
+    turnovers: Optional[int] = None
+    rebo_ofensivo: Optional[int] = None
+    rebo_defensivo: Optional[int] = None
+    fr: Optional[int] = None
+    fp: Optional[int] = None
     fouls: Optional[int] = None
     two_attempts: Optional[int] = None
     two_made: Optional[int] = None
@@ -39,6 +51,7 @@ class StatisticOut(StatisticBase):
     id: int
     player_id: int
     game_id: int
+    quarter: int
     created_at: datetime
 
     class Config:

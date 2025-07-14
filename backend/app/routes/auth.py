@@ -92,7 +92,7 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(
-        subject=user.email,
+        subject=user.id,
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     print("[DEBUG] Login bem-sucedido para:", user.email)

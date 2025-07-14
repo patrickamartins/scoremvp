@@ -15,6 +15,10 @@ const PlayersPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // 1. Adicionar campo de upload de foto ao formulário de cadastro de jogador
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string>("");
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -40,20 +44,27 @@ const PlayersPage: React.FC = () => {
     fetchPlayers();
   }, []);
 
+  // 2. Ajustar handleAddPlayer para enviar multipart/form-data
   const handleAddPlayer = async () => {
     if (!newPlayer.name || !newPlayer.number) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
-
+    if (photo && photo.size > 2 * 1024 * 1024) {
+      setPhotoError('A foto deve ter no máximo 2MB.');
+      return;
+    }
     try {
-      await createPlayer({
-        name: newPlayer.name,
-        number: newPlayer.number,
-        position: newPlayer.position || ""
-      });
+      const formData = new FormData();
+      formData.append('name', newPlayer.name);
+      formData.append('number', String(newPlayer.number));
+      formData.append('position', newPlayer.position || '');
+      if (photo) formData.append('photo', photo);
+      await createPlayer(formData); // Ajustar createPlayer para aceitar FormData
       toast.success("Jogador adicionado com sucesso!");
       setNewPlayer({ name: "", number: 0, position: "" });
+      setPhoto(null);
+      setPhotoPreview(null);
       fetchPlayers();
     } catch (error: any) {
       toast.error(error.response?.data?.detail || "Erro ao adicionar jogador");
@@ -106,6 +117,34 @@ const PlayersPage: React.FC = () => {
                 onChange={(e) => setNewPlayer({ ...newPlayer, position: e.target.value })}
                 placeholder="Posição"
               />
+            </div>
+            <div>
+              <Label htmlFor="photo">Foto (opcional, até 2MB)</Label>
+              <Input
+                id="photo"
+                type="file"
+                accept="image/*"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                      setPhotoError('A foto deve ter no máximo 2MB.');
+                      setPhoto(null);
+                      setPhotoPreview(null);
+                    } else {
+                      setPhotoError('');
+                      setPhoto(file);
+                      setPhotoPreview(URL.createObjectURL(file));
+                    }
+                  } else {
+                    setPhoto(null);
+                    setPhotoPreview(null);
+                    setPhotoError('');
+                  }
+                }}
+              />
+              {photoError && <div className="text-red-500 text-sm">{photoError}</div>}
+              {photoPreview && <img src={photoPreview} alt="Preview" className="mt-2 w-24 h-24 object-cover rounded" />}
             </div>
           </div>
           <Button onClick={handleAddPlayer} className="mt-4">Adicionar Jogador</Button>

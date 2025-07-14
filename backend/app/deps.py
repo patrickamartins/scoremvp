@@ -17,12 +17,14 @@ get_db = database.get_db
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         email = security.verify_access_token(token)
+        print("[DEBUG] Email extraído do token:", email)
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
     
     user = db.query(User).filter(User.email == email).first()
+    print("[DEBUG] Usuário encontrado:", user)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user

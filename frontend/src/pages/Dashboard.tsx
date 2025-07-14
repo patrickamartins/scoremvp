@@ -3,9 +3,10 @@ import { Card } from "../components/ui/Card";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { DateFilterDropdown } from "../components/ui/DateFilterDropdown";
 import { HighlightPlayerCard } from "../components/ui/HighlightPlayerCard";
-import { PlayersStatsTable } from "../components/ui/PlayersStatsTable";
+import { BoxScoreTable } from "../components/BoxScoreTable";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from 'recharts';
 import axios from 'axios';
+import { getGameStats } from '../services/api';
 import { AlertCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -30,9 +31,10 @@ export default function DashboardPage() {
   const [selectedGame, setSelectedGame] = useState<any>(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [playerFilter, setPlayerFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  // Remover filtros de jogadora e categoria
   const [allPlayers, setAllPlayers] = useState<any[]>([]);
+  // Buscar estatísticas reais do backend para o jogo selecionado
+  const [stats, setStats] = useState<GameStats[]>([]);
 
   // Buscar lista de jogos do período
   useEffect(() => {
@@ -115,6 +117,15 @@ export default function DashboardPage() {
     });
   }, []);
 
+  // Buscar estatísticas reais do backend para o jogo selecionado
+  useEffect(() => {
+    if (selectedGame?.id) {
+      getGameStats(selectedGame.id)
+        .then((data) => setStats(data))
+        .catch(() => setStats([]));
+    }
+  }, [selectedGame]);
+
   // Sugestões de jogos para autocomplete
   const filteredGames = useMemo(() => {
     if (!search) return games;
@@ -124,47 +135,47 @@ export default function DashboardPage() {
     );
   }, [games, search]);
 
-  // Filtrar playersStats conforme filtros
-  const filteredPlayersStats = useMemo(() => {
-    let filtered = playersStats;
-    if (playerFilter) {
-      filtered = filtered.filter((p: any) => String(p.id) === playerFilter);
-    }
-    if (categoryFilter) {
-      filtered = filtered.filter((p: any) => p.category === categoryFilter);
-    }
-    return filtered;
-  }, [playersStats, playerFilter, categoryFilter]);
+  // Não filtrar por jogadora nem categoria
+  const filteredPlayersStats = playersStats;
 
   // Destaques (exemplo: maior pontuadora, reboteira, assistente, aproveitamento)
   const highlights = overview && filteredPlayersStats.length > 0 ? [
-    {
-      title: "PONTOS",
-      value: Math.max(...filteredPlayersStats.map(p => p.total_pontos || 0)),
-      playerName: filteredPlayersStats.reduce((a, b) => (a.total_pontos > b.total_pontos ? a : b), filteredPlayersStats[0])?.nome || '-',
-      playerImage: `/images/players/${filteredPlayersStats.reduce((a, b) => (a.total_pontos > b.total_pontos ? a : b), filteredPlayersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
-      legend: "AACB Brasília Basquete",
-    },
-    {
-      title: "TOTAL DE REBOTES",
-      value: Math.max(...filteredPlayersStats.map(p => p.total_rebotes || 0)),
-      playerName: filteredPlayersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), filteredPlayersStats[0])?.nome || '-',
-      playerImage: `/images/players/${filteredPlayersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), filteredPlayersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
-      legend: "AACB Brasília Basquete",
-    },
-    {
-      title: "ASSISTÊNCIAS",
-      value: Math.max(...filteredPlayersStats.map(p => p.total_assistencias || 0)),
-      playerName: filteredPlayersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), filteredPlayersStats[0])?.nome || '-',
-      playerImage: `/images/players/${filteredPlayersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), filteredPlayersStats[0])?.nome?.toLowerCase().replace(/ /g, '-') || 'default'}.jpg`,
-      legend: "AACB Brasília Basquete",
-    },
+    (() => {
+      const leader = filteredPlayersStats.reduce((a, b) => (a.total_pontos > b.total_pontos ? a : b), filteredPlayersStats[0]);
+      return {
+        title: "PONTOS",
+        value: leader?.total_pontos ?? '-',
+        playerName: leader?.name || leader?.nome || '-',
+        playerImage: leader?.photoUrl || `/images/players/${(leader?.name || leader?.nome || 'default').toLowerCase().replace(/ /g, '-')}.jpg`,
+        legend: leader?.name || leader?.nome || '-',
+      };
+    })(),
+    (() => {
+      const leader = filteredPlayersStats.reduce((a, b) => (a.total_rebotes > b.total_rebotes ? a : b), filteredPlayersStats[0]);
+      return {
+        title: "TOTAL DE REBOTES",
+        value: leader?.total_rebotes ?? '-',
+        playerName: leader?.name || leader?.nome || '-',
+        playerImage: leader?.photoUrl || `/images/players/${(leader?.name || leader?.nome || 'default').toLowerCase().replace(/ /g, '-')}.jpg`,
+        legend: leader?.name || leader?.nome || '-',
+      };
+    })(),
+    (() => {
+      const leader = filteredPlayersStats.reduce((a, b) => (a.total_assistencias > b.total_assistencias ? a : b), filteredPlayersStats[0]);
+      return {
+        title: "ASSISTÊNCIAS",
+        value: leader?.total_assistencias ?? '-',
+        playerName: leader?.name || leader?.nome || '-',
+        playerImage: leader?.photoUrl || `/images/players/${(leader?.name || leader?.nome || 'default').toLowerCase().replace(/ /g, '-')}.jpg`,
+        legend: leader?.name || leader?.nome || '-',
+      };
+    })(),
     {
       title: "APROVEITAMENTO",
       value: '—',
       playerName: '-',
       playerImage: `/images/players/default.jpg`,
-      legend: "AACB Brasília Basquete",
+      legend: '-',
     },
   ] : [];
 
@@ -204,35 +215,6 @@ export default function DashboardPage() {
     plusMinus: 0,
     ef: 0,
   }));
-
-  // Dados para gráfico de linha (evolução por jogo)
-  const playerEvolutionData = useMemo(() => {
-    if (!playerFilter || !games.length) return [];
-    // Buscar estatísticas da jogadora por jogo
-    return games
-      .map((game: any) => {
-        const stats = playersStats.find((p: any) => String(p.id) === playerFilter && p.jogo_id === game.id);
-        return {
-          jogo: `${game.opponent} (${new Date(game.date).toLocaleDateString()})`,
-          pontos: stats ? stats.total_pontos : 0,
-        };
-      })
-      .filter((d) => d.pontos > 0);
-  }, [playerFilter, games, playersStats]);
-
-  // Dados para gráfico radar (desempenho individual)
-  const playerRadarData = useMemo(() => {
-    if (!playerFilter) return [];
-    const player = playersStats.find((p: any) => String(p.id) === playerFilter);
-    if (!player) return [];
-    return [
-      { stat: 'Pontos', valor: player.total_pontos || 0 },
-      { stat: 'Rebotes', valor: player.total_rebotes || 0 },
-      { stat: 'Assistências', valor: player.total_assistencias || 0 },
-      { stat: 'Roubos', valor: player.total_roubos || 0 },
-      { stat: 'Faltas', valor: player.total_faltas || 0 },
-    ];
-  }, [playerFilter, playersStats]);
 
   return (
     <div className="p-4 md:p-8 mt-16">
@@ -275,40 +257,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        {/* Filtro de Jogadora */}
-        <div className="flex-1 md:max-w-xs">
-          <input
-            type="text"
-            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            placeholder="Filtrar por jogadora..."
-            value={playerFilter ? (allPlayers.find(p => String(p.id) === playerFilter)?.nome || '') : ''}
-            onChange={e => {
-              const nome = e.target.value.toLowerCase();
-              const found = allPlayers.find(p => p.nome.toLowerCase().includes(nome));
-              setPlayerFilter(found ? String(found.id) : '');
-            }}
-            list="players-list"
-            aria-label="Filtrar por jogadora"
-          />
-          <datalist id="players-list">
-            {allPlayers.map((p) => (
-              <option key={p.id} value={p.nome} />
-            ))}
-          </datalist>
-        </div>
-        {/* Filtro de Categoria */}
-        <div className="flex-1 md:max-w-xs">
-          <select
-            className="w-full border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
-            aria-label="Filtrar por categoria"
-          >
-            {categorias.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
-            ))}
-          </select>
-        </div>
+        {/* Remover campos de filtro do layout (inputs e selects relacionados a playerFilter e categoryFilter) */}
       </div>
 
       {/* Feedback de erro */}
@@ -392,40 +341,6 @@ export default function DashboardPage() {
               <HighlightPlayerCard key={h.title} {...h} />
             ))}
           </div>
-          {playerFilter && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              {/* Gráfico de linha: evolução dos pontos */}
-              <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Evolução dos Pontos por Jogo</h2>
-                <div className="w-full h-64 overflow-x-auto">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={playerEvolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                      <XAxis dataKey="jogo" tick={{ fontSize: 12 }} angle={-20} interval={0} height={60} />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="pontos" stroke="#2563eb" strokeWidth={3} dot />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-              {/* Gráfico radar: desempenho individual */}
-              <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Radar de Desempenho Individual</h2>
-                <div className="w-full h-64 overflow-x-auto">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={playerRadarData} outerRadius={90}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="stat" />
-                      <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} />
-                      <Radar name="Desempenho" dataKey="valor" stroke="#2563eb" fill="#2563eb" fillOpacity={0.6} />
-                      <Tooltip />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-            </div>
-          )}
           <div className="w-full bg-white rounded shadow p-6 mb-8">
             <h3 className="font-bold text-lg mb-4">Comparativo das Jogadoras em Quadra</h3>
             <ResponsiveContainer width="100%" height={320}>
@@ -443,7 +358,12 @@ export default function DashboardPage() {
           {/* Box Score */}
           <div className="mt-8">
             <h2 className="text-2xl font-bold mb-4">Box Score</h2>
-            <PlayersStatsTable data={playersTable} />
+            {/* Passar playersStats se não houver jogo selecionado, stats se houver */}
+            <BoxScoreTable
+              gameId={selectedGame?.id}
+              stats={selectedGame ? stats : playersStats}
+              onStatsUpdate={() => {}}
+            />
           </div>
         </>
       )}
