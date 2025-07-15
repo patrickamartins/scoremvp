@@ -28,6 +28,7 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
+    # A biblioteca python-jose exige que o sub seja uma string
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -61,15 +62,29 @@ def get_current_user(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         print("[DEBUG] Payload decodificado:", payload)
-        user_id: str = payload.get("sub")
+        user_id = payload.get("sub")
+        print("[DEBUG] User ID extraído:", user_id)
+        print("[DEBUG] Tipo do user_id:", type(user_id))
+        
         if user_id is None:
             print("[DEBUG] Payload sem 'sub'")
             raise credentials_exception
+            
+        # Converter para int se necessário
+        if isinstance(user_id, str):
+            try:
+                user_id = int(user_id)
+                print("[DEBUG] User ID convertido para int:", user_id)
+            except ValueError as e:
+                print("[DEBUG] Erro ao converter user_id para int:", e)
+                raise credentials_exception
+                
     except JWTError as e:
         print("[DEBUG] Erro ao decodificar JWT:", e)
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    print("[DEBUG] Buscando usuário com ID:", user_id)
+    user = db.query(User).filter(User.id == user_id).first()
     print("[DEBUG] Usuário encontrado:", user)
     if user is None:
         print("[DEBUG] Usuário não encontrado para ID:", user_id)

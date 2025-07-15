@@ -90,6 +90,16 @@ def debug_db_url():
     logger.info(f"Database URL: {settings.SQLALCHEMY_DATABASE_URI}")
     return {"database_url": settings.SQLALCHEMY_DATABASE_URI}
 
+@app.get("/api/debug-secret")
+def debug_secret():
+    logger.info("Debug secret endpoint accessed")
+    return {
+        "secret_key_length": len(settings.SECRET_KEY) if settings.SECRET_KEY else 0,
+        "secret_key_preview": settings.SECRET_KEY[:20] + "..." if settings.SECRET_KEY else None,
+        "algorithm": settings.ALGORITHM,
+        "access_token_expire_minutes": settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    }
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

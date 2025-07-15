@@ -33,9 +33,26 @@ def login(
             detail="Inactive user"
         )
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        user.id, expires_delta=access_token_expires
+    )
+    
     return {
-        "access_token": create_access_token(
-            user.id, expires_delta=access_token_expires
-        ),
+        "access_token": access_token,
         "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "is_active": user.is_active,
+            "plan": user.plan,
+            "profile_image": user.profile_image,
+            "phone": user.phone,
+            "cpf": user.cpf,
+            "favorite_team": user.favorite_team,
+            "playing_team": user.playing_team,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+        }
     } 

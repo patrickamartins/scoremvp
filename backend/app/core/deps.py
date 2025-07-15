@@ -5,10 +5,9 @@ from jose import jwt, JWTError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from app.core.config import settings
-from app.core.security import ALGORITHM
+from app.core.security import ALGORITHM, get_current_user as security_get_current_user
 from app.database import SessionLocal
 from app.models import User
-# from app.services.user_service import UserService
 from app.schemas.token import TokenPayload
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -26,28 +25,8 @@ def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(reusable_oauth2)
 ) -> User:
-    try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[ALGORITHM]
-        )
-        token_data = TokenPayload.from_payload(payload)
-    except (JWTError, ValidationError):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
-    user = db.query(User).filter(User.id == token_data.sub).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
-    return user
+    # Usar a função do security.py que já está funcionando
+    return security_get_current_user(token, db)
 
 def get_current_active_superadmin(
     current_user: User = Depends(get_current_user),

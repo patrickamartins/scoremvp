@@ -28,6 +28,10 @@ class UserCreate(UserBase):
     send_activation_email: Optional[bool] = False
     number: Optional[int] = None
     position: Optional[str] = None
+    # Campos adicionais que podem vir do frontend
+    status: Optional[str] = None
+    type: Optional[str] = None
+    photoUrl: Optional[str] = None
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -43,6 +47,10 @@ class UserUpdate(BaseModel):
     playing_team: Optional[str] = None
     number: Optional[int] = None
     position: Optional[str] = None
+    # Campos adicionais que podem vir do frontend
+    status: Optional[str] = None
+    type: Optional[str] = None
+    photoUrl: Optional[str] = None
 
     @field_validator('name')
     def name_must_not_be_empty(cls, v):
@@ -56,13 +64,18 @@ class UserOut(BaseModel):
     name: str
     role: UserRole
     is_active: bool
-    number: Optional[str] = None
+    number: Optional[int] = None
     position: Optional[str] = None
     profile_image: Optional[str] = None
     phone: Optional[str] = None
     cpf: Optional[str] = None
     favorite_team: Optional[str] = None
     playing_team: Optional[str] = None
+    plan: Optional[UserPlan] = None
+    # Campos adicionais para compatibilidade com frontend
+    status: Optional[str] = None
+    type: Optional[str] = None
+    photoUrl: Optional[str] = None
 
     class Config:
         from_attributes = True
