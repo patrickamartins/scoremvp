@@ -7,12 +7,14 @@ console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 // Determinar a URL da API baseada no ambiente
 const getApiUrl = () => {
+  // Se VITE_API_URL está definido, usar ele
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
   // Em produção, sempre usar HTTPS
   if (import.meta.env.PROD) {
+    // Forçar HTTPS em produção
     return 'https://scoremvpback-production.up.railway.app/api';
   }
   
@@ -20,8 +22,17 @@ const getApiUrl = () => {
   return 'http://localhost:8000/api';
 };
 
+// Função para garantir que a URL seja HTTPS se a página estiver em HTTPS
+const ensureHttps = (url: string) => {
+  // Se estamos em uma página HTTPS, forçar HTTPS na API
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return url.replace('http://', 'https://');
+  }
+  return url;
+};
+
 export const api = axios.create({
-  baseURL: getApiUrl(),
+  baseURL: ensureHttps(getApiUrl()),
   headers: {
     'Content-Type': 'application/json',
   },

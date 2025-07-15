@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import api from '../lib/axios'; // Importa a instância do axios
 
-const API_URL = 'https://scoremvp-backend.onrender.com/api';
+// Remover a URL hardcoded e usar a instância configurada
+// const API_URL = 'https://scoremvp-backend.onrender.com/api';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),

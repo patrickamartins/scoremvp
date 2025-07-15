@@ -1,18 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
-import { Label } from '../components/ui/Label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
-import { toast } from 'sonner';
-
-const plans = [
-  { value: 'free', label: 'Gratuito' },
-  { value: 'premium', label: 'Premium' },
-  { value: 'pro', label: 'Profissional' },
-];
+import React, { useState, useEffect } from "react";
+import { Card, Button, Input, Label } from "../components/ui";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { toast } from "sonner";
+import { api } from "../services/api";
 
 export default function ConfiguracoesPessoaisPage() {
+  usePageTitle("Configurações Pessoais");
+
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -20,13 +14,14 @@ export default function ConfiguracoesPessoaisPage() {
     cpf: '',
     favoriteTeam: '',
     playingTeam: '',
-    plan: '',
+    plan: 'free',
     avatar: '',
     profileImage: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -34,20 +29,11 @@ export default function ConfiguracoesPessoaisPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('token'); // Assumindo que o token está no localStorage
-        const response = await fetch('http://localhost:8000/api/profile/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/profile/me');
 
-        if (!response.ok) {
-          throw new Error('A resposta da rede não foi ok.');
-        }
+        const user = response.data;
 
-        const user = await response.json();
-
-        console.log('Dados do perfil recebidos da API (com fetch):', user);
+        console.log('Dados do perfil recebidos da API:', user);
 
         try {
           setForm(prev => ({
@@ -105,12 +91,10 @@ export default function ConfiguracoesPessoaisPage() {
         formData.append('profile_image', form.profileImage);
       }
       
-      await fetch('http://localhost:8000/api/profile/me', {
-        method: 'PUT',
-        body: formData,
+      await api.put('/profile/me', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
       toast.success('Configurações salvas com sucesso!');
     } catch (error) {

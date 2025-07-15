@@ -3,6 +3,7 @@ import { Card, Button, Select, SelectTrigger, SelectValue, SelectContent, Select
 import type { Game, GameCategory } from '../types/game';
 import { Link } from "react-router-dom";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { api } from '../services/api';
 
 export function PublicDashboardPage() {
   const [games, setGames] = useState<Game[]>([]);
@@ -15,10 +16,8 @@ export function PublicDashboardPage() {
 
   const fetchGames = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/games`);
-      if (!response.ok) throw new Error('Failed to fetch games');
-      const data = await response.json();
-      setGames(data);
+      const response = await api.get('/games');
+      setGames(response.data);
     } catch (error) {
       console.error('Error fetching games:', error);
     } finally {

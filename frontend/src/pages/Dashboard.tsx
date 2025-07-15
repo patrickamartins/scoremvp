@@ -5,13 +5,14 @@ import { DateFilterDropdown } from "../components/ui/DateFilterDropdown";
 import { HighlightPlayerCard } from "../components/ui/HighlightPlayerCard";
 import { BoxScoreTable } from "../components/BoxScoreTable";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from 'recharts';
-import axios from 'axios';
+import { api } from '../services/api';
 import { getGameStats } from '../services/api';
 import { AlertCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Remover a constante API_URL hardcoded
+// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const categorias = [
   { label: 'Todas', value: '' },
@@ -50,7 +51,7 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await axios.get(`${API_URL}/dashboard/public/jogos`, { params });
+        const res = await api.get('/dashboard/public/jogos', { params });
         if (!ignore) setGames(res.data);
       } catch (e: any) {
         if (!ignore) {
@@ -75,8 +76,8 @@ export default function DashboardPage() {
         if (selectedGame) {
           // Buscar dados de um jogo específico
           const [overviewRes, playersRes] = await Promise.all([
-            axios.get(`${API_URL}/dashboard/public/overview`, { params: { jogo_id: selectedGame.id } }),
-            axios.get(`${API_URL}/dashboard/public/jogadoras`, { params: { jogo_id: selectedGame.id } }),
+            api.get('/dashboard/public/overview', { params: { jogo_id: selectedGame.id } }),
+            api.get('/dashboard/public/jogadoras', { params: { jogo_id: selectedGame.id } }),
           ]);
           if (!ignore) {
             setOverview(overviewRes.data);
@@ -90,8 +91,8 @@ export default function DashboardPage() {
             if (dateFilter.end) params.data_fim = dateFilter.end;
           }
           const [overviewRes, playersRes] = await Promise.all([
-            axios.get(`${API_URL}/dashboard/public/overview`, { params }),
-            axios.get(`${API_URL}/dashboard/public/jogadoras`, { params }),
+            api.get('/dashboard/public/overview', { params }),
+            api.get('/dashboard/public/jogadoras', { params }),
           ]);
           if (!ignore) {
             setOverview(overviewRes.data);
@@ -114,7 +115,7 @@ export default function DashboardPage() {
 
   // Buscar todas as jogadoras para o filtro
   useEffect(() => {
-    axios.get(`${API_URL}/dashboard/public/jogadoras`).then(({ data }) => {
+    api.get('/dashboard/public/jogadoras').then(({ data }) => {
       setAllPlayers(data);
     });
   }, []);

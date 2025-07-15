@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Game, GameAction, PlayerGameStats, GameStats } from '../types/game';
+import { api } from '../services/api';
 
 const initialStats: GameStats = {
   points: 0,
@@ -81,19 +82,8 @@ export const useGameStats = () => {
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/games`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gameToSave),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save game');
-      }
-
-      return await response.json();
+      const response = await api.post('/games', gameToSave);
+      return response.data;
     } catch (error) {
       console.error('Error saving game:', error);
       throw error;
