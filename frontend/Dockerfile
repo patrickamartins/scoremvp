@@ -7,8 +7,8 @@ WORKDIR /app
 # Copiar arquivos de dependências
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm install --omit=dev
+# Instalar TODAS as dependências (incluindo devDependencies para o build)
+RUN npm install
 
 # Copiar código fonte
 COPY . .
