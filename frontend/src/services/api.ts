@@ -5,8 +5,23 @@ import { Player, PlayerCreate, PlayerUpdate, PlayerStats } from '@/types/player'
 
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
+// Determinar a URL da API baseada no ambiente
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Em produção, sempre usar HTTPS
+  if (import.meta.env.PROD) {
+    return 'https://scoremvpback-production.up.railway.app/api';
+  }
+  
+  // Em desenvolvimento, usar localhost
+  return 'http://localhost:8000/api';
+};
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

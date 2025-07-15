@@ -38,23 +38,25 @@ def seed_database():
         # Criar alguns jogos de exemplo
         games = [
             {
-                "name": "Campeonato Regional 2024",
+                "opponent": "Time A",
                 "date": datetime.now(),
                 "location": "Ginásio Municipal",
-                "description": "Campeonato regional de basquete feminino"
+                "categoria": "Adulto",
+                "status": "PENDING"
             },
             {
-                "name": "Liga Estadual",
+                "opponent": "Time B", 
                 "date": datetime.now(),
                 "location": "Arena Esportiva",
-                "description": "Liga estadual de basquete"
+                "categoria": "Adulto",
+                "status": "PENDING"
             }
         ]
         
         for game_data in games:
-            existing_game = db.query(Game).filter(Game.name == game_data["name"]).first()
+            existing_game = db.query(Game).filter(Game.opponent == game_data["opponent"]).first()
             if not existing_game:
-                print(f"Criando jogo: {game_data['name']}")
+                print(f"Criando jogo: {game_data['opponent']}")
                 game = Game(**game_data)
                 db.add(game)
         
