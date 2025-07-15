@@ -50,7 +50,7 @@ export default function UsuariosPage() {
     setLoading(true);
     const params: any = { skip: 0, limit: 100 };
     if (search.trim()) params.name = search.trim();
-    api.get('/users', { params })
+    api.get('/users/', { params })
       .then(res => {
         setUsers(res.data);
         setTotalPages(Math.ceil(res.data.length / itemsPerPage));
@@ -201,7 +201,7 @@ export default function UsuariosPage() {
       // Refazer fetch dos usuários após salvar
       const params: any = { skip: 0, limit: 100 };
       if (search.trim()) params.name = search.trim();
-      const res = await api.get('/users', { params });
+      const res = await api.get('/users/', { params });
       setUsers(res.data);
       setTotalPages(Math.ceil(res.data.length / itemsPerPage));
     } catch (err: any) {
@@ -222,7 +222,7 @@ export default function UsuariosPage() {
           toast.success('Usuário excluído com sucesso!');
           const params: any = { skip: 0, limit: 100 };
           if (search.trim()) params.name = search.trim();
-          return api.get('/users', { params });
+          return api.get('/users/', { params });
         })
         .then(res => {
           setUsers(res.data);

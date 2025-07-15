@@ -1,0 +1,24 @@
+# Database Configuration
+DATABASE_URL=postgresql://postgres:UcKvEyogftKsJnbfoDgHhZXdiyrQwKGe@postgres.rail
+DATABASE_PUBLIC_URL=postgresql://postgres:UcKvEyogftKsJnbfoDgHhZXdiyrQwKGe@trolley.pi
+
+# API Configuration
+API_V1_STR=/api/v1
+SECRET_KEY=X3unnMXvQlXo5eC7hXi8YzPfVxYIUIT
+ACCESS_TOKEN_EXPIRE_MINUTES=11520
+
+# CORS Configuration
+BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173", "https://scoremvp.com.br", "https://scoremvpback-production.up.railway.app", "https://scoremvp-frontend-production.up.railway.app"]
+
+# Frontend URL
+FRONTEND_URL=https://scoremvp.com.br
+
+# Environment
+ENVIRONMENT=production
+
+# Email Configuration
+MAILERSEND_API_KEY=mlsn.43940fe7cd167f45ba617a54b17a15cd2e19007c7ef3c254d7d9cdba54ed763
+MAILERSEND_SMTP_USERNAME=MS_xqZKL5@scoremvp.com
+MAILERSEND_SMTP_PASSWORD=mssp.yAA7z00.yzkq3403xv04d796.WgibWXG
+MAILERSEND_SENDER_EMAIL=no-reply@scoremvp.com.br
+MAILERSEND_SENDER_NAME=Score MVP 

@@ -57,7 +57,7 @@ export function Users() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/users', {
+      const response = await api.get('/users/', {
         params: { search }
       });
       setUsers(response.data);
@@ -85,7 +85,7 @@ export function Users() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post('/users', formData);
+      await api.post('/users/', formData);
       setShowModal(false);
       loadUsers();
       resetForm();
