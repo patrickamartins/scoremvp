@@ -70,7 +70,7 @@ app.include_router(dashboard_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(leads_router, prefix="/api")  # Adicionar prefix /api
 from app.api.endpoints.users import router as users_router
-app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(users_router, prefix="/api", tags=["users"])
 
 # Montar arquivos estáticos
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
