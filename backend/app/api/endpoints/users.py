@@ -17,6 +17,11 @@ router = APIRouter()
 MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../media')
 os.makedirs(MEDIA_DIR, exist_ok=True)
 
+# Verificar se a pasta media existe e tem permissões
+logger.info(f"Pasta media: {MEDIA_DIR}")
+logger.info(f"Pasta existe: {os.path.exists(MEDIA_DIR)}")
+logger.info(f"Permissão de escrita: {os.access(MEDIA_DIR, os.W_OK)}")
+
 def user_to_out(user: User) -> dict:
     try:
         # Buscar player vinculado
@@ -217,12 +222,27 @@ async def upload_user_photo(
         contents = await file.read()
         
         # Sanitizar o nome do arquivo (remover espaços e caracteres especiais)
+        original_filename = file.filename
         safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', file.filename)
         safe_filename = safe_filename.replace(' ', '_')
+        safe_filename = safe_filename.replace('%20', '_')
+        # Garantir que não há espaços ou caracteres problemáticos
+        safe_filename = re.sub(r'_+', '_', safe_filename)  # Múltiplos underscores viram um só
+        safe_filename = safe_filename.strip('_')  # Remove underscores no início e fim
+        
+        logger.info(f"Upload de foto - Nome original: {original_filename}")
+        logger.info(f"Upload de foto - Nome sanitizado: {safe_filename}")
         
         file_path = os.path.join(MEDIA_DIR, f"user_{user_id}_{safe_filename}")
         with open(file_path, "wb") as f:
             f.write(contents)
+        
+        # Verificar se o arquivo foi salvo corretamente
+        if os.path.exists(file_path):
+            logger.info(f"Arquivo salvo com sucesso: {file_path}")
+            logger.info(f"Tamanho do arquivo: {os.path.getsize(file_path)} bytes")
+        else:
+            logger.error(f"ERRO: Arquivo não foi salvo: {file_path}")
         
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -236,6 +256,7 @@ async def upload_user_photo(
         db.refresh(user)
         
         logger.info(f"Foto salva para usuário {user_id}: {image_url}")
+        logger.info(f"Arquivo salvo em: {file_path}")
         
         # O player vinculado acessa a foto via user.profile_image
         return {"filename": safe_filename, "url": user.profile_image}
