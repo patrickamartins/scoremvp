@@ -55,6 +55,17 @@ export default function UsuariosPage() {
     return url.startsWith('http') || url.startsWith('/');
   };
 
+  // Função para recarregar dados de um usuário específico
+  const reloadUserData = async (userId: number) => {
+    try {
+      const response = await api.get(`/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao recarregar dados do usuário:', error);
+      return null;
+    }
+  };
+
   // Buscar usuários reais do backend
   useEffect(() => {
     setLoading(true);
@@ -272,6 +283,9 @@ export default function UsuariosPage() {
         // Atualiza o usuário com a URL persistente
         console.log('🔍 DEBUG - Atualizando usuário com profile_image:', profile_image);
         await api.put(`/users/${userId}`, { profile_image });
+        
+        // Atualizar o preview imediatamente
+        setPhotoPreview(profile_image);
       }
       
       // Refazer fetch dos usuários após salvar
@@ -279,8 +293,29 @@ export default function UsuariosPage() {
       if (search.trim()) params.name = search.trim();
       const res = await api.get('/users/', { params });
       console.log('🔍 DEBUG - Usuários após salvar:', res.data);
-      setUsers(res.data);
-      setTotalPages(Math.ceil(res.data.length / itemsPerPage));
+      
+      // Atualizar a lista com os dados mais recentes
+      const updatedUsers = res.data;
+      
+      // Se foi um update, recarregar os dados do usuário específico
+      if (selectedUser && userId) {
+        const updatedUser = await reloadUserData(userId);
+        if (updatedUser) {
+          // Substituir o usuário atualizado na lista
+          const userIndex = updatedUsers.findIndex((u: any) => u.id === userId);
+          if (userIndex !== -1) {
+            updatedUsers[userIndex] = updatedUser;
+          }
+        }
+      }
+      
+      setUsers(updatedUsers);
+      setTotalPages(Math.ceil(updatedUsers.length / itemsPerPage));
+      
+      // Forçar re-render garantindo que o React detecte a mudança
+      setTimeout(() => {
+        setUsers([...updatedUsers]);
+      }, 100);
     } catch (err: any) {
       console.error('❌ DEBUG - Erro ao salvar usuário:', err);
       toast.error(err?.response?.data?.detail || 'Erro ao salvar usuário ou foto.');
