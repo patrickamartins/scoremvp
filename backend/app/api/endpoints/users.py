@@ -99,6 +99,13 @@ def get_players_with_user(db: Session = Depends(get_db), current_user: User = De
         logger.error(f"Erro ao buscar jogadores com usuário: {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
 
+@router.get("/{user_id}", response_model=UserOut)
+def get_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_superadmin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user_to_out(user)
+
 @router.post("/", response_model=UserOut)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_superadmin)):
     try:
