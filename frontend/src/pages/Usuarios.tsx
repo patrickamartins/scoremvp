@@ -220,7 +220,7 @@ export default function UsuariosPage() {
           plan: form.plan,
           is_active: form.status === 'active',
           type: form.type,
-          number: form.number && form.number !== '' ? parseInt(form.number, 10) : null,
+          number: form.number && form.number !== '' && form.number !== '0' ? parseInt(form.number, 10) : null,
           position: form.position || null,
           profile_image: form.profile_image || null,
         };
@@ -246,7 +246,7 @@ export default function UsuariosPage() {
           playing_team: form.playingTeam || null,
           profile_image: form.profile_image || null,
           send_activation_email: false,
-          number: form.number && form.number !== '' ? parseInt(form.number, 10) : null,
+          number: form.number && form.number !== '' && form.number !== '0' ? parseInt(form.number, 10) : null,
           position: form.position || null,
         };
         
@@ -395,8 +395,29 @@ export default function UsuariosPage() {
                           {user.name}
                         </td>
                       <td className="border px-4 py-2">{user.email}</td>
-                      <td className="border px-4 py-2">{user.cpf}</td>
-                      <td className="border px-4 py-2">{user.playingTeam}</td>
+                      <td className="border px-4 py-2">
+                          {user.cpf ? (
+                            <span className="font-mono text-sm">
+                              {user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="border px-4 py-2">
+                          {user.playing_team ? (
+                            <div>
+                              <div className="font-medium">{user.playing_team}</div>
+                              {user.favorite_team && (
+                                <div className="text-xs text-gray-500">♥ {user.favorite_team}</div>
+                              )}
+                            </div>
+                          ) : user.favorite_team ? (
+                            <div className="text-gray-600">♥ {user.favorite_team}</div>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
                       <td className="border px-4 py-2">{plans.find(p => p.value === user.plan)?.label}</td>
                       <td className="border px-4 py-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -409,21 +430,18 @@ export default function UsuariosPage() {
                       </td>
                       <td className="border px-4 py-2">{types.find(t => t.value === user.type)?.label}</td>
                       <td className="border px-4 py-2 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <button
                           onClick={() => handleEdit(user)}
-                          className="mr-2"
+                          className="text-blue-600 hover:text-blue-800 mr-2"
                         >
                           Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
+                        </button>
+                        <button
                           onClick={() => handleDelete(user.id)}
+                          className="text-red-600 hover:text-red-800 border border-red-600 hover:border-red-800 px-2 py-1 rounded"
                         >
                           Excluir
-                        </Button>
+                        </button>
                       </td>
                     </tr>
                   ))}

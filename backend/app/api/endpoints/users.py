@@ -157,7 +157,14 @@ def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)
         # Atualizar campos do usuário
         for field, value in update_data.items():
             if hasattr(user, field):
-                setattr(user, field, value)
+                # Tratar campo number especificamente
+                if field == "number" and value is not None:
+                    try:
+                        setattr(user, field, int(value))
+                    except (ValueError, TypeError):
+                        setattr(user, field, None)
+                else:
+                    setattr(user, field, value)
         
         # Garantir que o Player vinculado existe e está atualizado
         player = getattr(user, 'player_profile', None)
@@ -173,7 +180,10 @@ def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)
         else:
             # Atualizar Player existente
             if "number" in update_data:
-                player.number = update_data["number"]
+                try:
+                    player.number = int(update_data["number"]) if update_data["number"] is not None else None
+                except (ValueError, TypeError):
+                    player.number = None
             if "position" in update_data:
                 player.position = update_data["position"]
             db.add(player)
@@ -183,6 +193,10 @@ def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)
         db.refresh(player)
         
         logger.info(f"Usuário {user_id} atualizado com sucesso")
+        logger.info(f"Campos salvos - profile_image: {user.profile_image}, number: {user.number}, position: {user.position}")
+        if player:
+            logger.info(f"Player vinculado - number: {player.number}, position: {player.position}")
+        
         return user_to_out(user)
     except HTTPException:
         raise
@@ -206,7 +220,11 @@ async def upload_user_photo(
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        user.profile_image = f"/media/user_{user_id}_{file.filename}"
+        
+        # Usar URL completa para a imagem
+        base_url = "https://scoremvpback-production.up.railway.app"
+        image_url = f"{base_url}/media/user_{user_id}_{file.filename}"
+        user.profile_image = image_url
         db.commit()
         db.refresh(user)
         # O player vinculado acessa a foto via user.profile_image
