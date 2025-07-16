@@ -113,9 +113,6 @@ const Painel: React.FC = () => {
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
   const [selectingDraft, setSelectingDraft] = useState(false);
 
-  // Adicionar campo de análise do jogo
-  const [analise, setAnalise] = useState("");
-
   // Buscar todas as jogadoras do banco para autocomplete ao abrir modal
   useEffect(() => {
     if (showModal) {
@@ -318,7 +315,6 @@ const Painel: React.FC = () => {
       setGameFormError("Adversário é obrigatório");
       return;
     }
-    // Remover checagem de análise aqui
     setSavingGame(true);
     try {
       const newGame = await createGame({
@@ -328,7 +324,6 @@ const Painel: React.FC = () => {
         location: gameForm.local,
         category: gameForm.category,
         status: "PENDENTE",
-        analysis: analise, // pode ser vazio
       });
       if (newGame && newGame.id) {
         setGameId(newGame.id);
@@ -406,16 +401,8 @@ const Painel: React.FC = () => {
   // Função para finalizar partida
   const handleFinalizarPartida = async () => {
     if (!gameId) return;
-    if (!analise.trim()) {
-      toast({
-        title: "Preencha a análise do jogo",
-        description: "Antes de finalizar a partida, escreva a análise do jogo.",
-        variant: "destructive",
-      });
-      return;
-    }
     try {
-      await updateGame(gameId, { status: 'FINALIZADA', analysis: analise });
+      await updateGame(gameId, { status: 'FINALIZADA' });
       setGameStatus('FINALIZADA');
       toast({
         title: "Sucesso",
@@ -845,17 +832,6 @@ const Painel: React.FC = () => {
                 value={gameForm.campeonato}
                 onChange={handleGameFormChange}
                 placeholder="Nome do campeonato"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="analise">Análise do Jogo <span className="text-red-500">*</span></Label>
-              <textarea
-                id="analise"
-                name="analise"
-                value={analise}
-                onChange={e => setAnalise(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 min-h-[80px]"
-                placeholder="Descreva a análise do jogo..."
               />
             </div>
             {gameFormError && <div className="text-red-500 text-sm md:col-span-2">{gameFormError}</div>}

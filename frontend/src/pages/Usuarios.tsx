@@ -58,10 +58,12 @@ export default function UsuariosPage() {
   // Função para recarregar dados de um usuário específico
   const reloadUserData = async (userId: number) => {
     try {
+      console.log('🔍 DEBUG - Recarregando dados do usuário:', userId);
       const response = await api.get(`/users/${userId}`);
+      console.log('🔍 DEBUG - Dados do usuário recarregados:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Erro ao recarregar dados do usuário:', error);
+      console.error('❌ DEBUG - Erro ao recarregar dados do usuário:', error);
       return null;
     }
   };
@@ -286,6 +288,11 @@ export default function UsuariosPage() {
         
         // Atualizar o preview imediatamente
         setPhotoPreview(profile_image);
+        
+        // Atualizar o form com a nova URL da foto
+        setForm(prev => ({ ...prev, profile_image }));
+        
+        console.log('🔍 DEBUG - Foto atualizada no estado:', profile_image);
       }
       
       // Refazer fetch dos usuários após salvar
@@ -299,22 +306,28 @@ export default function UsuariosPage() {
       
       // Se foi um update, recarregar os dados do usuário específico
       if (selectedUser && userId) {
-        const updatedUser = await reloadUserData(userId);
-        if (updatedUser) {
-          // Substituir o usuário atualizado na lista
-          const userIndex = updatedUsers.findIndex((u: any) => u.id === userId);
-          if (userIndex !== -1) {
-            updatedUsers[userIndex] = updatedUser;
+        try {
+          const updatedUser = await reloadUserData(userId);
+          if (updatedUser) {
+            console.log('🔍 DEBUG - Usuário atualizado:', updatedUser);
+            // Substituir o usuário atualizado na lista
+            const userIndex = updatedUsers.findIndex((u: any) => u.id === userId);
+            if (userIndex !== -1) {
+              updatedUsers[userIndex] = updatedUser;
+              console.log('🔍 DEBUG - Usuário substituído na lista');
+            }
           }
+        } catch (error) {
+          console.error('❌ DEBUG - Erro ao recarregar dados do usuário:', error);
         }
       }
       
-      setUsers(updatedUsers);
-      setTotalPages(Math.ceil(updatedUsers.length / itemsPerPage));
-      
-      // Forçar re-render garantindo que o React detecte a mudança
+      // Forçar atualização da lista
+      setUsers([]); // Limpar primeiro
       setTimeout(() => {
-        setUsers([...updatedUsers]);
+        setUsers(updatedUsers);
+        setTotalPages(Math.ceil(updatedUsers.length / itemsPerPage));
+        console.log('🔍 DEBUG - Lista atualizada com', updatedUsers.length, 'usuários');
       }, 100);
     } catch (err: any) {
       console.error('❌ DEBUG - Erro ao salvar usuário:', err);

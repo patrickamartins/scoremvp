@@ -23,7 +23,6 @@ export function GamePanel({ gameId }: GamePanelProps) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [analise, setAnalise] = useState<string>("");
   const [finalizing, setFinalizing] = useState(false);
 
   useEffect(() => {
@@ -37,7 +36,6 @@ export function GamePanel({ gameId }: GamePanelProps) {
         setGame(gameData);
         setPlayers(playersData);
         setStats(statsData);
-        setAnalise(gameData.analise || "");
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
         toast({
@@ -98,14 +96,8 @@ export function GamePanel({ gameId }: GamePanelProps) {
 
   // Função para finalizar partida
   const handleFinalizeGame = async () => {
-    if (!analise.trim()) {
-      toast({ title: 'Preencha a análise do jogo antes de finalizar.', variant: 'destructive' });
-      return;
-    }
     setFinalizing(true);
     try {
-      // Supondo que exista um endpoint updateGame
-      // await updateGame(gameId, { analise }); // Assuming updateGame is available
       toast({ title: 'Partida finalizada com sucesso!' });
       // Redirecionar ou atualizar status, se necessário
     } catch (error) {
@@ -208,22 +200,10 @@ export function GamePanel({ gameId }: GamePanelProps) {
                 </table>
               </div>
             </div>
-            <div className="mt-6">
-              <Label htmlFor="analise">Análise do Jogo <span className="text-red-500">*</span></Label>
-              <Textarea
-                id="analise"
-                value={analise}
-                onChange={e => setAnalise(e.target.value)}
-                rows={5}
-                placeholder="Descreva aqui a análise do jogo..."
-                required
-                className="w-full mt-1"
-              />
-            </div>
             <div className="flex justify-end mt-4">
               <Button
                 onClick={handleFinalizeGame}
-                disabled={finalizing || !analise.trim()}
+                disabled={finalizing}
                 className="bg-green-600 text-white"
               >
                 {finalizing ? 'Finalizando...' : 'Finalizar Partida'}

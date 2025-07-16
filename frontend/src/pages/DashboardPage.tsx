@@ -4,7 +4,7 @@ import { Card } from '../components/ui';
 import { usePageTitle } from "../hooks/usePageTitle";
 import { getGames, deleteGame } from '../services/api';
 import { Button } from '../components/ui/Button';
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -13,10 +13,21 @@ const mockComparativo = [
   { name: 'Jogo 2', Morena: 12, Maria: 9, Marina: 8 },
   { name: 'Jogo 3', Morena: 15, Maria: 11, Marina: 10 },
 ];
+
 const mockEvolucao = [
-  { name: '01/01', pontos: 10 },
-  { name: '05/01', pontos: 12 },
-  { name: '10/01', pontos: 15 },
+  { data: '01/01', pontos: 8, media: 7.5, tendencia: 'ascendente' },
+  { data: '08/01', pontos: 9, media: 7.8, tendencia: 'ascendente' },
+  { data: '15/01', pontos: 11, media: 8.2, tendencia: 'ascendente' },
+  { data: '22/01', pontos: 10, media: 8.0, tendencia: 'estavel' },
+  { data: '29/01', pontos: 12, media: 8.3, tendencia: 'ascendente' },
+  { data: '05/02', pontos: 14, media: 8.7, tendencia: 'ascendente' },
+  { data: '12/02', pontos: 13, media: 8.5, tendencia: 'estavel' },
+  { data: '19/02', pontos: 15, media: 8.9, tendencia: 'ascendente' },
+  { data: '26/02', pontos: 16, media: 9.1, tendencia: 'ascendente' },
+  { data: '05/03', pontos: 18, media: 9.4, tendencia: 'ascendente' },
+  { data: '12/03', pontos: 17, media: 9.2, tendencia: 'estavel' },
+  { data: '19/03', pontos: 19, media: 9.6, tendencia: 'ascendente' },
+  { data: '26/03', pontos: 20, media: 9.8, tendencia: 'ascendente' },
 ];
 
 const exportOptions = [
@@ -36,7 +47,11 @@ const DashboardPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedExport, setSelectedExport] = useState<string[]>(['resumo']);
-  const [showFullAnalise, setShowFullAnalise] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   // Deletar todos os jogos cadastrados
   const handleDeleteAllGames = async () => {
@@ -66,6 +81,22 @@ const DashboardPage: React.FC = () => {
     setSelectedExport(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
+  };
+
+  // Custom tooltip para o gráfico evolutivo
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800">{`Data: ${label}`}</p>
+          <p className="text-blue-600">{`Pontos: ${data.pontos}`}</p>
+          <p className="text-green-600">{`Média: ${data.media}`}</p>
+          <p className="text-gray-600">{`Tendência: ${data.tendencia}`}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -128,7 +159,7 @@ const DashboardPage: React.FC = () => {
             className={`px-4 py-2 rounded-t ${tab === 'comparativo' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
             onClick={() => setTab('comparativo')}
           >
-            Comparativo
+            Comparação
           </button>
           <button
             className={`px-4 py-2 rounded-t ${tab === 'evolucao' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
@@ -139,54 +170,54 @@ const DashboardPage: React.FC = () => {
         </div>
         <div className="bg-white rounded-b shadow p-4">
           {tab === 'comparativo' ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockComparativo}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="Morena" stroke="#2563eb" />
-                <Line type="monotone" dataKey="Maria" stroke="#f59e42" />
-                <Line type="monotone" dataKey="Marina" stroke="#10b981" />
-              </LineChart>
-            </ResponsiveContainer>
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-center">Comparação de Performance entre Jogadoras</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={mockComparativo}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="Morena" stroke="#2563eb" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Maria" stroke="#f59e42" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Marina" stroke="#10b981" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockEvolucao}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="pontos" stroke="#2563eb" />
-              </LineChart>
-            </ResponsiveContainer>
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-center">Evolução da Performance ao Longo do Tempo</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={mockEvolucao}>
+                  <XAxis dataKey="data" />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Area 
+                    type="monotone" 
+                    dataKey="pontos" 
+                    stroke="#2563eb" 
+                    fill="#2563eb" 
+                    fillOpacity={0.3}
+                    strokeWidth={3}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="media" 
+                    stroke="#f59e42" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+              <div className="mt-4 text-center text-sm text-gray-600">
+                <p><strong>Linha azul:</strong> Pontos por jogo</p>
+                <p><strong>Linha laranja tracejada:</strong> Média móvel</p>
+              </div>
+            </div>
           )}
         </div>
       </div>
-
-      {/* Análise do jogo filtrado */}
-      {/* selectedGame is not defined in this component, so this block will not render */}
-      {/* If selectedGame were available, it would look like this: */}
-      {/* {selectedGame && selectedGame.analise && (
-        <Card className="mb-6 p-6">
-          <div className="font-bold text-lg mb-2">Análise do Jogo</div>
-          <div className="text-gray-700 whitespace-pre-line">
-            {showFullAnalise
-              ? selectedGame.analise
-              : (selectedGame.analise.length > 200
-                  ? selectedGame.analise.slice(0, 200) + '...'
-                  : selectedGame.analise.split('\n').slice(0, 3).join('\n'))}
-          </div>
-          {selectedGame.analise.length > 200 || selectedGame.analise.split('\n').length > 3 ? (
-            <button
-              className="mt-2 text-blue-600 hover:underline text-sm"
-              onClick={() => setShowFullAnalise(v => !v)}
-            >
-              {showFullAnalise ? 'Ver menos' : 'Ver mais'}
-            </button>
-          ) : null}
-        </Card>
-      )} */}
 
       {/* Restante do dashboard (sem filtros por jogadora/categoria) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
