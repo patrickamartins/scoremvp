@@ -46,6 +46,15 @@ export default function UsuariosPage() {
   const [photoError, setPhotoError] = useState<string>("");
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
+  // Função para verificar se a URL da imagem é válida
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url || url === '' || url === 'null' || url === 'undefined') {
+      return false;
+    }
+    // Verificar se é uma URL válida (começa com http ou /)
+    return url.startsWith('http') || url.startsWith('/');
+  };
+
   // Buscar usuários reais do backend
   useEffect(() => {
     setLoading(true);
@@ -114,7 +123,7 @@ export default function UsuariosPage() {
       plan: user.plan || 'free',
       status: user.status || 'active',
       type: user.type || 'player',
-      number: user.number || '',
+      number: user.number !== null && user.number !== undefined ? user.number : '',
       position: user.position || '',
       profile_image: user.profile_image || '',
     });
@@ -133,7 +142,7 @@ export default function UsuariosPage() {
       plan: user.plan || 'free',
       status: user.status || 'active',
       type: user.type || 'player',
-      number: user.number || '',
+      number: user.number !== null && user.number !== undefined ? user.number : '',
       position: user.position || '',
       profile_image: user.profile_image || '',
     });
@@ -204,16 +213,16 @@ export default function UsuariosPage() {
         const payload = {
           name: form.name,
           email: form.email,
-          phone: form.phone,
-          cpf: form.cpf,
-          favorite_team: form.favoriteTeam,
-          playing_team: form.playingTeam,
+          phone: form.phone || null,
+          cpf: form.cpf || null,
+          favorite_team: form.favoriteTeam || null,
+          playing_team: form.playingTeam || null,
           plan: form.plan,
           is_active: form.status === 'active',
           type: form.type,
-          number: form.number ? parseInt(form.number, 10) : null,
-          position: form.position || '',
-          profile_image: form.profile_image || '',
+          number: form.number && form.number !== '' ? parseInt(form.number, 10) : null,
+          position: form.position || null,
+          profile_image: form.profile_image || null,
         };
         
         console.log('🔍 DEBUG - Payload enviado para update:', payload);
@@ -231,14 +240,14 @@ export default function UsuariosPage() {
           role: form.type || 'player',
           plan: form.plan || 'free',
           is_active: form.status === 'active',
-          phone: form.phone,
-          cpf: form.cpf,
-          favorite_team: form.favoriteTeam,
-          playing_team: form.playingTeam,
-          profile_image: form.profile_image || '',
+          phone: form.phone || null,
+          cpf: form.cpf || null,
+          favorite_team: form.favoriteTeam || null,
+          playing_team: form.playingTeam || null,
+          profile_image: form.profile_image || null,
           send_activation_email: false,
-          number: form.number ? parseInt(form.number, 10) : null,
-          position: form.position || '',
+          number: form.number && form.number !== '' ? parseInt(form.number, 10) : null,
+          position: form.position || null,
         };
         
         console.log('🔍 DEBUG - Payload enviado para create:', payload);
@@ -368,20 +377,23 @@ export default function UsuariosPage() {
                         />
                       </td>
                       <td className="border px-4 py-2">
-                        {user.profile_image || user.photoUrl ? (
-                          <img
-                            src={user.profile_image || user.photoUrl}
-                            alt={user.name?.charAt(0) || '?'}
-                            className="w-8 h-8 rounded-full object-cover mr-2"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.png'; }}
-                          />
-                        ) : (
-                          <span className="inline-block w-8 h-8 rounded-full bg-gray-200 mr-2 flex items-center justify-center text-gray-400 font-bold">
+                          {isValidImageUrl(user.profile_image) || isValidImageUrl(user.photoUrl) ? (
+                            <img
+                              src={user.profile_image || user.photoUrl}
+                              alt={user.name?.charAt(0) || '?'}
+                              className="w-8 h-8 rounded-full object-cover mr-2"
+                              onError={(e) => { 
+                                console.log('❌ DEBUG - Erro ao carregar imagem:', user.profile_image || user.photoUrl);
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <span className={`inline-block w-8 h-8 rounded-full bg-gray-200 mr-2 flex items-center justify-center text-gray-400 font-bold ${isValidImageUrl(user.profile_image) || isValidImageUrl(user.photoUrl) ? 'hidden' : ''}`}>
                             {user.name?.charAt(0) || '?'}
                           </span>
-                        )}
-                        {user.name}
-                      </td>
+                          {user.name}
+                        </td>
                       <td className="border px-4 py-2">{user.email}</td>
                       <td className="border px-4 py-2">{user.cpf}</td>
                       <td className="border px-4 py-2">{user.playingTeam}</td>
