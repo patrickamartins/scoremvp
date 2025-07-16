@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import debounce from "lodash/debounce";
 import { toast } from "sonner";
 import api from '../services/api';
+import { AuthDebug } from '../components/AuthDebug';
 
 // Remover mockUsers e auto-replacement
 
@@ -50,12 +51,22 @@ export default function UsuariosPage() {
     setLoading(true);
     const params: any = { skip: 0, limit: 100 };
     if (search.trim()) params.name = search.trim();
+    
+    // Debug: verificar token
+    const token = localStorage.getItem('token');
+    console.log('🔍 DEBUG - Token no localStorage:', token ? 'Presente' : 'Ausente');
+    console.log('🔍 DEBUG - Token completo:', token);
+    
     api.get('/users/', { params })
       .then(res => {
+        console.log('✅ DEBUG - Usuários carregados:', res.data);
         setUsers(res.data);
         setTotalPages(Math.ceil(res.data.length / itemsPerPage));
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('❌ DEBUG - Erro ao carregar usuários:', error);
+        console.error('❌ DEBUG - Status:', error.response?.status);
+        console.error('❌ DEBUG - Mensagem:', error.response?.data);
         setUsers([]);
         setTotalPages(1);
         toast.error('Erro ao carregar usuários do banco.');
@@ -91,10 +102,24 @@ export default function UsuariosPage() {
 
   // Edição e criação
   const handleEdit = (user: any) => {
+    // Mapear campos do backend para o formulário
     setSelectedUser(user);
-    setForm(user);
+    setForm({
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      cpf: user.cpf || '',
+      favoriteTeam: user.favorite_team || '',
+      playingTeam: user.playing_team || '',
+      plan: user.plan || 'free',
+      status: user.status || 'active',
+      type: user.type || 'player',
+      number: user.number || '',
+      position: user.position || '',
+      profile_image: user.profile_image || '',
+    });
     setPhoto(null);
-    setPhotoPreview(user.photoUrl || null);
+    setPhotoPreview(user.profile_image || user.photoUrl || null);
   };
 
   const handleCreate = () => {
@@ -154,13 +179,23 @@ export default function UsuariosPage() {
     setSaving(true);
     try {
       let userId = selectedUser ? selectedUser.id : null;
-      let photoUrl = form.photoUrl;
+      let profile_image = form.profile_image;
       let userResponse;
       if (selectedUser) {
         // PUT para editar usuário
         const payload = {
-          ...form,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          cpf: form.cpf,
+          favorite_team: form.favoriteTeam,
+          playing_team: form.playingTeam,
+          plan: form.plan,
+          is_active: form.status === 'active',
+          type: form.type,
           number: form.number ? parseInt(form.number, 10) : null,
+          position: form.position || '',
+          profile_image: form.profile_image || '',
         };
         userResponse = await api.put(`/users/${selectedUser.id}`, payload);
         userId = selectedUser.id;
@@ -171,14 +206,14 @@ export default function UsuariosPage() {
           name: form.name,
           email: form.email,
           password: form.password || 'SenhaForte123!', // ajuste conforme fluxo real
-          role: form.role || 'player',
+          role: form.type || 'player',
           plan: form.plan || 'free',
           is_active: form.status === 'active',
           phone: form.phone,
           cpf: form.cpf,
           favorite_team: form.favoriteTeam,
           playing_team: form.playingTeam,
-          profile_image: form.photoUrl || '',
+          profile_image: form.profile_image || '',
           send_activation_email: false,
           number: form.number ? parseInt(form.number, 10) : null,
           position: form.position || '',
@@ -194,9 +229,9 @@ export default function UsuariosPage() {
         const res = await api.post(`/users/${userId}/photo`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        photoUrl = res.data.url;
+        profile_image = res.data.url;
         // Atualiza o usuário com a URL persistente
-        await api.put(`/users/${userId}`, { ...form, photoUrl });
+        await api.put(`/users/${userId}`, { profile_image });
       }
       // Refazer fetch dos usuários após salvar
       const params: any = { skip: 0, limit: 100 };
@@ -299,11 +334,12 @@ export default function UsuariosPage() {
                         />
                       </td>
                       <td className="border px-4 py-2">
-                        {user.photoUrl ? (
-                          <img src={user.photoUrl} alt={user.name} className="w-8 h-8 rounded-full object-cover inline-block mr-2" />
-                        ) : (
-                          <span className="inline-block w-8 h-8 rounded-full bg-gray-200 mr-2" />
-                        )}
+                        <img
+                          src={user.profile_image || user.photoUrl || undefined}
+                          alt={user.name?.charAt(0) || '?'}
+                          className="w-8 h-8 rounded-full object-cover mr-2"
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.png'; }}
+                        />
                         {user.name}
                       </td>
                       <td className="border px-4 py-2">{user.email}</td>
@@ -630,6 +666,7 @@ export default function UsuariosPage() {
           </div>
         )}
       </div>
+      <AuthDebug />
     </div>
   );
 } 
