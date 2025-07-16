@@ -20,14 +20,14 @@ def user_to_out(user: User) -> dict:
     try:
         # Buscar player vinculado
         player = getattr(user, 'player_profile', None)
-        return {
+        
+        # Garantir que todos os campos sejam retornados
+        result = {
             "id": user.id,
             "email": user.email,
             "name": user.name,
             "role": user.role,
             "is_active": user.is_active,
-            "number": player.number if player else None,
-            "position": player.position if player else None,
             "profile_image": user.profile_image,
             "phone": user.phone,
             "cpf": user.cpf,
@@ -36,8 +36,19 @@ def user_to_out(user: User) -> dict:
             "plan": user.plan,
             "status": "active" if user.is_active else "inactive",
             "type": user.role.value,
-            "photoUrl": user.profile_image,
+            "photoUrl": user.profile_image,  # Para compatibilidade com frontend
         }
+        
+        # Adicionar campos do Player se existir
+        if player:
+            result["number"] = player.number
+            result["position"] = player.position
+        else:
+            # Se não há Player, usar campos do User (se existirem)
+            result["number"] = getattr(user, 'number', None)
+            result["position"] = getattr(user, 'position', None)
+        
+        return result
     except Exception as e:
         logger.error(f"Erro ao converter usuário {user.id}: {e}")
         return {
@@ -46,8 +57,8 @@ def user_to_out(user: User) -> dict:
             "name": user.name,
             "role": user.role,
             "is_active": user.is_active,
-            "number": None,
-            "position": None,
+            "number": getattr(user, 'number', None),
+            "position": getattr(user, 'position', None),
             "profile_image": user.profile_image,
             "phone": user.phone,
             "cpf": user.cpf,
@@ -143,12 +154,24 @@ def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)
             from app.core.security import get_password_hash
             update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
         
+        # Atualizar campos do usuário
         for field, value in update_data.items():
-            setattr(user, field, value)
+            if hasattr(user, field):
+                setattr(user, field, value)
         
-        # Atualizar player vinculado, se existir
+        # Garantir que o Player vinculado existe e está atualizado
         player = getattr(user, 'player_profile', None)
-        if player:
+        if not player:
+            # Criar Player se não existir
+            player = Player(
+                name=user.name,
+                number=update_data.get("number"),
+                position=update_data.get("position"),
+                user_id=user.id
+            )
+            db.add(player)
+        else:
+            # Atualizar Player existente
             if "number" in update_data:
                 player.number = update_data["number"]
             if "position" in update_data:
@@ -157,6 +180,9 @@ def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)
         
         db.commit()
         db.refresh(user)
+        db.refresh(player)
+        
+        logger.info(f"Usuário {user_id} atualizado com sucesso")
         return user_to_out(user)
     except HTTPException:
         raise

@@ -40,15 +40,9 @@ export const api = axios.create({
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  console.log('Axios request:', config.method, config.url, config);
   const token = localStorage.getItem('token');
-  console.log('🔍 DEBUG - Token encontrado:', token ? 'SIM' : 'NÃO');
-  console.log('🔍 DEBUG - Token completo:', token);
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.log('🔍 DEBUG - Header Authorization adicionado:', `Bearer ${token.substring(0, 20)}...`);
-  } else {
-    console.log('❌ DEBUG - Token não encontrado ou headers não disponíveis');
   }
   return config;
 });

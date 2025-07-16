@@ -120,6 +120,23 @@ export default function UsuariosPage() {
     });
     setPhoto(null);
     setPhotoPreview(user.profile_image || user.photoUrl || null);
+    
+    // Debug: log dos dados do usuário para verificar
+    console.log('🔍 DEBUG - Dados do usuário carregados:', user);
+    console.log('🔍 DEBUG - Form mapeado:', {
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      cpf: user.cpf || '',
+      favoriteTeam: user.favorite_team || '',
+      playingTeam: user.playing_team || '',
+      plan: user.plan || 'free',
+      status: user.status || 'active',
+      type: user.type || 'player',
+      number: user.number || '',
+      position: user.position || '',
+      profile_image: user.profile_image || '',
+    });
   };
 
   const handleCreate = () => {
@@ -181,6 +198,7 @@ export default function UsuariosPage() {
       let userId = selectedUser ? selectedUser.id : null;
       let profile_image = form.profile_image;
       let userResponse;
+      
       if (selectedUser) {
         // PUT para editar usuário
         const payload = {
@@ -197,7 +215,11 @@ export default function UsuariosPage() {
           position: form.position || '',
           profile_image: form.profile_image || '',
         };
+        
+        console.log('🔍 DEBUG - Payload enviado para update:', payload);
         userResponse = await api.put(`/users/${selectedUser.id}`, payload);
+        console.log('🔍 DEBUG - Resposta do update:', userResponse.data);
+        
         userId = selectedUser.id;
         toast.success('Usuário atualizado com sucesso!');
       } else {
@@ -218,28 +240,40 @@ export default function UsuariosPage() {
           number: form.number ? parseInt(form.number, 10) : null,
           position: form.position || '',
         };
+        
+        console.log('🔍 DEBUG - Payload enviado para create:', payload);
         userResponse = await api.post('/users/', payload);
+        console.log('🔍 DEBUG - Resposta do create:', userResponse.data);
+        
         userId = userResponse.data.id;
         toast.success('Usuário criado com sucesso!');
       }
+      
       // Upload da foto, se houver
       if (photo && userId) {
         const formData = new FormData();
         formData.append('file', photo);
+        console.log('🔍 DEBUG - Fazendo upload da foto para usuário:', userId);
         const res = await api.post(`/users/${userId}/photo`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
+        console.log('🔍 DEBUG - Resposta do upload da foto:', res.data);
         profile_image = res.data.url;
+        
         // Atualiza o usuário com a URL persistente
+        console.log('🔍 DEBUG - Atualizando usuário com profile_image:', profile_image);
         await api.put(`/users/${userId}`, { profile_image });
       }
+      
       // Refazer fetch dos usuários após salvar
       const params: any = { skip: 0, limit: 100 };
       if (search.trim()) params.name = search.trim();
       const res = await api.get('/users/', { params });
+      console.log('🔍 DEBUG - Usuários após salvar:', res.data);
       setUsers(res.data);
       setTotalPages(Math.ceil(res.data.length / itemsPerPage));
     } catch (err: any) {
+      console.error('❌ DEBUG - Erro ao salvar usuário:', err);
       toast.error(err?.response?.data?.detail || 'Erro ao salvar usuário ou foto.');
     } finally {
       setSaving(false);
