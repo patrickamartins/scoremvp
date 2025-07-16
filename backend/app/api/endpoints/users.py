@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 import os
 from app.schemas.player import PlayerOut
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -214,21 +215,30 @@ async def upload_user_photo(
 ):
     try:
         contents = await file.read()
-        file_path = os.path.join(MEDIA_DIR, f"user_{user_id}_{file.filename}")
+        
+        # Sanitizar o nome do arquivo (remover espaços e caracteres especiais)
+        safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', file.filename)
+        safe_filename = safe_filename.replace(' ', '_')
+        
+        file_path = os.path.join(MEDIA_DIR, f"user_{user_id}_{safe_filename}")
         with open(file_path, "wb") as f:
             f.write(contents)
+        
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         # Usar URL completa para a imagem
         base_url = "https://scoremvpback-production.up.railway.app"
-        image_url = f"{base_url}/media/user_{user_id}_{file.filename}"
+        image_url = f"{base_url}/media/user_{user_id}_{safe_filename}"
         user.profile_image = image_url
         db.commit()
         db.refresh(user)
+        
+        logger.info(f"Foto salva para usuário {user_id}: {image_url}")
+        
         # O player vinculado acessa a foto via user.profile_image
-        return {"filename": file.filename, "url": user.profile_image}
+        return {"filename": safe_filename, "url": user.profile_image}
     except Exception as e:
         logger.error(f"Erro ao fazer upload da foto do usuário {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
