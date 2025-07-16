@@ -334,12 +334,18 @@ export default function UsuariosPage() {
                         />
                       </td>
                       <td className="border px-4 py-2">
-                        <img
-                          src={user.profile_image || user.photoUrl || undefined}
-                          alt={user.name?.charAt(0) || '?'}
-                          className="w-8 h-8 rounded-full object-cover mr-2"
-                          onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.png'; }}
-                        />
+                        {user.profile_image || user.photoUrl ? (
+                          <img
+                            src={user.profile_image || user.photoUrl}
+                            alt={user.name?.charAt(0) || '?'}
+                            className="w-8 h-8 rounded-full object-cover mr-2"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.png'; }}
+                          />
+                        ) : (
+                          <span className="inline-block w-8 h-8 rounded-full bg-gray-200 mr-2 flex items-center justify-center text-gray-400 font-bold">
+                            {user.name?.charAt(0) || '?'}
+                          </span>
+                        )}
                         {user.name}
                       </td>
                       <td className="border px-4 py-2">{user.email}</td>
@@ -666,7 +672,6 @@ export default function UsuariosPage() {
           </div>
         )}
       </div>
-      <AuthDebug />
     </div>
   );
 } 
