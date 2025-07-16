@@ -230,12 +230,17 @@ async def upload_user_photo(
         
         # Sanitizar o nome do arquivo (remover espaços e caracteres especiais)
         original_filename = file.filename
-        safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', file.filename)
-        safe_filename = safe_filename.replace(' ', '_')
-        safe_filename = safe_filename.replace('%20', '_')
-        # Garantir que não há espaços ou caracteres problemáticos
-        safe_filename = re.sub(r'_+', '_', safe_filename)  # Múltiplos underscores viram um só
-        safe_filename = safe_filename.strip('_')  # Remove underscores no início e fim
+        # Remover extensão temporariamente
+        name, ext = os.path.splitext(file.filename)
+        # Sanitizar apenas o nome, preservando a extensão
+        safe_name = re.sub(r'[^a-zA-Z0-9]', '_', name)
+        safe_name = re.sub(r'_+', '_', safe_name)  # Múltiplos underscores viram um só
+        safe_name = safe_name.strip('_')  # Remove underscores no início e fim
+        # Garantir que o nome não fique vazio
+        if not safe_name:
+            safe_name = 'image'
+        # Reconstruir o nome do arquivo
+        safe_filename = f"{safe_name}{ext}"
         
         logger.info(f"Upload de foto - Nome original: {original_filename}")
         logger.info(f"Upload de foto - Nome sanitizado: {safe_filename}")

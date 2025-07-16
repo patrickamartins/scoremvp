@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import '../components/ui';
 import { Card } from '../components/ui';
 import { usePageTitle } from "../hooks/usePageTitle";
 import { getGames, deleteGame } from '../services/api';
 import { Button } from '../components/ui/Button';
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -43,7 +43,7 @@ const exportOptions = [
 
 const DashboardPage: React.FC = () => {
   usePageTitle("Dashboard");
-  const [tab, setTab] = useState<'comparativo' | 'evolucao'>('comparativo');
+  const [tab, setTab] = useState<'comparativo' | 'evolucao'>('evolucao');
   const [deleting, setDeleting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedExport, setSelectedExport] = useState<string[]>(['resumo']);
@@ -52,6 +52,15 @@ const DashboardPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [userPhoto, setUserPhoto] = useState<string>('');
+
+  // Debug: Log para verificar se o componente está renderizando
+  useEffect(() => {
+    console.log('DashboardPage renderizado, tab atual:', tab);
+    console.log('Dados evolutivos:', mockEvolucao);
+    console.log('Recharts disponível:', typeof LineChart);
+    console.log('ResponsiveContainer disponível:', typeof ResponsiveContainer);
+  }, [tab]);
 
   // Deletar todos os jogos cadastrados
   const handleDeleteAllGames = async () => {
@@ -109,7 +118,11 @@ const DashboardPage: React.FC = () => {
         </Card>
         <Card className="w-64 flex flex-col items-center justify-center">
           <div className="text-lg font-semibold mb-2">Profile</div>
-          <div className="w-16 h-16 rounded-full bg-powderblue mb-2" />
+          <div className="w-16 h-16 rounded-full bg-powderblue mb-2 flex items-center justify-center overflow-hidden">
+            <div className="w-full h-full rounded-full bg-powderblue flex items-center justify-center text-white font-bold text-lg">
+              U
+            </div>
+          </div>
           <div className="font-bold">Usuário</div>
           <div className="text-xs text-eerieblack/60 mb-2">user@email.com</div>
           <button className="text-persimoon text-xs hover:underline">Edit Profile</button>
@@ -187,32 +200,45 @@ const DashboardPage: React.FC = () => {
           ) : (
             <div>
               <h3 className="text-lg font-semibold mb-4 text-center">Evolução da Performance ao Longo do Tempo</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={mockEvolucao}>
-                  <XAxis dataKey="data" />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="pontos" 
-                    stroke="#2563eb" 
-                    fill="#2563eb" 
-                    fillOpacity={0.3}
-                    strokeWidth={3}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="media" 
-                    stroke="#f59e42" 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="w-full h-80 bg-gray-50 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-lg font-semibold mb-4">Gráfico de Evolução</p>
+                  <div className="w-full h-64 bg-white rounded-lg border p-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={mockEvolucao}>
+                        <XAxis dataKey="data" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="pontos" 
+                          stroke="#2563eb" 
+                          strokeWidth={3}
+                          name="Pontos"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="media" 
+                          stroke="#f59e42" 
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          name="Média"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
               <div className="mt-4 text-center text-sm text-gray-600">
                 <p><strong>Linha azul:</strong> Pontos por jogo</p>
                 <p><strong>Linha laranja tracejada:</strong> Média móvel</p>
+              </div>
+              <div className="mt-4 text-center text-xs text-gray-500">
+                <p>Debug: {mockEvolucao.length} pontos de dados carregados</p>
+                <p>Primeiro ponto: {JSON.stringify(mockEvolucao[0])}</p>
+                <p>Recharts disponível: {typeof LineChart !== 'undefined' ? 'Sim' : 'Não'}</p>
+                <p>ResponsiveContainer disponível: {typeof ResponsiveContainer !== 'undefined' ? 'Sim' : 'Não'}</p>
               </div>
             </div>
           )}
