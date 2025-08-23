@@ -1,26 +1,22 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api, getGame, getPlayer, updateGameStats } from "@/services/api";
-import { Game } from "@/types/game";
-import { Player, PlayerStats } from "@/types/player";
-import { Button } from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Label } from './ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
+import { getPlayers, getGameStats, createGameStats, updateGameStats } from '../services/api';
+import { Player, GameStats } from '../types';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { Layout } from './Layout';
 
-interface GameStatsFormProps {
-  gameId: number;
-  statsId: number;
-}
+export function GameStatsForm() {
+  usePageTitle("Formulário de Estatísticas");
 
-export function GameStatsForm({ gameId, statsId }: GameStatsFormProps) {
-  const [game, setGame] = useState<Game | null>(null);
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [gameStats, setGameStats] = useState<GameStats[]>([]);
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {

@@ -16,9 +16,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    },
     "allowJs": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

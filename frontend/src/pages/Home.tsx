@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { api } from "../services/api";
-import { toast } from "sonner";
 import { PatternFormat } from 'react-number-format';
 
 export default function Home() {
@@ -32,10 +31,7 @@ export default function Home() {
       await api.post('/leads', formData);
       
       // Sucesso - mostrar popup e limpar formulário
-      toast.success("🎉 Cadastro realizado com sucesso!", {
-        description: "Entraremos em contato em breve através do email ou WhatsApp informado.",
-        duration: 5000,
-      });
+      console.log("🎉 Cadastro realizado com sucesso!");
       
       // Limpar formulário
       setFormData({ nome: '', email: '', whatsapp: '' });
@@ -59,9 +55,7 @@ export default function Home() {
         }
       }
       
-      toast.error(errorMessage, {
-        duration: 6000,
-      });
+      console.error(errorMessage);
     } finally {
       setLoading(false);
     }

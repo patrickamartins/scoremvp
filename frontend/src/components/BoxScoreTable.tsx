@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { getPlayers } from '@/services/api';
+import { getPlayers } from '../services/api';
 import { Card } from "./ui/Card";
 import { Button } from '../components/ui/Button';
-import { GameStats } from "@/types/game";
-import { Player } from "@/types/player";
-import { useToast } from "@/components/ui/use-toast";
+import { GameStats } from "../types/game";
+import { Player } from "../types/player";
 import { Select } from "./ui/Select";
 
 interface BoxScoreTableProps {
@@ -23,7 +22,6 @@ const POS_SIGLAS: Record<string, string> = {
 
 export function BoxScoreTable({ gameId, stats, onStatsUpdate }: BoxScoreTableProps) {
   const [players, setPlayers] = useState<Player[]>([]);
-  const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState<'total' | number>('total');
 
   useEffect(() => {
@@ -36,15 +34,11 @@ export function BoxScoreTable({ gameId, stats, onStatsUpdate }: BoxScoreTablePro
         const playersData = await getPlayers();
         setPlayers(playersData);
       } catch (error) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os jogadores",
-          variant: "destructive",
-        });
+        console.error("Erro ao carregar jogadores:", error);
       }
     };
     fetchData();
-  }, [gameId, toast]);
+  }, [gameId]);
 
   // Se não houver jogo selecionado, exibe mensagem amigável
   if (!gameId) {

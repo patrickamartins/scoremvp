@@ -1,7 +1,7 @@
 // src/services/api.ts
-import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { Game, GameCreate, GameUpdate, GameStats, GameStatsCreate, GameStatsUpdate } from '@/types/game';
-import { Player, PlayerCreate, PlayerUpdate, PlayerStats } from '@/types/player';
+import axios from 'axios';
+import { Game, GameCreate, GameUpdate, GameStats, GameStatsCreate, GameStatsUpdate } from '../types/game';
+import { Player, PlayerCreate, PlayerUpdate, PlayerStats } from '../types/player';
 
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
@@ -39,7 +39,7 @@ export const api = axios.create({
 });
 
 // Interceptor para adicionar o token em todas as requisições
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -49,8 +49,8 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // Interceptor para tratamento de erros
 api.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error: AxiosError) => {
+  (response) => response,
+  (error) => {
     // Apenas rejeita o erro, sem redirecionar para login
     return Promise.reject(error);
   }
@@ -95,7 +95,7 @@ export function signup(payload: {
   username: string;
   email: string;
   password: string;
-}): Promise<AxiosResponse<SignupResponse>> {
+}): Promise<any> { // Changed AxiosResponse to any as AxiosResponse is not imported
   return api.post<SignupResponse>('/auth/register', payload);
 }
 

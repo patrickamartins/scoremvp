@@ -1,31 +1,22 @@
-import { useState, useEffect } from 'react';
-import { api, getPlayers, getGameStats, updateGameStats } from '@/services/api';
-import { Card } from "./ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from '../components/ui/Button';
-import { Input } from "@/components/ui/input";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GameStats } from "@/types/game";
-import { Player } from "@/types/player";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Label } from './ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
+import { getPlayers, getGameStats, createGameStats, updateGameStats } from '../services/api';
+import { Player, GameStats } from '../types';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { Layout } from './Layout';
 
-interface GameStatsTableProps {
-  gameId: number;
-  stats: GameStats[];
-  onStatsUpdate: () => void;
-}
+export function GameStatsTable() {
+  usePageTitle("Tabela de Estatísticas");
 
-export function BoxScoreTable({ gameId, stats, onStatsUpdate }: GameStatsTableProps) {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [editingStats, setEditingStats] = useState<GameStats | null>(null);
-  const { toast } = useToast();
+  const [gameStats, setGameStats] = useState<GameStats[]>([]);
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {

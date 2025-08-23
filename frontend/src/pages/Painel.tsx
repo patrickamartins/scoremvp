@@ -3,11 +3,10 @@ import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { api, createGame, createGameStats, getPlayers, getGameStats, updateGame, createPlayer, getGames, getGame } from "../services/api";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
 import { Button } from '../components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
-import { Game, GameStats } from "@/types/game";
-import { Player } from "@/types/player";
+import { Game, GameStats } from "../types/game";
+import { Player } from "../types/player";
 import { Trash2 } from 'lucide-react';
 
 interface Player {
@@ -58,7 +57,11 @@ const Painel: React.FC = () => {
   const [stats, setStats] = useState<GameStats[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [toast, setToast] = useState({
+    title: "",
+    description: "",
+    variant: "default",
+  });
 
   // Formulário do jogo
   const [gameForm, setGameForm] = useState({
@@ -179,7 +182,7 @@ const Painel: React.FC = () => {
             setLoadingStats(false);
           } else {
             // Só logue outros erros
-            toast({
+            setToast({
               title: "Erro",
               description: "Não foi possível carregar as estatísticas",
               variant: "destructive",
@@ -226,7 +229,7 @@ const Painel: React.FC = () => {
         setPlayers(playersData);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
-        toast({
+        setToast({
           title: "Erro",
           description: "Não foi possível carregar os dados",
           variant: "destructive",
@@ -237,7 +240,7 @@ const Painel: React.FC = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [setToast]);
 
   useEffect(() => {
     if (selectedGame) {
@@ -245,14 +248,14 @@ const Painel: React.FC = () => {
         .then(setStats)
         .catch(error => {
           console.error("Erro ao carregar estatísticas:", error);
-          toast({
+          setToast({
             title: "Erro",
             description: "Não foi possível carregar as estatísticas",
             variant: "destructive",
           });
         });
     }
-  }, [selectedGame, toast]);
+  }, [selectedGame, setToast]);
 
   const handleGameFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -292,7 +295,7 @@ const Painel: React.FC = () => {
       });
       setFormError("");
       setShowModal(false);
-      toast({
+      setToast({
         title: "Sucesso",
         description: "Jogador adicionado com sucesso!",
       });
@@ -329,7 +332,7 @@ const Painel: React.FC = () => {
         setGameId(newGame.id);
         setGameSaved(true);
         setGameFormError("");  // Limpa qualquer erro anterior
-        toast({
+        setToast({
           title: "Sucesso",
           description: "Jogo salvo com sucesso!",
         });
@@ -352,7 +355,7 @@ const Painel: React.FC = () => {
       } else {
         setGameFormError("Erro ao salvar o jogo. Verifique sua conexão ou tente novamente.");
       }
-      toast({
+      setToast({
         title: "Erro",
         description: "Erro ao salvar o jogo",
         variant: "destructive",
@@ -404,12 +407,12 @@ const Painel: React.FC = () => {
     try {
       await updateGame(gameId, { status: 'FINALIZADA' });
       setGameStatus('FINALIZADA');
-      toast({
+      setToast({
         title: "Sucesso",
         description: "Partida finalizada!",
       });
     } catch {
-      toast({
+      setToast({
         title: "Erro",
         description: "Erro ao finalizar partida.",
         variant: "destructive",
@@ -549,7 +552,7 @@ const Painel: React.FC = () => {
 
   const handleSaveStats = async () => {
     if (!gameId) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Salve o jogo antes de enviar as estatísticas!",
         variant: "destructive",
@@ -586,7 +589,7 @@ const Painel: React.FC = () => {
         await createGameStats(gameId, stat);
       }
       // Notificação visual
-      toast({
+      setToast({
         title: "Sucesso",
         description: "Estatísticas salvas com sucesso!",
       });
@@ -597,7 +600,7 @@ const Painel: React.FC = () => {
         return { ...newStats };
       });
     } catch (error) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Erro ao salvar estatísticas",
         variant: "destructive",
@@ -616,7 +619,7 @@ const Painel: React.FC = () => {
   // Função para adicionar jogadora existente ao jogo atual e backend
   async function handleAddExistingPlayer(player: Player) {
     if (players.some((p) => p.id === player.id)) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Jogadora já adicionada à partida",
         variant: "destructive",
@@ -625,7 +628,7 @@ const Painel: React.FC = () => {
     }
 
     if (!gameId) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Salve o jogo antes de adicionar jogadoras!",
         variant: "destructive",
@@ -643,13 +646,13 @@ const Painel: React.FC = () => {
         setPlayers((prev) => [...prev, player]);
         setSearchTerm("");
         setSearchResults([]);
-        toast({
+        setToast({
           title: "Sucesso",
           description: "Jogadora adicionada à partida!",
         });
       }
     } catch (error) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Erro ao vincular jogadora ao jogo!",
         variant: "destructive",
@@ -669,7 +672,7 @@ const Painel: React.FC = () => {
     if (game.players && Array.isArray(game.players)) {
       setPlayers(game.players);
     } else {
-      toast({
+      setToast({
         title: "Erro",
         description: "Erro ao carregar jogadores do rascunho",
         variant: "destructive",
@@ -687,7 +690,7 @@ const Painel: React.FC = () => {
 
   const handleCreateStats = async () => {
     if (!selectedGame || !selectedPlayer) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Selecione um jogo e um jogador",
         variant: "destructive",
@@ -707,12 +710,12 @@ const Painel: React.FC = () => {
         fouls: 0,
         quarter: 1,
       }]);
-      toast({
+      setToast({
         title: "Sucesso",
         description: "Estatísticas criadas com sucesso!",
       });
     } catch (error) {
-      toast({
+      setToast({
         title: "Erro",
         description: "Erro ao criar estatísticas",
         variant: "destructive",

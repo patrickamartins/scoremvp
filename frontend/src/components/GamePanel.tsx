@@ -1,29 +1,22 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getGame, getPlayers, getGameStats, createGameStats } from "@/services/api";
-import { Game, GameStats } from "@/types/game";
-import { Player } from "@/types/player";
-import { Button } from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
-import { Label } from "../components/ui/Label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
-import { useToast } from "@/components/ui/use-toast";
-import { Textarea } from '../components/ui/Input';
+import React, { useState, useEffect } from 'react';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Label } from './ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
+import { getPlayers, getGameStats, createGameStats, updateGameStats } from '../services/api';
+import { Player, GameStats } from '../types';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { Layout } from './Layout';
 
-interface GamePanelProps {
-  gameId: number;
-}
+export function GamePanel() {
+  usePageTitle("Painel de Jogos");
 
-export function GamePanel({ gameId }: GamePanelProps) {
-  const [game, setGame] = useState<Game | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [stats, setStats] = useState<GameStats[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [gameStats, setGameStats] = useState<GameStats[]>([]);
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [finalizing, setFinalizing] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
