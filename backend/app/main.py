@@ -45,16 +45,7 @@ app = FastAPI(
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://scoremvp.com.br",
-        "https://www.scoremvp.com.br",
-        "https://scoremvpback-production.up.railway.app",
-        "https://scoremvp-frontend-production.up.railway.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
@@ -90,14 +81,12 @@ def debug_db_url():
     logger.info(f"Database URL: {settings.SQLALCHEMY_DATABASE_URI}")
     return {"database_url": settings.SQLALCHEMY_DATABASE_URI}
 
-@app.get("/api/debug-secret")
-def debug_secret():
-    logger.info("Debug secret endpoint accessed")
+@app.get("/api/debug-cors")
+def debug_cors():
+    logger.info(f"CORS Origins: {settings.BACKEND_CORS_ORIGINS}")
     return {
-        "secret_key_length": len(settings.SECRET_KEY) if settings.SECRET_KEY else 0,
-        "secret_key_preview": settings.SECRET_KEY[:20] + "..." if settings.SECRET_KEY else None,
-        "algorithm": settings.ALGORITHM,
-        "access_token_expire_minutes": settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        "cors_origins": settings.BACKEND_CORS_ORIGINS,
+        "cors_type": str(type(settings.BACKEND_CORS_ORIGINS))
     }
 
 if __name__ == "__main__":

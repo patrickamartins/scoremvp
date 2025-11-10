@@ -107,12 +107,12 @@ export default function Profile() {
     );
   }
 
-  if (loading) return <div className="p-8 mt-16">Carregando...</div>;
-  if (!profile) return <div className="p-8 mt-16 text-red-500">Erro ao carregar dados do perfil.</div>;
+  if (loading) return <div className="w-full h-full">Carregando...</div>;
+  if (!profile) return <div className="w-full h-full text-red-500">Erro ao carregar dados do perfil.</div>;
 
   return (
-    <div className="p-8 mt-16">
-      <div className="max-w-2xl mx-auto">
+    <div className="w-full h-full">
+      <div className="w-full">
         <Card className="p-6">
           <div className="flex items-center gap-4 mb-6">
             <img

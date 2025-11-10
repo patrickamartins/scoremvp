@@ -4,7 +4,7 @@ import Home from '../pages/Home'
 import Dashboard from '../pages/Dashboard'
 import Painel from '../pages/Painel'
 import { NotFound } from '../pages/NotFound'
-import { AdminLayout } from '../components/AdminLayout'
+import { BaseLayout } from '../components/BaseLayout'
 import UsuariosPage from '../pages/Usuarios'
 import NotificacoesPage from '../pages/Notificacoes'
 import Profile from '../pages/Profile'
@@ -13,6 +13,7 @@ import { PrivateRoute } from '../components/PrivateRoute'
 import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import Unauthorized from '../pages/Unauthorized'
+import SubscriptionPage from '../pages/SubscriptionPage'
 
 export function AppRoutes() {
   return (
@@ -22,12 +23,13 @@ export function AppRoutes() {
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/" element={<Home />} />
       <Route element={<PrivateRoute />}>
-        <Route element={<AdminLayout />}>
+        <Route element={<BaseLayout />}>
           <Route path="/painel" element={<Painel />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
           <Route path="/notificacoes" element={<NotificacoesPage />} />
           <Route path="/configuracoes" element={<Profile />} />
+          <Route path="/assinaturas" element={<SubscriptionPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
         </Route>
       </Route>

@@ -1,27 +1,8 @@
 import axios from 'axios';
-
-// Função para determinar a URL base da API
-const getBaseUrl = () => {
-  // Em produção, sempre usar HTTPS
-  if (import.meta.env.PROD) {
-    return 'https://scoremvpback-production.up.railway.app/api';
-  }
-  
-  // Em desenvolvimento, usar localhost
-  return 'http://localhost:8000/api';
-};
-
-// Função para garantir que a URL seja HTTPS se a página estiver em HTTPS
-const ensureHttps = (url: string) => {
-  // Se estamos em uma página HTTPS, forçar HTTPS na API
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return url.replace('http://', 'https://');
-  }
-  return url;
-};
+import { resolveApiBaseUrl } from '../utils/resolve-api-base-url';
 
 const api = axios.create({
-  baseURL: ensureHttps(getBaseUrl()),
+  baseURL: resolveApiBaseUrl(),
 });
 
 // Adiciona o token a todas as requisições

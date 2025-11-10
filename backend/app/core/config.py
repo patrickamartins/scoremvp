@@ -12,7 +12,16 @@ class Settings(BaseSettings):
     
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000"]'
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "https://scoremvp-frontend-production.up.railway.app",
+        "https://scoremvp.com.br",
+        "http://localhost:3000",
+        "http://localhost:3003",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3003",
+        "http://127.0.0.1:5173",
+    ]
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
@@ -68,7 +77,7 @@ class Settings(BaseSettings):
     MAILERSEND_SENDER_EMAIL: str = os.getenv("MAILERSEND_SENDER_EMAIL", "no-reply@scoremvp.com.br")
     MAILERSEND_SENDER_NAME: str = "ScoreMVP"
     
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://scoremvp-frontend-production.up.railway.app"
     
     DATABASE_URL: Optional[str] = None
     ALGORITHM: str = "HS256"
@@ -79,5 +88,6 @@ class Settings(BaseSettings):
     class Config:
         case_sensitive = True
         env_file = ".env"
+        extra = "ignore"  # Ignorar variáveis extras não definidas
 
 settings = Settings()

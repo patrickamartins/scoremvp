@@ -2,37 +2,10 @@
 import axios from 'axios';
 import { Game, GameCreate, GameUpdate, GameStats, GameStatsCreate, GameStatsUpdate } from '../types/game';
 import { Player, PlayerCreate, PlayerUpdate, PlayerStats } from '../types/player';
-
-console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
-
-// Determinar a URL da API baseada no ambiente
-const getApiUrl = () => {
-  // Se VITE_API_URL está definido, usar ele
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  
-  // Em produção, sempre usar HTTPS
-  if (import.meta.env.PROD) {
-    // Forçar HTTPS em produção
-    return 'https://scoremvpback-production.up.railway.app/api';
-  }
-  
-  // Em desenvolvimento, usar localhost
-  return 'http://localhost:8000/api';
-};
-
-// Função para garantir que a URL seja HTTPS se a página estiver em HTTPS
-const ensureHttps = (url: string) => {
-  // Se estamos em uma página HTTPS, forçar HTTPS na API
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return url.replace('http://', 'https://');
-  }
-  return url;
-};
+import { resolveApiBaseUrl } from '../utils/resolve-api-base-url';
 
 export const api = axios.create({
-  baseURL: ensureHttps(getApiUrl()),
+  baseURL: resolveApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

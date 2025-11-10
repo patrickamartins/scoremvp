@@ -361,8 +361,9 @@ export default function UsuariosPage() {
   const paginatedUsers = users.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
-    <div className="p-8 mt-16">
-      <div className="max-w-6xl mx-auto">
+    <div className="w-full h-full">
+      {/* Conteúdo principal - quando o sidebar estiver aberto, reduz a área */}
+      <div className={`w-full transition-all duration-200 ${form && Object.keys(form).length > 0 ? 'pr-[420px]' : ''}`}>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-[#2563eb]">Usuários</h1>
           <Button onClick={handleCreate}>Novo Usuário</Button>
@@ -371,11 +372,11 @@ export default function UsuariosPage() {
         <Card className="p-6 mb-8">
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
-              <Input
+          <Input
                 placeholder="Buscar por nome, email ou CPF..."
                 onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
+          />
+        </div>
           </div>
 
           <Button
@@ -386,13 +387,13 @@ export default function UsuariosPage() {
             Deletar Selecionados ({selectedUsers.length})
           </Button>
 
-          {loading ? (
-            <div className="text-center text-gray-500">Carregando usuários...</div>
-          ) : (
+        {loading ? (
+          <div className="text-center text-gray-500">Carregando usuários...</div>
+        ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border border-gray-300">
-                <thead className="bg-gray-200">
-                  <tr>
+            <table className="min-w-full text-sm border border-gray-300">
+              <thead className="bg-gray-200">
+                <tr>
                     <th>
                       <input
                         type="checkbox"
@@ -410,9 +411,9 @@ export default function UsuariosPage() {
                     <th className="border px-4 py-2 text-left">Status</th>
                     <th className="border px-4 py-2 text-left">Tipo</th>
                     <th className="border px-4 py-2 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
+                </tr>
+              </thead>
+              <tbody>
                   {paginatedUsers.map((user) => (
                     <tr key={user.id}>
                       <td>
@@ -490,11 +491,11 @@ export default function UsuariosPage() {
                         >
                           Excluir
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             </div>
           )}
 
@@ -522,12 +523,12 @@ export default function UsuariosPage() {
           </div>
         </Card>
 
-        {/* Modal de edição/criação */}
+      {/* Sidebar de edição/criação - fixa à direita */}
         {form && Object.keys(form).length > 0 && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* Overlay escurecido */}
+          <>
+            {/* Overlay */}
             <div
-              className="fixed inset-0 bg-black bg-opacity-50"
+              className="fixed inset-0 bg-black/40 z-40"
               onClick={() => {
                 setForm({});
                 setSelectedUser(null);
@@ -535,23 +536,23 @@ export default function UsuariosPage() {
                 setPhotoPreview(null);
               }}
             />
-            <div className="relative z-10 w-full max-w-lg mx-auto bg-white rounded-lg shadow-lg p-8 animate-fade-in">
-              {/* Botão de fechar */}
-              <button
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold focus:outline-none"
-                onClick={() => {
-                  setForm({});
-                  setSelectedUser(null);
-                  setPhoto(null);
-                  setPhotoPreview(null);
-                }}
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-              <h2 className="text-2xl font-bold mb-6 text-center">
-                {selectedUser ? 'Editar Usuário' : 'Novo Usuário'}
-              </h2>
+            {/* Sidebar à direita - fixa */}
+            <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl border-l border-[#E3E3E3] p-6 overflow-y-auto z-50">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[#0F172A]">{selectedUser ? 'Editar Usuário' : 'Adicionar Usuário'}</h2>
+                <button
+                  className="text-gray-400 hover:text-gray-700 text-xl font-bold"
+                  onClick={() => {
+                    setForm({});
+                    setSelectedUser(null);
+                    setPhoto(null);
+                    setPhotoPreview(null);
+                  }}
+                  aria-label="Fechar"
+                >
+                  ×
+                </button>
+              </div>
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-4"
                 onSubmit={e => {
@@ -594,7 +595,7 @@ export default function UsuariosPage() {
                     onChange={handleFormChange}
                     required
                   />
-                </div>
+            </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
                   <Input
@@ -632,7 +633,7 @@ export default function UsuariosPage() {
                       <option value="Ala-Armador">Ala-Armador</option>
                       <option value="Ala-Pivô">Ala-Pivô</option>
                       <option value="Pivô">Pivô</option>
-                    </select>
+                  </select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cpf">CPF/CNPJ</Label>
@@ -738,7 +739,7 @@ export default function UsuariosPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </>
         )}
 
         {/* Modal de assinatura */}
@@ -768,18 +769,18 @@ export default function UsuariosPage() {
                   <p className="mt-1 text-gray-900">{selectedUser.next_payment_date || '-'}</p>
                 </div>
                 {selectedUser.card_last4 && (
-                  <div>
+                        <div>
                     <Label>Cartão Cadastrado</Label>
                     <p className="mt-1 text-gray-900">{selectedUser.card_brand} terminando em {selectedUser.card_last4}</p>
-                  </div>
+                    </div>
                 )}
-              </div>
+                    </div>
               <div className="flex justify-end gap-2 mt-6">
                 <Button variant="outline" onClick={() => setShowSubscriptionModal(false)}>Fechar</Button>
                 {selectedUser.plan !== 'free' && (
                   <Button variant="destructive" onClick={() => { toast.success('Assinatura cancelada (mock)'); setShowSubscriptionModal(false); }}>Cancelar Assinatura</Button>
                 )}
-              </div>
+                </div>
             </div>
           </div>
         )}

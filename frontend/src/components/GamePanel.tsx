@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { getPlayers, getGameStats, createGameStats, updateGameStats } from '../services/api';
 import { Player, GameStats } from '../types';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { Layout } from './Layout';
 
 export function GamePanel() {
   usePageTitle("Painel de Jogos");

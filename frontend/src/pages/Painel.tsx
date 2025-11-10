@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { api, createGame, createGameStats, getPlayers, getGameStats, updateGame, createPlayer, getGames, getGame } from "../services/api";
-import { useNavigate } from "react-router-dom";
 import { Button } from '../components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { Game, GameStats } from "../types/game";
@@ -48,6 +47,22 @@ const horarios = Array.from({length: 24 * 2}, (_, i) => {
   return `${h}:${m}`;
 });
 
+const brandButtonStyle: React.CSSProperties = {
+  backgroundColor: '#AC7F5E',
+  color: '#FFFFFF',
+};
+
+const disabledButtonStyle: React.CSSProperties = {
+  backgroundColor: '#D1D5DB',
+  color: '#4B5563',
+};
+
+const getButtonStyle = (disabled: boolean) =>
+  disabled ? disabledButtonStyle : brandButtonStyle;
+
+const brandButtonClass = "rounded text-xs font-semibold px-1 py-0.5 transition-colors hover:opacity-90 disabled:opacity-50";
+const brandButtonClassLarge = "rounded text-xs font-semibold px-2 py-1 transition-colors hover:opacity-90 disabled:opacity-50";
+
 const Painel: React.FC = () => {
   usePageTitle("Painel");
   const [games, setGames] = useState<Game[]>([]);
@@ -56,7 +71,6 @@ const Painel: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [stats, setStats] = useState<GameStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const [toast, setToast] = useState({
     title: "",
     description: "",
@@ -64,14 +78,15 @@ const Painel: React.FC = () => {
   });
 
   // Formulário do jogo
-  const [gameForm, setGameForm] = useState({
+  const initialGameForm = {
     adversario: "",
     data: "",
     horario: "",
     local: "",
     category: categorias[0],
     campeonato: "",
-  });
+  };
+  const [gameForm, setGameForm] = useState(() => initialGameForm);
   const [gameFormError, setGameFormError] = useState("");
   const [gameSaved, setGameSaved] = useState(false);
   const [gameId, setGameId] = useState<number | null>(null);
@@ -103,6 +118,7 @@ const Painel: React.FC = () => {
   const nomeInputRef = useRef<HTMLInputElement>(null);
 
   const [savingPlayer, setSavingPlayer] = useState(false);
+  const [finishingGame, setFinishingGame] = useState(false);
 
   // Adicionar status da partida
   const [gameStatus, setGameStatus] = useState<'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA'>('PENDENTE');
@@ -403,20 +419,50 @@ const Painel: React.FC = () => {
 
   // Função para finalizar partida
   const handleFinalizarPartida = async () => {
-    if (!gameId) return;
+    if (!gameId || finishingGame) return;
+    setFinishingGame(true);
     try {
+      const saved = await persistAllUnsavedStats();
+      if (!saved) {
+        throw new Error("Falha ao salvar estatísticas antes de encerrar.");
+      }
       await updateGame(gameId, { status: 'FINALIZADA' });
-      setGameStatus('FINALIZADA');
       setToast({
         title: "Sucesso",
-        description: "Partida finalizada!",
+        description: "Partida finalizada e estatísticas salvas!",
       });
-    } catch {
+
+      setGameId(null);
+      setGameSaved(false);
+      setGameForm({ ...initialGameForm });
+      setStatistics({});
+      setPlayers([]);
+      setSelectedGame(null);
+      setSelectedPlayer(null);
+      setSelectedQuarto(1);
+      setGameStatus('PENDENTE');
+      setPendingShot(null);
+      setStats([]);
+      setHistory([]);
+      setGameFormError("");
+      setSelectingDraft(false);
+      setLoadingPlayers(false);
+      setLoadingStats(false);
+
+      const refreshedGames = await getGames();
+      setGames(refreshedGames);
+      setPendingGames(refreshedGames.filter((game) => game.status === "PENDENTE"));
+      const refreshedPlayers = await getPlayers();
+      setPlayers(refreshedPlayers);
+      setAllPlayers(refreshedPlayers);
+    } catch (error) {
       setToast({
         title: "Erro",
-        description: "Erro ao finalizar partida.",
+        description: error instanceof Error ? error.message : "Erro ao finalizar partida.",
         variant: "destructive",
       });
+    } finally {
+      setFinishingGame(false);
     }
   };
 
@@ -533,9 +579,9 @@ const Painel: React.FC = () => {
 
   // Remover funções handleUndo e handleReset e os botões correspondentes do painel de estatísticas.
 
-  // Função utilitária para checar se há alguma estatística diferente de zero no quarto atual
-  function hasStatsToSave() {
-    const statsQ = statistics[selectedQuarto] || {};
+  // Função utilitária para checar se há alguma estatística diferente de zero em um quarto
+  function hasStatsToSaveForQuarter(quarto: number) {
+    const statsQ = statistics[quarto] || {};
     return Object.values(statsQ).some((s: any) => {
       if (!s) return false;
       return (
@@ -550,18 +596,31 @@ const Painel: React.FC = () => {
     });
   }
 
-  const handleSaveStats = async () => {
+  function hasStatsToSave() {
+    return hasStatsToSaveForQuarter(selectedQuarto);
+  }
+
+  const handleSaveStats = async (
+    quarto: number = selectedQuarto,
+    { showToast = true, resetAfter = true }: { showToast?: boolean; resetAfter?: boolean } = {},
+  ) => {
     if (!gameId) {
-      setToast({
-        title: "Erro",
-        description: "Salve o jogo antes de enviar as estatísticas!",
-        variant: "destructive",
-      });
-      return;
+      if (showToast) {
+        setToast({
+          title: "Erro",
+          description: "Salve o jogo antes de enviar as estatísticas!",
+          variant: "destructive",
+        });
+      }
+      return false;
+    }
+
+    if (!hasStatsToSaveForQuarter(quarto)) {
+      return true;
     }
 
     try {
-      const statsToSave = Object.entries(statistics[selectedQuarto] || {}).map(([playerId, stats]) => ({
+      const statsToSave = Object.entries(statistics[quarto] || {}).map(([playerId, stats]) => ({
         game_id: gameId,
         player_id: parseInt(playerId),
         points: (stats.two.hits * 2) + (stats.three.hits * 3) + stats.freeThrow.hits,
@@ -571,7 +630,7 @@ const Painel: React.FC = () => {
         blocks: stats.blocks,
         fp: stats.fouls, // falta pessoal
         fouls: stats.fouls, // total de faltas (mesmo valor de fp por enquanto)
-        quarter: selectedQuarto,
+        quarter: quarto,
         two_attempts: stats.two.attempts,
         two_made: stats.two.hits,
         three_attempts: stats.three.attempts,
@@ -588,24 +647,52 @@ const Painel: React.FC = () => {
       for (const stat of statsToSave) {
         await createGameStats(gameId, stat);
       }
-      // Notificação visual
-      setToast({
-        title: "Sucesso",
-        description: "Estatísticas salvas com sucesso!",
-      });
-      // Zerar apenas o quarto atual (deep clone)
-      setStatistics((prev) => {
-        const newStats = { ...prev };
-        newStats[selectedQuarto] = {};
-        return { ...newStats };
-      });
+      if (showToast) {
+        setToast({
+          title: "Sucesso",
+          description: "Estatísticas salvas com sucesso!",
+        });
+      }
+      if (resetAfter) {
+        setStatistics((prev) => {
+          const newStats = { ...prev };
+          newStats[quarto] = {};
+          return { ...newStats };
+        });
+      }
+      return true;
     } catch (error) {
-      setToast({
-        title: "Erro",
-        description: "Erro ao salvar estatísticas",
-        variant: "destructive",
-      });
+      if (showToast) {
+        setToast({
+          title: "Erro",
+          description: "Erro ao salvar estatísticas",
+          variant: "destructive",
+        });
+      }
+      return false;
     }
+  };
+
+  const persistAllUnsavedStats = async (): Promise<boolean> => {
+    if (!gameId) return false;
+    let allSaved = true;
+    const quarterKeys = Object.keys(statistics)
+      .map((key) => parseInt(key, 10))
+      .filter((quarto) => !Number.isNaN(quarto));
+
+    for (const quarto of quarterKeys) {
+      if (hasStatsToSaveForQuarter(quarto)) {
+        const saved = await handleSaveStats(quarto, { showToast: false, resetAfter: false });
+        if (!saved) {
+          allSaved = false;
+        }
+      }
+    }
+
+    if (allSaved) {
+      setStatistics({});
+    }
+    return allSaved;
   };
 
   // Retornar foco ao botão de adicionar jogador ao fechar modal
@@ -764,14 +851,13 @@ const Painel: React.FC = () => {
   };
 
   return (
-    <div className="p-8 mt-16 space-y-8 relative">
-      <h1 className="text-3xl font-bold text-eerieblack">Painel da Partida</h1>
+    <div className="w-full h-full">
+      <h1 className="text-3xl font-bold text-[#2563eb] mb-6">Dados da Partida</h1>
 
       {/* Formulário do Jogo */}
       {!gameSaved ? (
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Informações do Jogo</h2>
-          <form onSubmit={handleCreateGame} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-8">
+          <form onSubmit={handleCreateGame} className="grid grid-cols-3 gap-4 mb-4">
             <div>
               <Label htmlFor="adversario">Adversário</Label>
               <Input
@@ -780,6 +866,16 @@ const Painel: React.FC = () => {
                 value={gameForm.adversario}
                 onChange={handleGameFormChange}
                 placeholder="Nome do adversário"
+              />
+            </div>
+            <div>
+              <Label htmlFor="local">Local</Label>
+              <Input
+                id="local"
+                name="local"
+                value={gameForm.local}
+                onChange={handleGameFormChange}
+                placeholder="Local do jogo"
               />
             </div>
             <div>
@@ -817,107 +913,49 @@ const Painel: React.FC = () => {
                 {horarios.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
             </div>
-            <div className="md:col-span-1">
-              <Label htmlFor="local">Local</Label>
-              <Input
-                id="local"
-                name="local"
-                value={gameForm.local}
-                onChange={handleGameFormChange}
-                placeholder="Local do jogo"
-              />
-            </div>
-            <div className="md:col-span-1">
-              <Label htmlFor="campeonato">Campeonato</Label>
-              <Input
-                id="campeonato"
-                name="campeonato"
-                value={gameForm.campeonato}
-                onChange={handleGameFormChange}
-                placeholder="Nome do campeonato"
-              />
-            </div>
-            {gameFormError && <div className="text-red-500 text-sm md:col-span-2">{gameFormError}</div>}
-            <div className="md:col-span-2">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Label htmlFor="campeonato">Campeonato</Label>
+                <Input
+                  id="campeonato"
+                  name="campeonato"
+                  value={gameForm.campeonato}
+                  onChange={handleGameFormChange}
+                  placeholder="Nome do campeonato"
+                />
+              </div>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2 disabled:opacity-50"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow transition-colors disabled:opacity-50"
                 disabled={savingGame}
               >
-                {savingGame ? "Salvando..." : "Salvar Jogo"}
+                {savingGame ? "Salvando..." : "Iniciar Partida"}
               </button>
             </div>
+            {gameFormError && <div className="text-red-500 text-sm col-span-3">{gameFormError}</div>}
           </form>
-        </Card>
-      ) : (
-        <Card className="p-6 mb-8">
-          <div className="flex items-center gap-2 relative">
-            <h2 className="text-xl font-semibold mb-4">Informações do Jogo</h2>
-            {gameId && (
-              <button onClick={handleDeleteDraftGame} className="text-red-500 hover:text-red-700 absolute top-2 right-2">
-                <Trash2 size={20} />
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-            <div>
-              <span className="font-bold">Adversário:</span> {gameForm.adversario}
-            </div>
-            <div>
-              <span className="font-bold">Categoria:</span> {gameForm.category}
-            </div>
-            <div>
-              <span className="font-bold">Data:</span> {gameForm.data}
-            </div>
-            <div>
-              <span className="font-bold">Horário:</span> {gameForm.horario}
-            </div>
-            <div className="md:col-span-2">
-              <span className="font-bold">Local:</span> {gameForm.local}
-            </div>
-            <div className="md:col-span-2">
-              <span className="font-bold">Campeonato:</span> {gameForm.campeonato}
-            </div>
-            <div className="md:col-span-2">
-              <span className="font-bold">Status:</span> {gameStatus === 'PENDENTE' ? 'Pendente' : gameStatus === 'EM_ANDAMENTO' ? 'Em andamento' : 'Partida Finalizada'}
-            </div>
-          </div>
-          {gameStatus !== 'FINALIZADA' && (
-            <button
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold shadow transition-colors mt-2"
-              onClick={handleFinalizarPartida}
-            >
-              Finalizar Partida
-            </button>
-          )}
-          {gameStatus === 'FINALIZADA' && (
-            <div className="text-green-700 font-bold mt-2">Partida Finalizada</div>
-          )}
-        </Card>
-      )}
-
-      {/* Dropdown de quarto */}
-      {gameSaved && (
-        <div className="flex items-center gap-4 mb-4">
-          <Label htmlFor="quarto">Quarto</Label>
-          <select
-            id="quarto"
-            name="quarto"
-            value={selectedQuarto}
-            onChange={e => setSelectedQuarto(Number(e.target.value) || 1)}
-            className="rounded-md border border-gray-300 px-3 py-2"
-          >
-            {quartos.map(q => (
-              <option key={q.value} value={q.value}>{q.label}</option>
-            ))}
-          </select>
         </div>
-      )}
+      ) : null}
 
-      {/* Painel de Estatísticas */}
+      {/* Dropdown de quarto e tabela de estatísticas */}
       {gameSaved && (
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Painel de Estatísticas</h2>
+        <>
+          <div className="flex items-center gap-4 mb-4">
+            <Label htmlFor="quarto">PERÍODO DO JOGO</Label>
+            <select
+              id="quarto"
+              name="quarto"
+              value={selectedQuarto}
+              onChange={e => setSelectedQuarto(Number(e.target.value) || 1)}
+              className="rounded-md border border-gray-300 px-3 py-2"
+            >
+              {quartos.map(q => (
+                <option key={q.value} value={q.value}>{q.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tabela de Estatísticas */}
           {loadingPlayers || loadingStats ? (
             <div className="animate-pulse space-y-4">
               <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
@@ -926,24 +964,31 @@ const Painel: React.FC = () => {
               <div className="h-8 bg-gray-200 rounded w-full mb-2"></div>
             </div>
           ) : players.length === 0 ? (
-            <div className="text-gray-400">Adicione jogadoras para começar a registrar estatísticas.</div>
+            <>
+              <div className="text-gray-400 mb-8">Adicione jogadoras para começar a registrar estatísticas.</div>
+              <div className="flex gap-4 mt-4">
+                <button onClick={() => handleSaveStats()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold" disabled={!hasStatsToSave()}>Salvar Estatísticas</button>
+              </div>
+            </>
           ) : (
-            <table className="min-w-full text-sm border mb-4">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border px-2 py-1 text-center">Nome</th>
-                  <th className="border px-2 py-1 text-center">Pontos</th>
-                  <th className="border px-2 py-1 text-center">Rebote</th>
-                  <th className="border px-2 py-1 text-center">Assistências</th>
-                  <th className="border px-2 py-1 text-center">Turn</th>
-                  <th className="border px-2 py-1 text-center">Roubo</th>
-                  <th className="border px-2 py-1 text-center">Toco</th>
-                  <th className="border px-2 py-1 text-center">Faltas</th>
-                  <th className="border px-2 py-1 text-center">Interf</th>
-                </tr>
-              </thead>
-              <tbody>
-                {players.map((p, idx) => {
+            <>
+              <div className="overflow-x-auto mb-8">
+                <table className="min-w-full text-sm border border-gray-300">
+                  <thead className="bg-gray-200">
+                    <tr>
+                      <th className="border px-2 py-2 text-center font-bold">NO.</th>
+                      <th className="border px-2 py-2 text-center font-bold">Jogador</th>
+                      <th className="border px-2 py-2 text-center font-bold">PONTOS</th>
+                      <th className="border px-2 py-2 text-center font-bold">REBOT</th>
+                      <th className="border px-2 py-2 text-center font-bold">FALTA</th>
+                      <th className="border px-2 py-2 text-center font-bold">ASSIST</th>
+                      <th className="border px-2 py-2 text-center font-bold">TOCO</th>
+                      <th className="border px-2 py-2 text-center font-bold">TURN</th>
+                      <th className="border px-2 py-2 text-center font-bold">INTER</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {players.map((p, idx) => {
                   const s = (statistics[selectedQuarto] && statistics[selectedQuarto][p.id]) ? statistics[selectedQuarto][p.id] : initialPlayerStats;
                   const fouls = s.fouls || 0;
                   const fr = s.fr || 0;
@@ -953,127 +998,259 @@ const Painel: React.FC = () => {
                   const rowClass = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                   return (
                     <tr key={p.id} className={rowClass}>
-                      <td className="border px-2 py-1 text-center font-semibold">{p.name}</td>
-                      {/* Pontos: 2PT, 3PT, LL */}
-                      <td className="border px-2 py-1 text-center">
+                      {/* NO. */}
+                      <td className="border px-2 py-2 text-center font-bold">{p.number || '-'}</td>
+                      {/* Jogador */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs">
+                            {p.name?.charAt(0) || '?'}
+                          </div>
+                          <span className="font-semibold">{p.name}</span>
+                        </div>
+                      </td>
+                      {/* PONTOS: 2PTS, 3PTS, L.L */}
+                      <td className="border px-2 py-2 text-center">
                         <div className="flex flex-col gap-1 items-center">
-                          {/* 2PT */}
                           <button
                             disabled={isEliminado}
-                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'dois' ? 'bg-blue-500 text-white scale-105 shadow-lg' : 'bg-blue-100 text-blue-900 hover:bg-blue-200'}`}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClassLarge}
                             onClick={() => handleShot(p.id, 'dois')}
                             type="button"
-                            title="Registrar tentativa/acerto de 2 pontos"
-                            aria-label={`Registrar arremesso de 2 pontos para ${p.name}`}
                           >
-                            2PT ({(s.two?.attempts ?? 0)}/{(s.two?.hits ?? 0)})
+                            2PTS ({(s.two?.attempts ?? 0)}/{(s.two?.hits ?? 0)})
                           </button>
-                          {/* 3PT */}
                           <button
                             disabled={isEliminado}
-                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'tres' ? 'bg-green-500 text-white scale-105 shadow-lg' : 'bg-green-100 text-green-900 hover:bg-green-200'}`}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClassLarge}
                             onClick={() => handleShot(p.id, 'tres')}
                             type="button"
-                            title="Registrar tentativa/acerto de 3 pontos"
-                            aria-label={`Registrar arremesso de 3 pontos para ${p.name}`}
                           >
-                            3PT ({(s.three?.attempts ?? 0)}/{(s.three?.hits ?? 0)})
+                            3PTS ({(s.three?.attempts ?? 0)}/{(s.three?.hits ?? 0)})
                           </button>
-                          {/* LL */}
                           <button
                             disabled={isEliminado}
-                            className={`px-3 py-1.5 rounded font-bold transition-all duration-200 ${pendingShot && pendingShot.playerId === p.id && pendingShot.tipo === 'lance' ? 'bg-yellow-500 text-white scale-105 shadow-lg' : 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200'}`}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClassLarge}
                             onClick={() => handleShot(p.id, 'lance')}
                             type="button"
-                            title="Registrar lance livre"
-                            aria-label={`Registrar lance livre para ${p.name}`}
                           >
-                            LL ({(s.freeThrow?.attempts ?? 0)}/{(s.freeThrow?.hits ?? 0)})
+                            L.L ({(s.freeThrow?.attempts ?? 0)}/{(s.freeThrow?.hits ?? 0)})
                           </button>
                         </div>
                       </td>
-                      {/* Rebote: REBO e REBD */}
-                      <td className="border px-2 py-1 text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          <div className="flex items-center gap-1">
-                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-100 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_ofensivo', -1)}>-1</button>
-                            <span className="px-2">REBO {s.rebo_ofensivo || 0}</span>
-                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-100 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_ofensivo', 1)}>+1</button>
+                      {/* REBOT: OFENSIVO e DEFENSIVO */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex flex-col gap-2 items-center">
+                          <div className="flex flex-col gap-1 items-center">
+                            <span className="text-xs font-semibold text-gray-700">OFENSIVO</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'rebo_ofensivo', -1)}
+                              >
+                                -1
+                              </button>
+                              <span className="px-2 text-xs font-bold text-gray-800">{rebo_ofensivo}</span>
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'rebo_ofensivo', 1)}
+                              >
+                                +1
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_defensivo', -1)}>-1</button>
-                            <span className="px-2">REBD {s.rebo_defensivo || 0}</span>
-                            <button disabled={isEliminado} className="px-2 py-1 bg-pink-200 text-pink-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'rebo_defensivo', 1)}>+1</button>
-                          </div>
-                        </div>
-                      </td>
-                      {/* Assistências */}
-                      <td className="border px-2 py-1 text-center">
-                        <div className="flex items-center gap-1 justify-center">
-                          <button disabled={isEliminado} className="px-2 py-1 bg-purple-100 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', -1)}>-1</button>
-                          <span className="px-2">{s.assists}</span>
-                          <button disabled={isEliminado} className="px-2 py-1 bg-purple-100 text-purple-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'assists', 1)}>+1</button>
-                        </div>
-                      </td>
-                      {/* Turnovers */}
-                      <td className="border px-2 py-1 text-center">
-                        <div className="flex items-center gap-1 justify-center">
-                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', -1)}>-1</button>
-                          <span className="px-2">{s.turnovers}</span>
-                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'turnovers', 1)}>+1</button>
-                        </div>
-                      </td>
-                      {/* Roubo */}
-                      <td className="border px-2 py-1 text-center">
-                        <div className="flex items-center gap-1 justify-center">
-                          <button disabled={isEliminado} className="px-2 py-1 bg-orange-100 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', -1)}>-1</button>
-                          <span className="px-2">{s.steals}</span>
-                          <button disabled={isEliminado} className="px-2 py-1 bg-orange-100 text-orange-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'steals', 1)}>+1</button>
-                        </div>
-                      </td>
-                      {/* Toco */}
-                      <td className="border px-2 py-1 text-center">
-                        <div className="flex items-center gap-1 justify-center">
-                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', -1)}>-1</button>
-                          <span className="px-2">{s.blocks}</span>
-                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-200 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'blocks', 1)}>+1</button>
-                        </div>
-                      </td>
-                      {/* Faltas (FP e FR) */}
-                      <td className="border px-2 py-1 text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          <div className={`flex items-center gap-1 justify-center ${fouls === 3 ? 'bg-yellow-100' : ''} ${fouls === 4 ? 'bg-red-100' : ''} p-1 rounded`}>
-                            <button disabled={isEliminado} className="px-2 py-1 bg-red-100 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', -1)}>-1</button>
-                            <span className="px-2">FP {fouls}</span>
-                            <button disabled={isEliminado} className="px-2 py-1 bg-red-100 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fouls', 1)}>+1</button>
-                            {fouls === 3 && (<span className="ml-2 text-yellow-700 font-bold" title="Atenção: 3 faltas">⚠️</span>)}
-                            {fouls === 4 && (<span className="ml-2 text-red-700 font-bold" title="Atenção: 4 faltas">⚠️</span>)}
-                          </div>
-                          <div className="flex items-center gap-1 justify-center">
-                            <button disabled={isEliminado} className="px-2 py-1 bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fr', -1)}>-1</button>
-                            <span className="px-2">FR {fr}</span>
-                            <button disabled={isEliminado} className="px-2 py-1 bg-red-200 text-red-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'fr', 1)}>+1</button>
+                          <div className="flex flex-col gap-1 items-center">
+                            <span className="text-xs font-semibold text-gray-700">DEFENSIVO</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'rebo_defensivo', -1)}
+                              >
+                                -1
+                              </button>
+                              <span className="px-2 text-xs font-bold text-gray-800">{rebo_defensivo}</span>
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'rebo_defensivo', 1)}
+                              >
+                                +1
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </td>
-                      {/* Interferência */}
-                      <td className="border px-2 py-1 text-center">
+                      {/* FALTA: PESSOAL e RECEBIDA */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex flex-col gap-2 items-center">
+                          <div className={`flex flex-col gap-1 items-center ${fouls === 4 ? 'bg-yellow-100' : ''} ${fouls >= 5 ? 'bg-red-100' : ''} p-1 rounded`}>
+                            <span className="text-xs font-semibold text-gray-700">PESSOAL</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                style={brandButtonStyle}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'fouls', -1)}
+                              >
+                                -1
+                              </button>
+                              <span className={`px-2 text-xs font-bold ${fouls === 4 ? 'bg-yellow-200 text-yellow-900' : ''} ${fouls >= 5 ? 'bg-red-200 text-red-900' : 'text-gray-800'}`}>{fouls}</span>
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'fouls', 1)}
+                              >
+                                +1
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1 items-center">
+                            <span className="text-xs font-semibold text-gray-700">RECEBIDA</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'fr', -1)}
+                              >
+                                -1
+                              </button>
+                              <span className="px-2 text-xs font-bold text-gray-800">{fr}</span>
+                              <button
+                                disabled={isEliminado}
+                                style={getButtonStyle(isEliminado)}
+                                className={brandButtonClass}
+                                onClick={() => handleStatButton(p.id, 'fr', 1)}
+                              >
+                                +1
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      {/* ASSIST */}
+                      <td className="border px-2 py-2 text-center">
                         <div className="flex items-center gap-1 justify-center">
-                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', -1)}>-1</button>
-                          <span className="px-2">{s.interference}</span>
-                          <button disabled={isEliminado} className="px-2 py-1 bg-gray-100 text-gray-900 rounded font-bold" onClick={() => handleStatButton(p.id, 'interference', 1)}>+1</button>
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'assists', -1)}
+                          >
+                            -1
+                          </button>
+                          <span className="px-2 text-xs font-bold text-gray-800">{s.assists || 0}</span>
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'assists', 1)}
+                          >
+                            +1
+                          </button>
+                        </div>
+                      </td>
+                      {/* TOCO */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'blocks', -1)}
+                          >
+                            -1
+                          </button>
+                          <span className="px-2 text-xs font-bold text-gray-800">{s.blocks || 0}</span>
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'blocks', 1)}
+                          >
+                            +1
+                          </button>
+                        </div>
+                      </td>
+                      {/* TURN */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'turnovers', -1)}
+                          >
+                            -1
+                          </button>
+                          <span className="px-2 text-xs font-bold text-gray-800">{s.turnovers || 0}</span>
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'turnovers', 1)}
+                          >
+                            +1
+                          </button>
+                        </div>
+                      </td>
+                      {/* INTER */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'interference', -1)}
+                          >
+                            -1
+                          </button>
+                          <span className="px-2 text-xs font-bold text-gray-800">{s.interference || 0}</span>
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'interference', 1)}
+                          >
+                            +1
+                          </button>
                         </div>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
+                  })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex gap-4 mt-4">
+                <button onClick={() => handleSaveStats()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold" disabled={!hasStatsToSave()}>Salvar Estatísticas</button>
+                {gameStatus !== 'FINALIZADA' && (
+                  <button
+                    onClick={handleFinalizarPartida}
+                    disabled={finishingGame}
+                    style={brandButtonStyle}
+                    className="px-4 py-2 rounded font-bold hover:opacity-90 disabled:opacity-50 transition-colors"
+                  >
+                    {finishingGame ? 'Encerrando...' : 'Encerrar Partida'}
+                  </button>
+                )}
+                {gameStatus === 'FINALIZADA' && (
+                  <span className="px-4 py-2 text-green-700 font-bold">Partida Finalizada</span>
+                )}
+              </div>
+            </>
           )}
-          <div className="flex gap-4 mt-4">
-            <button onClick={handleSaveStats} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold" disabled={!hasStatsToSave()}>Salvar Estatísticas</button>
-          </div>
-        </Card>
+        </>
       )}
 
       {/* Botão flutuante */}

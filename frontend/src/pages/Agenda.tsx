@@ -41,9 +41,9 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8 mt-16">
+    <div className="w-full h-full p-2.5">
       <h1 className="text-2xl font-bold mb-6 text-[#2563eb]">Agenda</h1>
-      <Card className="p-4 mb-8">
+      <Card className="p-4 mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="font-bold text-[#2563eb] text-lg">{format(calendarMonth, 'MMMM yyyy')}</span>
           <div className="flex gap-1">

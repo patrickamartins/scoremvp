@@ -30,11 +30,11 @@ def criar_jogadora(
     current_user: models.User = Depends(get_current_user),
 ):
     try:
-        nova = models.Player(**player_in.dict())
+        nova = models.Player(**player_in.model_dump())
         db.add(nova)
         db.commit()
         db.refresh(nova)
-        return schemas.PlayerOut.from_orm(nova)
+        return schemas.PlayerOut.model_validate(nova)
     except IntegrityError as e:
         db.rollback()
         logger.error(f"Erro de integridade ao criar jogadora: {str(e)}")
@@ -62,7 +62,7 @@ def listar_jogadoras(
 ):
     try:
         jogadoras = db.query(models.Player).all()
-        return [schemas.PlayerOut.from_orm(j) for j in jogadoras]
+        return [schemas.PlayerOut.model_validate(j) for j in jogadoras]
     except Exception as e:
         logger.error(f"Erro ao listar jogadoras: {str(e)}")
         raise HTTPException(
@@ -91,7 +91,7 @@ def ler_jogadora(
     jog = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not jog:
         raise HTTPException(status_code=404, detail="Jogadora não encontrada")
-    return schemas.PlayerOut.from_orm(jog)
+    return schemas.PlayerOut.model_validate(jog)
 
 
 @router.put(
@@ -108,11 +108,11 @@ def atualizar_jogadora(
     jog = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not jog:
         raise HTTPException(status_code=404, detail="Jogadora não encontrada")
-    for key, val in player_in.dict(exclude_unset=True).items():
+    for key, val in player_in.model_dump(exclude_unset=True).items():
         setattr(jog, key, val)
     db.commit()
     db.refresh(jog)
-    return schemas.PlayerOut.from_orm(jog)
+    return schemas.PlayerOut.model_validate(jog)
 
 
 @router.delete(

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const presets = [
   { label: "Hoje", value: "today" },
@@ -15,10 +15,32 @@ const presets = [
   { label: "Personalizado", value: "custom" },
 ];
 
-export function DateRangePicker({ onChange }: { onChange?: (range: any) => void }) {
-  const [selectedPreset, setSelectedPreset] = useState("today");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+type DateFilterValue = {
+  preset: string;
+  start?: string | null;
+  end?: string | null;
+};
+
+interface DateRangePickerProps {
+  value?: DateFilterValue;
+  onChange?: (range: DateFilterValue) => void;
+}
+
+function toDateInputValue(iso?: string | null) {
+  if (!iso) return "";
+  return iso.slice(0, 10);
+}
+
+export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
+  const [selectedPreset, setSelectedPreset] = useState<string>(value?.preset ?? "today");
+  const [customStart, setCustomStart] = useState<string>(toDateInputValue(value?.start));
+  const [customEnd, setCustomEnd] = useState<string>(toDateInputValue(value?.end));
+
+  useEffect(() => {
+    setSelectedPreset(value?.preset ?? "today");
+    setCustomStart(toDateInputValue(value?.start));
+    setCustomEnd(toDateInputValue(value?.end));
+  }, [value?.preset, value?.start, value?.end]);
 
   function handlePresetChange(value: string) {
     setSelectedPreset(value);
@@ -34,7 +56,7 @@ export function DateRangePicker({ onChange }: { onChange?: (range: any) => void 
   }
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white p-4 rounded shadow mb-6">
+    <div className="flex flex-col md:flex-row md:items-start gap-4">
       <div className="flex flex-col gap-2">
         {presets.map((preset) => (
           <label key={preset.value} className="flex items-center gap-2 cursor-pointer">

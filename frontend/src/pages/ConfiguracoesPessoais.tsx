@@ -133,8 +133,8 @@ export default function ConfiguracoesPessoaisPage() {
   }
 
   return (
-    <div className="p-8 mt-16">
-      <div className="max-w-2xl mx-auto">
+    <div className="w-full h-full">
+      <div className="w-full">
         <h1 className="text-3xl font-bold text-primary mb-6">Configurações Pessoais</h1>
         
         <Card className="p-6 mb-8">

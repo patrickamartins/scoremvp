@@ -83,8 +83,8 @@ export default function NotificacoesPage() {
   };
 
   return (
-    <div className="p-8 mt-16">
-      <div className="max-w-3xl mx-auto">
+    <div className="w-full h-full">
+      <div className="w-full">
         <h1 className="text-3xl font-bold text-primary mb-6">Notificações</h1>
         {/* Indicador de não lidas */}
         <div className="mb-4 flex items-center gap-2">

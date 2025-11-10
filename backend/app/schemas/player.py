@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import Optional
 from datetime import datetime
 from app.schemas.user import UserOut
@@ -22,8 +22,16 @@ class PlayerUpdate(BaseModel):
 
 class PlayerOut(PlayerBase):
     id: int
-    created_at: Optional[str]
+    created_at: Optional[datetime] = None
     user: Optional[UserOut] = None
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return str(value)
 
     class Config:
         from_attributes = True 

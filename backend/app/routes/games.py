@@ -50,7 +50,7 @@ def criar_jogo(
         db.commit()
         db.refresh(novo)
 
-    return schemas.GameOut.from_orm(novo)
+    return schemas.GameOut.model_validate(novo)
 
 
 @router.get(
@@ -102,7 +102,7 @@ def ler_jogo(
         "location": jogo.location,
         "status": jogo.status,
         "created_at": jogo.created_at,
-        "players": [schemas.PlayerOut.from_orm(p) for p in jogo.players],
+        "players": [schemas.PlayerOut.model_validate(p) for p in jogo.players],
     }
 
 
@@ -124,7 +124,7 @@ def atualizar_jogo(
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
 
-    data = game_in.dict(exclude_unset=True)
+    data = game_in.model_dump(exclude_unset=True)
     for field, value in data.items():
         if field != "players":
             setattr(jogo, field, value)
@@ -150,7 +150,7 @@ def atualizar_jogo(
         "location": jogo.location,
         "status": jogo.status,
         "created_at": jogo.created_at,
-        "players": [schemas.PlayerOut.from_orm(p) for p in jogo.players],
+        "players": [schemas.PlayerOut.model_validate(p) for p in jogo.players],
     }
 
 
