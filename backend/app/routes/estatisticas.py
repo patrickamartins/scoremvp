@@ -23,42 +23,51 @@ def create_statistic(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    # Verifica se o jogo existe e pertence ao usuário
-    game = db.query(models.Game).filter(
-        models.Game.id == statistic_in.game_id,
-        models.Game.owner_id == current_user.id
-    ).first()
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    # Verifica se a jogadora existe
-    player = db.query(models.Player).filter(
-        models.Player.id == statistic_in.player_id
-    ).first()
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
-    
-    # Verifica se já existe estatística para essa jogadora, jogo e quarto
-    existing_stat = db.query(models.Statistic).filter(
-        models.Statistic.game_id == statistic_in.game_id,
-        models.Statistic.player_id == statistic_in.player_id,
-        models.Statistic.quarter == statistic_in.quarter
-    ).first()
-    
-    if existing_stat:
-        # Atualiza a estatística existente
-        for field, value in statistic_in.dict().items():
-            setattr(existing_stat, field, value)
+    try:
+        # Verifica se o jogo existe e pertence ao usuário
+        game = db.query(models.Game).filter(
+            models.Game.id == statistic_in.game_id,
+            models.Game.owner_id == current_user.id
+        ).first()
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+        
+        # Verifica se a jogadora existe
+        player = db.query(models.Player).filter(
+            models.Player.id == statistic_in.player_id
+        ).first()
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+        
+        # Verifica se já existe estatística para essa jogadora, jogo e quarto
+        existing_stat = db.query(models.Statistic).filter(
+            models.Statistic.game_id == statistic_in.game_id,
+            models.Statistic.player_id == statistic_in.player_id,
+            models.Statistic.quarter == statistic_in.quarter
+        ).first()
+        
+        if existing_stat:
+            # Atualiza a estatística existente
+            for field, value in statistic_in.model_dump().items():
+                if field not in ['player_id', 'game_id', 'quarter']:  # Não atualizar chaves primárias
+                    setattr(existing_stat, field, value)
+            db.commit()
+            db.refresh(existing_stat)
+            return schemas.StatisticOut.model_validate(existing_stat)
+        
+        # Cria nova estatística
+        new_stat = models.Statistic(**statistic_in.model_dump())
+        db.add(new_stat)
         db.commit()
-        db.refresh(existing_stat)
-        return existing_stat
-    
-    # Cria nova estatística
-    new_stat = models.Statistic(**statistic_in.dict())
-    db.add(new_stat)
-    db.commit()
-    db.refresh(new_stat)
-    return new_stat
+        db.refresh(new_stat)
+        return schemas.StatisticOut.model_validate(new_stat)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erro ao criar estatística: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
 
 @router.get(
     "/game/{game_id}",
@@ -89,7 +98,8 @@ def list_game_statistics(
     if player_id:
         query = query.filter(models.Statistic.player_id == player_id)
     
-    return query.all()
+    stats = query.all()
+    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
 
 @router.get(
     "/game/{game_id}/summary",
@@ -159,12 +169,12 @@ def update_statistic(
     if not statistic:
         raise HTTPException(status_code=404, detail="Statistic not found")
     
-    for field, value in statistic_in.dict(exclude_unset=True).items():
+    for field, value in statistic_in.model_dump(exclude_unset=True).items():
         setattr(statistic, field, value)
     
     db.commit()
     db.refresh(statistic)
-    return statistic
+    return schemas.StatisticOut.model_validate(statistic)
 
 @router.delete(
     "/{statistic_id}",
@@ -216,7 +226,8 @@ def listar_estatisticas_publicas(
     if player_id:
         query = query.filter(models.Statistic.player_id == player_id)
     
-    return query.all()
+    stats = query.all()
+    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
 
 @router.get(
     "/games/{game_id}/stats",
@@ -235,7 +246,8 @@ def listar_stats_game(
     ).first()
     if not game:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-    return db.query(models.Statistic).filter(models.Statistic.game_id == game_id).all()
+    stats = db.query(models.Statistic).filter(models.Statistic.game_id == game_id).all()
+    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
 
 # Alias: GET /stats/games/{game_id} (retorna estatísticas do jogo)
 @router.get(
