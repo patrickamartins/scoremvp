@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Game, GameStats } from "../types/game";
 import { Player } from "../types/player";
 import { Trash2 } from 'lucide-react';
+import { BoxScoreTable } from '../components/BoxScoreTable';
 
 interface Player {
   id: number;
@@ -132,6 +133,13 @@ const Painel: React.FC = () => {
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
   const [selectingDraft, setSelectingDraft] = useState(false);
 
+  // Estados para modais
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalSuccess, setSaveModalSuccess] = useState(false);
+  const [saveModalMessage, setSaveModalMessage] = useState("");
+  const [showBoxScoreModal, setShowBoxScoreModal] = useState(false);
+  const [savingStats, setSavingStats] = useState(false);
+
   // Buscar todas as jogadoras do banco para autocomplete ao abrir modal
   useEffect(() => {
     if (showModal) {
@@ -174,16 +182,16 @@ const Painel: React.FC = () => {
               newStats[quarto] = {};
             }
             newStats[quarto][estatistica.player_id] = {
-              two: { attempts: 0, hits: 0 },
-              three: { attempts: 0, hits: 0 },
-              freeThrow: { attempts: 0, hits: 0 },
+              two: { attempts: estatistica.two_attempts || 0, hits: estatistica.two_made || 0 },
+              three: { attempts: estatistica.three_attempts || 0, hits: estatistica.three_made || 0 },
+              freeThrow: { attempts: estatistica.free_throw_attempts || 0, hits: estatistica.free_throw_made || 0 },
               rebounds: estatistica.rebounds,
               assists: estatistica.assists,
               fouls: estatistica.fouls,
-              blocks: 0,
-              turnovers: 0,
-              steals: estatistica.steals,
-              interference: estatistica.interference,
+              blocks: estatistica.blocks || 0,
+              turnovers: estatistica.turnovers || 0,
+              steals: estatistica.steals || 0,
+              interference: estatistica.interference || 0,
               rebo_ofensivo: estatistica.rebo_ofensivo || 0,
               rebo_defensivo: estatistica.rebo_defensivo || 0,
               fr: estatistica.fr || 0,
@@ -422,16 +430,21 @@ const Painel: React.FC = () => {
     if (!gameId || finishingGame) return;
     setFinishingGame(true);
     try {
+      // Salvar todas as estatísticas pendentes
       const saved = await persistAllUnsavedStats();
       if (!saved) {
         throw new Error("Falha ao salvar estatísticas antes de encerrar.");
       }
+      
+      // Atualizar status do jogo
       await updateGame(gameId, { status: 'FINALIZADA' });
+      
       setToast({
         title: "Sucesso",
         description: "Partida finalizada e estatísticas salvas!",
       });
 
+      // Resetar apenas o necessário, mantendo dados para possível visualização
       setGameId(null);
       setGameSaved(false);
       setGameForm({ ...initialGameForm });
@@ -449,6 +462,7 @@ const Painel: React.FC = () => {
       setLoadingPlayers(false);
       setLoadingStats(false);
 
+      // Recarregar dados
       const refreshedGames = await getGames();
       setGames(refreshedGames);
       setPendingGames(refreshedGames.filter((game) => game.status === "PENDENTE"));
@@ -463,6 +477,50 @@ const Painel: React.FC = () => {
       });
     } finally {
       setFinishingGame(false);
+    }
+  };
+
+  // Função para remover jogador da partida
+  const handleRemovePlayerFromGame = async (playerId: number) => {
+    if (!gameId || !window.confirm('Tem certeza que deseja remover este jogador da partida?')) {
+      return;
+    }
+
+    try {
+      const game = await getGame(gameId);
+      const updatedPlayers = game.players
+        .filter((p: Player) => p.id !== playerId)
+        .map((p: Player) => p.id);
+      
+      await updateGame(gameId, { players: updatedPlayers });
+      setPlayers((prev) => prev.filter((p) => p.id !== playerId));
+      setToast({
+        title: "Sucesso",
+        description: "Jogador removido da partida!",
+      });
+    } catch (error) {
+      setToast({
+        title: "Erro",
+        description: "Erro ao remover jogador da partida.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Função para carregar preview do boxscore
+  const handleShowBoxScore = async () => {
+    if (!gameId) return;
+    try {
+      // Recarregar estatísticas do banco para garantir dados atualizados
+      const currentStats = await getGameStats(gameId);
+      setStats(currentStats);
+      setShowBoxScoreModal(true);
+    } catch (error) {
+      setToast({
+        title: "Erro",
+        description: "Erro ao carregar boxscore",
+        variant: "destructive",
+      });
     }
   };
 
@@ -543,7 +601,7 @@ const Painel: React.FC = () => {
         };
       });
       setPendingShot(null);
-    }, 3000);
+    }, 3000); // 3 segundos exatos
     setPendingShot({ playerId, tipo, timeout });
   }
 
@@ -602,23 +660,27 @@ const Painel: React.FC = () => {
 
   const handleSaveStats = async (
     quarto: number = selectedQuarto,
-    { showToast = true, resetAfter = true }: { showToast?: boolean; resetAfter?: boolean } = {},
+    { showToast = true, resetAfter = false }: { showToast?: boolean; resetAfter?: boolean } = {},
   ) => {
     if (!gameId) {
       if (showToast) {
-        setToast({
-          title: "Erro",
-          description: "Salve o jogo antes de enviar as estatísticas!",
-          variant: "destructive",
-        });
+        setSaveModalSuccess(false);
+        setSaveModalMessage("Salve o jogo antes de enviar as estatísticas!");
+        setShowSaveModal(true);
       }
       return false;
     }
 
     if (!hasStatsToSaveForQuarter(quarto)) {
+      if (showToast) {
+        setSaveModalSuccess(true);
+        setSaveModalMessage("Nenhuma estatística para salvar neste quarto.");
+        setShowSaveModal(true);
+      }
       return true;
     }
 
+    setSavingStats(true);
     try {
       const statsToSave = Object.entries(statistics[quarto] || {}).map(([playerId, stats]) => ({
         game_id: gameId,
@@ -647,11 +709,50 @@ const Painel: React.FC = () => {
       for (const stat of statsToSave) {
         await createGameStats(gameId, stat);
       }
+      
+      // Recarregar estatísticas do banco para manter sincronizado
+      const savedStats = await getGameStats(gameId);
+      const newStats = { ...statistics };
+      savedStats.forEach((estatistica) => {
+        const q = estatistica.quarter || 1;
+        if (!newStats[q]) {
+          newStats[q] = {};
+        }
+        if (!newStats[q][estatistica.player_id]) {
+          newStats[q][estatistica.player_id] = initialPlayerStats;
+        }
+        newStats[q][estatistica.player_id] = {
+          ...newStats[q][estatistica.player_id],
+          two: { 
+            attempts: estatistica.two_attempts || 0, 
+            hits: estatistica.two_made || 0 
+          },
+          three: { 
+            attempts: estatistica.three_attempts || 0, 
+            hits: estatistica.three_made || 0 
+          },
+          freeThrow: { 
+            attempts: estatistica.free_throw_attempts || 0, 
+            hits: estatistica.free_throw_made || 0 
+          },
+          rebounds: estatistica.rebounds,
+          assists: estatistica.assists,
+          fouls: estatistica.fouls,
+          blocks: estatistica.blocks || 0,
+          turnovers: estatistica.turnovers || 0,
+          steals: estatistica.steals || 0,
+          interference: estatistica.interference || 0,
+          rebo_ofensivo: estatistica.rebo_ofensivo || 0,
+          rebo_defensivo: estatistica.rebo_defensivo || 0,
+          fr: estatistica.fr || 0,
+        };
+      });
+      setStatistics(newStats);
+
       if (showToast) {
-        setToast({
-          title: "Sucesso",
-          description: "Estatísticas salvas com sucesso!",
-        });
+        setSaveModalSuccess(true);
+        setSaveModalMessage("Estatísticas salvas com sucesso!");
+        setShowSaveModal(true);
       }
       if (resetAfter) {
         setStatistics((prev) => {
@@ -663,13 +764,13 @@ const Painel: React.FC = () => {
       return true;
     } catch (error) {
       if (showToast) {
-        setToast({
-          title: "Erro",
-          description: "Erro ao salvar estatísticas",
-          variant: "destructive",
-        });
+        setSaveModalSuccess(false);
+        setSaveModalMessage("Erro ao salvar estatísticas. Tente novamente.");
+        setShowSaveModal(true);
       }
       return false;
+    } finally {
+      setSavingStats(false);
     }
   };
 
@@ -748,22 +849,55 @@ const Painel: React.FC = () => {
   }
 
   // Função para selecionar um rascunho e preencher o formulário
-  function handleSelectDraft(game: Game) {
+  async function handleSelectDraft(game: Game) {
     setSelectedGame(game);
     setGameId(game.id);
     setGameSaved(true);
     setGameStatus(game.status as 'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA');
     setSelectingDraft(false);
 
-    // Carregar jogadores do rascunho
-    if (game.players && Array.isArray(game.players)) {
-      setPlayers(game.players);
-    } else {
+    // Carregar dados completos do jogo
+    try {
+      const fullGame = await getGame(game.id);
+      if (fullGame.players && Array.isArray(fullGame.players)) {
+        setPlayers(fullGame.players);
+      }
+      
+      // Carregar estatísticas do jogo
+      setLoadingStats(true);
+      const gameStats = await getGameStats(game.id);
+      const newStats: Record<number, Record<number, PlayerStatistics>> = {};
+      gameStats.forEach((estatistica) => {
+        const quarto = estatistica.quarter || 1;
+        if (!newStats[quarto]) {
+          newStats[quarto] = {};
+        }
+        newStats[quarto][estatistica.player_id] = {
+          two: { attempts: estatistica.two_attempts || 0, hits: estatistica.two_made || 0 },
+          three: { attempts: estatistica.three_attempts || 0, hits: estatistica.three_made || 0 },
+          freeThrow: { attempts: estatistica.free_throw_attempts || 0, hits: estatistica.free_throw_made || 0 },
+          rebounds: estatistica.rebounds,
+          assists: estatistica.assists,
+          fouls: estatistica.fouls,
+          blocks: estatistica.blocks || 0,
+          turnovers: estatistica.turnovers || 0,
+          steals: estatistica.steals || 0,
+          interference: estatistica.interference || 0,
+          rebo_ofensivo: estatistica.rebo_ofensivo || 0,
+          rebo_defensivo: estatistica.rebo_defensivo || 0,
+          fr: estatistica.fr || 0,
+        };
+      });
+      setStatistics(newStats);
+      setStats(gameStats);
+      setLoadingStats(false);
+    } catch (error) {
       setToast({
         title: "Erro",
-        description: "Erro ao carregar jogadores do rascunho",
+        description: "Erro ao carregar dados do rascunho",
         variant: "destructive",
       });
+      setLoadingStats(false);
     }
   }
 
@@ -825,15 +959,7 @@ const Painel: React.FC = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
-  // Adicionar campos ao objeto inicial de estatísticas
+  // Adicionar campos ao objeto inicial de estatísticas (definido antes do return)
   const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defensivo?: number; fr?: number } = {
     two: { attempts: 0, hits: 0 },
     three: { attempts: 0, hits: 0 },
@@ -849,6 +975,14 @@ const Painel: React.FC = () => {
     rebo_defensivo: 0,
     fr: 0,
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">
@@ -937,7 +1071,7 @@ const Painel: React.FC = () => {
         </div>
       ) : null}
 
-      {/* Dropdown de quarto e tabela de estatísticas */}
+          {/* Dropdown de quarto e tabela de estatísticas */}
       {gameSaved && (
         <>
           <div className="flex items-center gap-4 mb-4">
@@ -946,7 +1080,14 @@ const Painel: React.FC = () => {
               id="quarto"
               name="quarto"
               value={selectedQuarto}
-              onChange={e => setSelectedQuarto(Number(e.target.value) || 1)}
+              onChange={async (e) => {
+                const novoQuarto = Number(e.target.value) || 1;
+                // Salvar estatísticas do quarto atual antes de mudar
+                if (hasStatsToSaveForQuarter(selectedQuarto)) {
+                  await handleSaveStats(selectedQuarto, { showToast: false, resetAfter: false });
+                }
+                setSelectedQuarto(novoQuarto);
+              }}
               className="rounded-md border border-gray-300 px-3 py-2"
             >
               {quartos.map(q => (
@@ -972,22 +1113,25 @@ const Painel: React.FC = () => {
             </>
           ) : (
             <>
-              <div className="overflow-x-auto mb-8">
-                <table className="min-w-full text-sm border border-gray-300">
-                  <thead className="bg-gray-200">
-                    <tr>
-                      <th className="border px-2 py-2 text-center font-bold">NO.</th>
-                      <th className="border px-2 py-2 text-center font-bold">Jogador</th>
-                      <th className="border px-2 py-2 text-center font-bold">PONTOS</th>
-                      <th className="border px-2 py-2 text-center font-bold">REBOT</th>
-                      <th className="border px-2 py-2 text-center font-bold">FALTA</th>
-                      <th className="border px-2 py-2 text-center font-bold">ASSIST</th>
-                      <th className="border px-2 py-2 text-center font-bold">TOCO</th>
-                      <th className="border px-2 py-2 text-center font-bold">TURN</th>
-                      <th className="border px-2 py-2 text-center font-bold">INTER</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="overflow-x-auto mb-8" style={{ maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+                <div className="overflow-y-auto flex-1">
+                  <table className="min-w-full text-sm border border-gray-300">
+                    <thead className="bg-gray-200 sticky top-0 z-10">
+                      <tr>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">NO.</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">Jogador</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">PONTOS</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">REBOT</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">FALTA</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">ASSIST</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">TOCO</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">ROUBO</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">TURN</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">INTER</th>
+                        <th className="border px-2 py-2 text-center font-bold bg-gray-200">AÇÕES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                   {players.map((p, idx) => {
                   const s = (statistics[selectedQuarto] && statistics[selectedQuarto][p.id]) ? statistics[selectedQuarto][p.id] : initialPlayerStats;
                   const fouls = s.fouls || 0;
@@ -1182,6 +1326,28 @@ const Painel: React.FC = () => {
                           </button>
                         </div>
                       </td>
+                      {/* ROUBO */}
+                      <td className="border px-2 py-2 text-center">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'steals', -1)}
+                          >
+                            -1
+                          </button>
+                          <span className="px-2 text-xs font-bold text-gray-800">{s.steals || 0}</span>
+                          <button
+                            disabled={isEliminado}
+                            style={getButtonStyle(isEliminado)}
+                            className={brandButtonClass}
+                            onClick={() => handleStatButton(p.id, 'steals', 1)}
+                          >
+                            +1
+                          </button>
+                        </div>
+                      </td>
                       {/* TURN */}
                       <td className="border px-2 py-2 text-center">
                         <div className="flex items-center gap-1 justify-center">
@@ -1226,14 +1392,37 @@ const Painel: React.FC = () => {
                           </button>
                         </div>
                       </td>
+                      {/* AÇÕES */}
+                      <td className="border px-2 py-2 text-center">
+                        <button
+                          onClick={() => handleRemovePlayerFromGame(p.id)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Remover jogador da partida"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
                     </tr>
                   );
                   })}
                   </tbody>
                 </table>
+                </div>
               </div>
               <div className="flex gap-4 mt-4">
-                <button onClick={() => handleSaveStats()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold" disabled={!hasStatsToSave()}>Salvar Estatísticas</button>
+                <button 
+                  onClick={() => handleSaveStats()} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold disabled:opacity-50" 
+                  disabled={!hasStatsToSave() || savingStats}
+                >
+                  {savingStats ? 'Salvando...' : 'Salvar Estatísticas'}
+                </button>
+                <button 
+                  onClick={handleShowBoxScore} 
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold"
+                >
+                  Preview BoxScore
+                </button>
                 {gameStatus !== 'FINALIZADA' && (
                   <button
                     onClick={handleFinalizarPartida}
@@ -1410,6 +1599,57 @@ const Painel: React.FC = () => {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Modal de confirmação de salvamento */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => setShowSaveModal(false)}
+              type="button"
+            >
+              ×
+            </button>
+            <div className={`text-center ${saveModalSuccess ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="text-4xl mb-4">{saveModalSuccess ? '✓' : '✗'}</div>
+              <h2 className="text-xl font-bold mb-2">
+                {saveModalSuccess ? 'Sucesso!' : 'Erro!'}
+              </h2>
+              <p className="text-gray-700">{saveModalMessage}</p>
+            </div>
+            <button
+              onClick={() => setShowSaveModal(false)}
+              className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de preview do BoxScore */}
+      {showBoxScoreModal && gameId && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl z-10"
+              onClick={() => setShowBoxScoreModal(false)}
+              type="button"
+            >
+              ×
+            </button>
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Preview BoxScore</h2>
+              <BoxScoreTable
+                gameId={gameId}
+                stats={stats}
+                players={players}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
