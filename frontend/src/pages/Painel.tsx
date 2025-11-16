@@ -710,44 +710,42 @@ const Painel: React.FC = () => {
         await createGameStats(gameId, stat);
       }
       
-      // Recarregar estatísticas do banco para manter sincronizado
+      // Recarregar estatísticas do banco e MESCLAR com o estado atual (não sobrescrever)
       const savedStats = await getGameStats(gameId);
-      const newStats = { ...statistics };
+      const mergedStats = { ...statistics };
       savedStats.forEach((estatistica) => {
         const q = estatistica.quarter || 1;
-        if (!newStats[q]) {
-          newStats[q] = {};
+        if (!mergedStats[q]) {
+          mergedStats[q] = {};
         }
-        if (!newStats[q][estatistica.player_id]) {
-          newStats[q][estatistica.player_id] = initialPlayerStats;
+        const prevPlayerQStats = mergedStats[q][estatistica.player_id] || initialPlayerStats;
+        mergedStats[q][estatistica.player_id] = {
+          ...prevPlayerQStats,
+          two: {
+            attempts: estatistica.two_attempts ?? prevPlayerQStats.two.attempts ?? 0,
+            hits: estatistica.two_made ?? prevPlayerQStats.two.hits ?? 0,
+          },
+          three: {
+            attempts: estatistica.three_attempts ?? prevPlayerQStats.three.attempts ?? 0,
+            hits: estatistica.three_made ?? prevPlayerQStats.three.hits ?? 0,
+          },
+          freeThrow: {
+            attempts: estatistica.free_throw_attempts ?? prevPlayerQStats.freeThrow.attempts ?? 0,
+            hits: estatistica.free_throw_made ?? prevPlayerQStats.freeThrow.hits ?? 0,
+          },
+          rebounds: estatistica.rebounds ?? prevPlayerQStats.rebounds ?? 0,
+          assists: estatistica.assists ?? prevPlayerQStats.assists ?? 0,
+          fouls: estatistica.fouls ?? prevPlayerQStats.fouls ?? 0,
+          blocks: estatistica.blocks ?? prevPlayerQStats.blocks ?? 0,
+          turnovers: estatistica.turnovers ?? prevPlayerQStats.turnovers ?? 0,
+          steals: estatistica.steals ?? prevPlayerQStats.steals ?? 0,
+          interference: estatistica.interference ?? prevPlayerQStats.interference ?? 0,
+          rebo_ofensivo: estatistica.rebo_ofensivo ?? prevPlayerQStats.rebo_ofensivo ?? 0,
+          rebo_defensivo: estatistica.rebo_defensivo ?? prevPlayerQStats.rebo_defensivo ?? 0,
+          fr: estatistica.fr ?? prevPlayerQStats.fr ?? 0,
         }
-        newStats[q][estatistica.player_id] = {
-          ...newStats[q][estatistica.player_id],
-          two: { 
-            attempts: estatistica.two_attempts || 0, 
-            hits: estatistica.two_made || 0 
-          },
-          three: { 
-            attempts: estatistica.three_attempts || 0, 
-            hits: estatistica.three_made || 0 
-          },
-          freeThrow: { 
-            attempts: estatistica.free_throw_attempts || 0, 
-            hits: estatistica.free_throw_made || 0 
-          },
-          rebounds: estatistica.rebounds,
-          assists: estatistica.assists,
-          fouls: estatistica.fouls,
-          blocks: estatistica.blocks || 0,
-          turnovers: estatistica.turnovers || 0,
-          steals: estatistica.steals || 0,
-          interference: estatistica.interference || 0,
-          rebo_ofensivo: estatistica.rebo_ofensivo || 0,
-          rebo_defensivo: estatistica.rebo_defensivo || 0,
-          fr: estatistica.fr || 0,
-        };
       });
-      setStatistics(newStats);
+      setStatistics(mergedStats);
 
       if (showToast) {
         setSaveModalSuccess(true);

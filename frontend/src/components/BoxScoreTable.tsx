@@ -112,7 +112,10 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
       if (selectedPeriod !== 'total' && periodValue !== selectedPeriod) return;
       const stat = mapStat(raw);
       const bucket = map.get(stat.player_id) ?? emptyStat(stat.player_id);
-      bucket.points += stat.points;
+      // Somar pontos: se o backend não trouxe points, calcular pelos acertos
+      const derivedPoints = (stat.two_made || 0) * 2 + (stat.three_made || 0) * 3 + (stat.free_throw_made || 0);
+      const pointsToAdd = typeof stat.points === 'number' && stat.points > 0 ? stat.points : derivedPoints;
+      bucket.points += pointsToAdd;
       bucket.two_attempts += stat.two_attempts;
       bucket.two_made += stat.two_made;
       bucket.three_attempts += stat.three_attempts;
