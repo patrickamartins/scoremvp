@@ -1131,7 +1131,38 @@ const Painel: React.FC = () => {
                     </thead>
                     <tbody>
                   {players.map((p, idx) => {
-                  const s = (statistics[selectedQuarto] && statistics[selectedQuarto][p.id]) ? statistics[selectedQuarto][p.id] : initialPlayerStats;
+                  // Acumular estatísticas de todos os quartos até o quarto selecionado (incluindo o atual)
+                  let accumulatedStats = { ...initialPlayerStats };
+                  for (let q = 1; q <= selectedQuarto; q++) {
+                    if (statistics[q] && statistics[q][p.id]) {
+                      const quartoStats = statistics[q][p.id];
+                      accumulatedStats = {
+                        two: {
+                          attempts: (accumulatedStats.two?.attempts ?? 0) + (quartoStats.two?.attempts ?? 0),
+                          hits: (accumulatedStats.two?.hits ?? 0) + (quartoStats.two?.hits ?? 0),
+                        },
+                        three: {
+                          attempts: (accumulatedStats.three?.attempts ?? 0) + (quartoStats.three?.attempts ?? 0),
+                          hits: (accumulatedStats.three?.hits ?? 0) + (quartoStats.three?.hits ?? 0),
+                        },
+                        freeThrow: {
+                          attempts: (accumulatedStats.freeThrow?.attempts ?? 0) + (quartoStats.freeThrow?.attempts ?? 0),
+                          hits: (accumulatedStats.freeThrow?.hits ?? 0) + (quartoStats.freeThrow?.hits ?? 0),
+                        },
+                        rebounds: (accumulatedStats.rebounds ?? 0) + (quartoStats.rebounds ?? 0),
+                        assists: (accumulatedStats.assists ?? 0) + (quartoStats.assists ?? 0),
+                        fouls: (accumulatedStats.fouls ?? 0) + (quartoStats.fouls ?? 0),
+                        blocks: (accumulatedStats.blocks ?? 0) + (quartoStats.blocks ?? 0),
+                        turnovers: (accumulatedStats.turnovers ?? 0) + (quartoStats.turnovers ?? 0),
+                        steals: (accumulatedStats.steals ?? 0) + (quartoStats.steals ?? 0),
+                        interference: (accumulatedStats.interference ?? 0) + (quartoStats.interference ?? 0),
+                        rebo_ofensivo: (accumulatedStats.rebo_ofensivo ?? 0) + (quartoStats.rebo_ofensivo ?? 0),
+                        rebo_defensivo: (accumulatedStats.rebo_defensivo ?? 0) + (quartoStats.rebo_defensivo ?? 0),
+                        fr: (accumulatedStats.fr ?? 0) + (quartoStats.fr ?? 0),
+                      };
+                    }
+                  }
+                  const s = accumulatedStats;
                   const fouls = s.fouls || 0;
                   const fr = s.fr || 0;
                   const rebo_ofensivo = s.rebo_ofensivo || 0;
