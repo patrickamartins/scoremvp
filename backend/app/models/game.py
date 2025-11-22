@@ -16,6 +16,7 @@ class Game(Base):
     analise = Column(String, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, server_default="now()")
+    public_link = Column(String, unique=True, nullable=True, index=True)
 
     # Relacionamentos
     owner = relationship("User", back_populates="games")

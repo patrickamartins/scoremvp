@@ -230,6 +230,35 @@ def listar_estatisticas_publicas(
     return [schemas.StatisticOut.model_validate(stat) for stat in stats]
 
 @router.get(
+    "/public/link/{public_link}",
+    response_model=List[schemas.StatisticOut],
+    summary="Lista estatísticas públicas de um jogo por link único",
+)
+def listar_estatisticas_por_link(
+    public_link: str,
+    quarter: Optional[int] = None,
+    player_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    game = db.query(models.Game).filter(
+        models.Game.public_link == public_link
+    ).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    
+    query = db.query(models.Statistic).filter(
+        models.Statistic.game_id == game.id
+    )
+    
+    if quarter:
+        query = query.filter(models.Statistic.quarter == quarter)
+    if player_id:
+        query = query.filter(models.Statistic.player_id == player_id)
+    
+    stats = query.all()
+    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
+
+@router.get(
     "/games/{game_id}/stats",
     response_model=List[schemas.StatisticOut],
     summary="Lista estatísticas de um jogo (compatível com frontend)",

@@ -4,10 +4,12 @@ import { Play, Pause } from 'lucide-react';
 interface GameScoreboardProps {
   homeScore: number;
   awayScore: number;
-  onAwayScoreChange: (score: number) => void;
+  onAwayScoreChange?: (score: number) => void;
   quarter: number;
   onQuarterChange?: (quarter: number) => void;
   onTimerStateChange?: (isRunning: boolean, time: number) => void;
+  opponentName?: string;
+  readOnly?: boolean;
 }
 
 export function GameScoreboard({ 
@@ -16,7 +18,9 @@ export function GameScoreboard({
   onAwayScoreChange,
   quarter,
   onQuarterChange,
-  onTimerStateChange
+  onTimerStateChange,
+  opponentName = "VISITANTE",
+  readOnly = false
 }: GameScoreboardProps) {
   const [time, setTime] = useState(600); // 10 minutos em segundos
   const [isRunning, setIsRunning] = useState(false);
@@ -105,11 +109,15 @@ export function GameScoreboard({
   };
 
   const handleAwayScoreIncrement = () => {
-    onAwayScoreChange(awayScore + 1);
+    if (onAwayScoreChange) {
+      onAwayScoreChange(awayScore + 1);
+    }
   };
 
   const handleAwayScoreDecrement = () => {
-    onAwayScoreChange(Math.max(0, awayScore - 1));
+    if (onAwayScoreChange) {
+      onAwayScoreChange(Math.max(0, awayScore - 1));
+    }
   };
 
   return (
@@ -117,17 +125,19 @@ export function GameScoreboard({
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg shadow-2xl p-6 mb-6">
         <div className="flex items-center justify-center gap-8">
           {/* Botão Play/Pause */}
-          <button
-            onClick={handlePlayPause}
-            className="bg-white hover:bg-gray-100 rounded-full p-3 transition-colors shadow-lg"
-            title={isRunning ? 'Pausar' : 'Iniciar'}
-          >
-            {isRunning ? (
-              <Pause className="w-6 h-6 text-gray-800" />
-            ) : (
-              <Play className="w-6 h-6 text-gray-800" />
-            )}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={handlePlayPause}
+              className="bg-white hover:bg-gray-100 rounded-full p-3 transition-colors shadow-lg"
+              title={isRunning ? 'Pausar' : 'Iniciar'}
+            >
+              {isRunning ? (
+                <Pause className="w-6 h-6 text-gray-800" />
+              ) : (
+                <Play className="w-6 h-6 text-gray-800" />
+              )}
+            </button>
+          )}
 
           {/* Placar Casa */}
           <div className="flex flex-col items-center">
@@ -139,36 +149,46 @@ export function GameScoreboard({
 
           {/* Cronômetro */}
           <div className="flex flex-col items-center">
-            <button
-              onClick={handleTimeClick}
-              className="bg-red-600 hover:bg-red-700 rounded-lg px-8 py-4 transition-colors shadow-lg cursor-pointer"
-              title="Clique para definir o tempo"
-            >
-              <span className="text-5xl font-mono font-bold text-white tracking-wider">
-                {formatTime(time)}
-              </span>
-            </button>
+            {readOnly ? (
+              <div className="bg-red-600 rounded-lg px-8 py-4 shadow-lg">
+                <span className="text-5xl font-mono font-bold text-white tracking-wider">
+                  {formatTime(time)}
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={handleTimeClick}
+                className="bg-red-600 hover:bg-red-700 rounded-lg px-8 py-4 transition-colors shadow-lg cursor-pointer"
+                title="Clique para definir o tempo"
+              >
+                <span className="text-5xl font-mono font-bold text-white tracking-wider">
+                  {formatTime(time)}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Placar Visitante */}
           <div className="flex flex-col items-center">
-            <span className="text-white text-sm font-semibold mb-2">VISITANTE</span>
+            <span className="text-white text-sm font-semibold mb-2">{opponentName}</span>
             <div className="bg-white rounded-lg px-6 py-4 min-w-[80px] text-center shadow-lg relative">
               <span className="text-4xl font-bold text-gray-800">{awayScore}</span>
-              <div className="absolute -right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-                <button
-                  onClick={handleAwayScoreIncrement}
-                  className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-2 py-1 transition-colors"
-                >
-                  +1
-                </button>
-                <button
-                  onClick={handleAwayScoreDecrement}
-                  className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-2 py-1 transition-colors"
-                >
-                  -1
-                </button>
-              </div>
+              {!readOnly && onAwayScoreChange && (
+                <div className="absolute -right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+                  <button
+                    onClick={handleAwayScoreIncrement}
+                    className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-2 py-1 transition-colors"
+                  >
+                    +1
+                  </button>
+                  <button
+                    onClick={handleAwayScoreDecrement}
+                    className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-2 py-1 transition-colors"
+                  >
+                    -1
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

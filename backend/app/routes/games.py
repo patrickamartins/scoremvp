@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
+import secrets
 
 from app.database import get_db
 from app import models, schemas
@@ -29,13 +30,22 @@ def criar_jogo(
     current_user: models.User = Depends(get_current_user),
 ):
     data = game_in.dict()
+    
+    # Gerar link único para visualização pública
+    public_link = secrets.token_urlsafe(32)
+    
+    # Garantir que o link é único
+    while db.query(models.Game).filter(models.Game.public_link == public_link).first():
+        public_link = secrets.token_urlsafe(32)
+    
     novo = models.Game(
         opponent=data['opponent'],
         date=data['date'],
         location=data.get('location'),
         categoria=data.get('category'),
         status="PENDENTE",
-        owner_id=current_user.id
+        owner_id=current_user.id,
+        public_link=public_link
     )
     db.add(novo)
     db.commit()
@@ -189,3 +199,19 @@ def ler_jogo_publico(
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
     return jogo
+
+@router.get(
+    "/public/link/{public_link}",
+    response_model=schemas.GameOut,
+    summary="Consulta um jogo público por link único",
+)
+def ler_jogo_por_link(
+    public_link: str,
+    db: Session = Depends(get_db),
+):
+    jogo = db.query(models.Game).options(
+        joinedload(models.Game.players)
+    ).filter(models.Game.public_link == public_link).first()
+    if not jogo:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    return schemas.GameOut.model_validate(jogo)

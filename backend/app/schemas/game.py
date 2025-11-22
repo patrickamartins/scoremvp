@@ -38,6 +38,7 @@ class GameOut(BaseModel):
     created_at: datetime
     players: List[PlayerOut] = []
     analise: Optional[str] = None
+    public_link: Optional[str] = None
     # Adicione outros campos/relacionamentos se necessário
 
     class Config:

@@ -14,6 +14,7 @@ import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import Unauthorized from '../pages/Unauthorized'
 import SubscriptionPage from '../pages/SubscriptionPage'
+import PublicGameView from '../pages/PublicGameView'
 
 export function AppRoutes() {
   return (
@@ -22,6 +23,7 @@ export function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/" element={<Home />} />
+      <Route path="/public/game/:link" element={<PublicGameView />} />
       <Route element={<PrivateRoute />}>
         <Route element={<BaseLayout />}>
           <Route path="/painel" element={<Painel />} />

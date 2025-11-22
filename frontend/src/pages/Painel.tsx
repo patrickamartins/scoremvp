@@ -144,6 +144,7 @@ const Painel: React.FC = () => {
 
   // Estados para o placar
   const [awayScore, setAwayScore] = useState(0);
+  const [publicLink, setPublicLink] = useState<string | null>(null);
 
   // Estados para controle de jogadores em quadra e tempo de jogo
   const [playersOnCourt, setPlayersOnCourt] = useState<number[]>([]); // Array ordenado ao invés de Set
@@ -368,6 +369,7 @@ const Painel: React.FC = () => {
       if (newGame && newGame.id) {
         setGameId(newGame.id);
         setGameSaved(true);
+        setPublicLink(newGame.public_link || null);
         setGameFormError("");  // Limpa qualquer erro anterior
         setToast({
           title: "Sucesso",
@@ -873,12 +875,13 @@ const Painel: React.FC = () => {
     setGameStatus(game.status as 'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA');
     setSelectingDraft(false);
 
-    // Carregar dados completos do jogo
-    try {
-      const fullGame = await getGame(game.id);
-      if (fullGame.players && Array.isArray(fullGame.players)) {
-        setPlayers(fullGame.players);
-      }
+      // Carregar dados completos do jogo
+      try {
+        const fullGame = await getGame(game.id);
+        if (fullGame.players && Array.isArray(fullGame.players)) {
+          setPlayers(fullGame.players);
+        }
+        setPublicLink(fullGame.public_link || null);
       
       // Carregar estatísticas do jogo
       setLoadingStats(true);
@@ -1007,12 +1010,33 @@ const Painel: React.FC = () => {
   }, [statistics]);
 
   // Inicializar jogadores em quadra automaticamente (primeiros 5)
+  // Os primeiros 5 jogadores adicionados vão para o painel, do 6º em diante vão para o banco
   useEffect(() => {
-    if (players.length > 0 && playersOnCourt.length === 0) {
-      const firstFive = players.slice(0, Math.min(5, players.length)).map(p => p.id);
-      setPlayersOnCourt(firstFive);
+    if (players.length > 0) {
+      // Se não há jogadores em quadra, inicializa com os primeiros 5
+      if (playersOnCourt.length === 0) {
+        const firstFive = players.slice(0, Math.min(5, players.length)).map(p => p.id);
+        setPlayersOnCourt(firstFive);
+      } else {
+        // Se há jogadores em quadra, apenas adiciona novos jogadores ao banco
+        // Mantém os primeiros 5 em quadra, a menos que sejam removidos manualmente
+        const currentCourtIds = playersOnCourt;
+        const allPlayerIds = players.map(p => p.id);
+        
+        // Remover jogadores que não existem mais
+        const validCourtIds = currentCourtIds.filter(id => allPlayerIds.includes(id));
+        
+        // Se temos menos de 5 em quadra e há jogadores disponíveis, preencher com os primeiros disponíveis
+        if (validCourtIds.length < 5 && players.length > validCourtIds.length) {
+          const firstFiveIds = players.slice(0, Math.min(5, players.length)).map(p => p.id);
+          const missingIds = firstFiveIds.filter(id => !validCourtIds.includes(id));
+          validCourtIds.push(...missingIds.slice(0, 5 - validCourtIds.length));
+        }
+        
+        setPlayersOnCourt(validCourtIds.slice(0, 5));
+      }
     }
-  }, [players, playersOnCourt.length]);
+  }, [players.length]); // Apenas quando o número de jogadores muda
 
   // Acumular tempo dos jogadores em quadra quando cronômetro está rodando
   useEffect(() => {
@@ -1095,7 +1119,40 @@ const Painel: React.FC = () => {
 
   return (
     <div className="w-full h-full">
-      <h1 className="text-3xl font-bold text-[#2563eb] mb-6">Dados da Partida</h1>
+      {/* Link Público - exibido quando o jogo está salvo */}
+      {gameSaved && publicLink && (
+        <Card className="mb-4 p-4 bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-blue-900 mb-1">Link de Visualização Pública</h3>
+              <p className="text-sm text-blue-700 mb-2">
+                Compartilhe este link para visualização pública do placar e estatísticas
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/public/game/${publicLink}`}
+                  className="flex-1 px-3 py-2 bg-white border border-blue-300 rounded text-sm font-mono"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/public/game/${publicLink}`);
+                    setToast({
+                      title: "Sucesso",
+                      description: "Link copiado para a área de transferência!",
+                    });
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold text-sm"
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Placar - exibido apenas quando o jogo está salvo */}
       {gameSaved && (
@@ -1105,6 +1162,7 @@ const Painel: React.FC = () => {
           onAwayScoreChange={setAwayScore}
           quarter={selectedQuarto}
           onTimerStateChange={handleTimerStateChange}
+          opponentName={gameForm.adversario || selectedGame?.opponent || "VISITANTE"}
         />
       )}
 
