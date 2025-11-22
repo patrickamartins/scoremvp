@@ -1106,36 +1106,6 @@ const Painel: React.FC = () => {
     }
   }, [awayScore, gameId, gameSaved, timerTime, timerIsRunning, selectedQuarto]);
 
-  // Save automático de estatísticas a cada 30 segundos
-  useEffect(() => {
-    if (!gameId || !gameSaved) return;
-
-    const autoSaveInterval = setInterval(async () => {
-      // Verificar se há estatísticas para salvar no quarto atual
-      const quartoStats = statistics[selectedQuarto] || {};
-      const hasStats = Object.keys(quartoStats).length > 0 && 
-        Object.values(quartoStats).some((s: any) => {
-          return (s.two?.attempts > 0 || s.two?.hits > 0 ||
-                  s.three?.attempts > 0 || s.three?.hits > 0 ||
-                  s.freeThrow?.attempts > 0 || s.freeThrow?.hits > 0 ||
-                  s.rebounds > 0 || s.assists > 0 || s.fouls > 0 ||
-                  s.blocks > 0 || s.turnovers > 0 || s.steals > 0 ||
-                  s.interference > 0 || s.rebo_ofensivo > 0 ||
-                  s.rebo_defensivo > 0 || s.fr > 0);
-        });
-      
-      if (hasStats) {
-        try {
-          await handleSaveStats(selectedQuarto, { showToast: false, resetAfter: false });
-        } catch (error) {
-          console.error('Erro no save automático:', error);
-        }
-      }
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(autoSaveInterval);
-  }, [gameId, gameSaved, selectedQuarto, statistics, handleSaveStats]);
-
   // Abrir modal de substituição
   const handleOpenSubstitution = (player: Player, index: number) => {
     setPlayerToSubstitute({ player, index });
