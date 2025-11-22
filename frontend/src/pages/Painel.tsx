@@ -653,6 +653,23 @@ const Painel: React.FC = () => {
 
   // Remover funções handleUndo e handleReset e os botões correspondentes do painel de estatísticas.
 
+  // Adicionar campos ao objeto inicial de estatísticas (definido antes do useCallback)
+  const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defensivo?: number; fr?: number } = {
+    two: { attempts: 0, hits: 0 },
+    three: { attempts: 0, hits: 0 },
+    freeThrow: { attempts: 0, hits: 0 },
+    rebounds: 0,
+    assists: 0,
+    fouls: 0,
+    blocks: 0,
+    turnovers: 0,
+    steals: 0,
+    interference: 0,
+    rebo_ofensivo: 0,
+    rebo_defensivo: 0,
+    fr: 0,
+  };
+
   // Função utilitária para checar se há alguma estatística diferente de zero em um quarto
   function hasStatsToSaveForQuarter(quarto: number) {
     const statsQ = statistics[quarto] || {};
@@ -979,23 +996,6 @@ const Painel: React.FC = () => {
       setStatistics({});
     }
   }
-
-  // Adicionar campos ao objeto inicial de estatísticas (definido antes do return)
-  const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defensivo?: number; fr?: number } = {
-    two: { attempts: 0, hits: 0 },
-    three: { attempts: 0, hits: 0 },
-    freeThrow: { attempts: 0, hits: 0 },
-    rebounds: 0,
-    assists: 0,
-    fouls: 0,
-    blocks: 0,
-    turnovers: 0,
-    steals: 0,
-    interference: 0,
-    rebo_ofensivo: 0,
-    rebo_defensivo: 0,
-    fr: 0,
-  };
 
   // Calcular pontuação casa em tempo real baseado nas estatísticas
   const homeScore = useMemo(() => {
