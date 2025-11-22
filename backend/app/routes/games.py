@@ -84,7 +84,8 @@ def listar_jogos(
     if data_fim:
         query = query.filter(models.Game.date <= data_fim)
     
-    return query.offset(skip).limit(limit).all()
+    games = query.offset(skip).limit(limit).all()
+    return [schemas.GameOut.model_validate(game) for game in games]
 
 
 @router.get(
@@ -103,15 +104,7 @@ def ler_jogo(
     ).first()
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-    return {
-        "id": jogo.id,
-        "opponent": jogo.opponent,
-        "date": jogo.date,
-        "location": jogo.location,
-        "status": jogo.status,
-        "created_at": jogo.created_at,
-        "players": [schemas.PlayerOut.model_validate(p) for p in jogo.players],
-    }
+    return schemas.GameOut.model_validate(jogo)
 
 
 @router.put(
@@ -151,15 +144,7 @@ def atualizar_jogo(
 
     db.commit()
     db.refresh(jogo)
-    return {
-        "id": jogo.id,
-        "opponent": jogo.opponent,
-        "date": jogo.date,
-        "location": jogo.location,
-        "status": jogo.status,
-        "created_at": jogo.created_at,
-        "players": [schemas.PlayerOut.model_validate(p) for p in jogo.players],
-    }
+    return schemas.GameOut.model_validate(jogo)
 
 
 @router.delete(

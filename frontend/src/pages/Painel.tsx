@@ -1837,16 +1837,48 @@ const Painel: React.FC = () => {
       {pendingGames.length > 0 && !gameSaved && !gameId && (
         <div className="mb-6">
           <div className="font-semibold mb-2">Você possui jogos em rascunho:</div>
-          <ul className="space-y-2">
+          <ul className="space-y-4">
             {pendingGames.map((game) => (
-              <li key={game.id} className="flex items-center gap-2">
-                <span>{game.opponent} - {game.date?.slice(0, 10)} - {game.category}</span>
-                <button
-                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => handleSelectDraft(game)}
-                >
-                  Continuar preenchimento
-                </button>
+              <li key={game.id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-800 mb-1">
+                      {game.opponent} - {game.date ? new Date(game.date).toLocaleDateString('pt-BR') : ''} - {game.category}
+                    </div>
+                    {game.public_link && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                        <div className="text-xs font-semibold text-blue-900 mb-1">Link de Visualização Pública:</div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${window.location.origin}/public/game/${game.public_link}`}
+                            className="flex-1 px-2 py-1 bg-white border border-blue-300 rounded text-xs font-mono"
+                            onClick={(e) => (e.target as HTMLInputElement).select()}
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/public/game/${game.public_link}`);
+                              setToast({
+                                title: "Sucesso",
+                                description: "Link copiado para a área de transferência!",
+                              });
+                            }}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold"
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-semibold"
+                    onClick={() => handleSelectDraft(game)}
+                  >
+                    Continuar preenchimento
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
