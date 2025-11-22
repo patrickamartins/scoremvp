@@ -66,6 +66,23 @@ const getButtonStyle = (disabled: boolean) =>
 const brandButtonClass = "rounded text-xs font-semibold px-1 py-0.5 transition-colors hover:opacity-90 disabled:opacity-50";
 const brandButtonClassLarge = "rounded text-xs font-semibold px-2 py-1 transition-colors hover:opacity-90 disabled:opacity-50";
 
+// Objeto inicial de estatísticas (definido fora do componente para evitar problemas de dependências)
+const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defensivo?: number; fr?: number } = {
+  two: { attempts: 0, hits: 0 },
+  three: { attempts: 0, hits: 0 },
+  freeThrow: { attempts: 0, hits: 0 },
+  rebounds: 0,
+  assists: 0,
+  fouls: 0,
+  blocks: 0,
+  turnovers: 0,
+  steals: 0,
+  interference: 0,
+  rebo_ofensivo: 0,
+  rebo_defensivo: 0,
+  fr: 0,
+};
+
 const Painel: React.FC = () => {
   usePageTitle("Painel");
   const [games, setGames] = useState<Game[]>([]);
@@ -653,23 +670,6 @@ const Painel: React.FC = () => {
 
   // Remover funções handleUndo e handleReset e os botões correspondentes do painel de estatísticas.
 
-  // Adicionar campos ao objeto inicial de estatísticas (definido antes do useCallback)
-  const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defensivo?: number; fr?: number } = {
-    two: { attempts: 0, hits: 0 },
-    three: { attempts: 0, hits: 0 },
-    freeThrow: { attempts: 0, hits: 0 },
-    rebounds: 0,
-    assists: 0,
-    fouls: 0,
-    blocks: 0,
-    turnovers: 0,
-    steals: 0,
-    interference: 0,
-    rebo_ofensivo: 0,
-    rebo_defensivo: 0,
-    fr: 0,
-  };
-
   // Função utilitária para checar se há alguma estatística diferente de zero em um quarto
   function hasStatsToSaveForQuarter(quarto: number) {
     const statsQ = statistics[quarto] || {};
@@ -809,7 +809,7 @@ const Painel: React.FC = () => {
     } finally {
       setSavingStats(false);
     }
-  }, [gameId, statistics, playerMinutes, selectedQuarto, hasStatsToSaveForQuarter, initialPlayerStats]);
+  }, [gameId, statistics, playerMinutes, selectedQuarto, hasStatsToSaveForQuarter]);
 
   const persistAllUnsavedStats = async (): Promise<boolean> => {
     if (!gameId) return false;
