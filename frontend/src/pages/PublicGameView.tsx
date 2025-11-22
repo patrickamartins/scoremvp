@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { GameScoreboard } from '../components/GameScoreboard';
 import { BoxScoreTable } from '../components/BoxScoreTable';
 import { Card } from '../components/ui/Card';
-import { api } from '../services/api';
+import { api, getPublicScoreboard } from '../services/api';
 import { Game, GameStats } from '../types/game';
 import { Player } from '../types/player';
 
@@ -15,20 +15,12 @@ export default function PublicGameView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [awayScore, setAwayScore] = useState(0);
+  const [homeScore, setHomeScore] = useState(0);
   const [selectedQuarto, setSelectedQuarto] = useState(1);
+  const [timerTime, setTimerTime] = useState(720);
+  const [timerRunning, setTimerRunning] = useState(false);
 
-  // Calcular pontuação casa
-  const homeScore = useMemo(() => {
-    let total = 0;
-    stats.forEach((stat) => {
-      total += (stat.two_made || 0) * 2;
-      total += (stat.three_made || 0) * 3;
-      total += (stat.free_throw_made || 0);
-    });
-    return total;
-  }, [stats]);
-
-  // Buscar dados do jogo
+  // Buscar dados do jogo (apenas uma vez)
   const fetchGameData = async () => {
     if (!link) return;
 
@@ -39,7 +31,7 @@ export default function PublicGameView() {
       setGame(gameData);
       setPlayers(gameData.players || []);
 
-      // Buscar estatísticas
+      // Buscar estatísticas (apenas uma vez, não atualiza automaticamente)
       const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
       setStats(statsResponse.data);
 
@@ -52,18 +44,35 @@ export default function PublicGameView() {
     }
   };
 
+  // Buscar estado do placar em tempo real
+  const fetchScoreboard = async () => {
+    if (!link) return;
+
+    try {
+      const scoreboardData = await getPublicScoreboard(link);
+      setAwayScore(scoreboardData.away_score);
+      setHomeScore(scoreboardData.home_score);
+      setTimerTime(scoreboardData.timer_time);
+      setTimerRunning(scoreboardData.timer_running);
+      setSelectedQuarto(scoreboardData.current_quarter);
+    } catch (err: any) {
+      console.error('Erro ao buscar placar:', err);
+    }
+  };
+
   // Carregar dados inicialmente
   useEffect(() => {
     fetchGameData();
+    fetchScoreboard();
   }, [link]);
 
-  // Atualizar automaticamente a cada 15 segundos
+  // Atualizar placar em tempo real a cada 2 segundos
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
-      fetchGameData();
-    }, 15000); // 15 segundos
+      fetchScoreboard();
+    }, 2000); // 2 segundos para atualização em tempo real
 
     return () => clearInterval(interval);
   }, [link, loading]);
@@ -108,6 +117,10 @@ export default function PublicGameView() {
             quarter={selectedQuarto}
             opponentName={game.opponent}
             readOnly={true}
+            initialTime={timerTime}
+            initialRunning={timerRunning}
+            onTimeChange={setTimerTime}
+            onRunningChange={setTimerRunning}
           />
         </div>
 

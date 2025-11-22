@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { api, createGame, createGameStats, getPlayers, getGameStats, updateGame, createPlayer, getGames, getGame } from "../services/api";
+import { api, createGame, createGameStats, getPlayers, getGameStats, updateGame, createPlayer, getGames, getGame, updateScoreboard } from "../services/api";
 import { Button } from '../components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { Game, GameStats } from "../types/game";
@@ -145,6 +145,7 @@ const Painel: React.FC = () => {
   // Estados para o placar
   const [awayScore, setAwayScore] = useState(0);
   const [publicLink, setPublicLink] = useState<string | null>(null);
+  const [timerTime, setTimerTime] = useState(720); // 12 minutos em segundos
 
   // Estados para controle de jogadores em quadra e tempo de jogo
   const [playersOnCourt, setPlayersOnCourt] = useState<number[]>([]); // Array ordenado ao invés de Set
@@ -673,7 +674,7 @@ const Painel: React.FC = () => {
     return hasStatsToSaveForQuarter(selectedQuarto);
   }
 
-  const handleSaveStats = async (
+  const handleSaveStats = useCallback(async (
     quarto: number = selectedQuarto,
     { showToast = true, resetAfter = false }: { showToast?: boolean; resetAfter?: boolean } = {},
   ) => {
@@ -791,7 +792,7 @@ const Painel: React.FC = () => {
     } finally {
       setSavingStats(false);
     }
-  };
+  }, [gameId, statistics, playerMinutes, selectedQuarto, hasStatsToSaveForQuarter, initialPlayerStats]);
 
   const persistAllUnsavedStats = async (): Promise<boolean> => {
     if (!gameId) return false;
@@ -1075,8 +1076,65 @@ const Painel: React.FC = () => {
   // Callback para mudanças no cronômetro
   const handleTimerStateChange = (isRunning: boolean, time: number) => {
     setTimerIsRunning(isRunning);
+    setTimerTime(time);
     setLastTickTime(Date.now());
+    
+    // Salvar estado do placar no backend
+    if (gameId) {
+      updateScoreboard(gameId, {
+        timer_time: time,
+        timer_running: isRunning,
+        current_quarter: selectedQuarto,
+        away_score: awayScore
+      }).catch(err => {
+        console.error('Erro ao salvar estado do placar:', err);
+      });
+    }
   };
+
+  // Salvar estado do placar quando awayScore muda
+  useEffect(() => {
+    if (gameId && gameSaved) {
+      updateScoreboard(gameId, {
+        away_score: awayScore,
+        timer_time: timerTime,
+        timer_running: timerIsRunning,
+        current_quarter: selectedQuarto
+      }).catch(err => {
+        console.error('Erro ao salvar estado do placar:', err);
+      });
+    }
+  }, [awayScore, gameId, gameSaved, timerTime, timerIsRunning, selectedQuarto]);
+
+  // Save automático de estatísticas a cada 30 segundos
+  useEffect(() => {
+    if (!gameId || !gameSaved) return;
+
+    const autoSaveInterval = setInterval(async () => {
+      // Verificar se há estatísticas para salvar no quarto atual
+      const quartoStats = statistics[selectedQuarto] || {};
+      const hasStats = Object.keys(quartoStats).length > 0 && 
+        Object.values(quartoStats).some((s: any) => {
+          return (s.two?.attempts > 0 || s.two?.hits > 0 ||
+                  s.three?.attempts > 0 || s.three?.hits > 0 ||
+                  s.freeThrow?.attempts > 0 || s.freeThrow?.hits > 0 ||
+                  s.rebounds > 0 || s.assists > 0 || s.fouls > 0 ||
+                  s.blocks > 0 || s.turnovers > 0 || s.steals > 0 ||
+                  s.interference > 0 || s.rebo_ofensivo > 0 ||
+                  s.rebo_defensivo > 0 || s.fr > 0);
+        });
+      
+      if (hasStats) {
+        try {
+          await handleSaveStats(selectedQuarto, { showToast: false, resetAfter: false });
+        } catch (error) {
+          console.error('Erro no save automático:', error);
+        }
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(autoSaveInterval);
+  }, [gameId, gameSaved, selectedQuarto, statistics, handleSaveStats]);
 
   // Abrir modal de substituição
   const handleOpenSubstitution = (player: Player, index: number) => {
@@ -1163,6 +1221,10 @@ const Painel: React.FC = () => {
           quarter={selectedQuarto}
           onTimerStateChange={handleTimerStateChange}
           opponentName={gameForm.adversario || selectedGame?.opponent || "VISITANTE"}
+          initialTime={timerTime}
+          initialRunning={timerIsRunning}
+          onTimeChange={setTimerTime}
+          onRunningChange={setTimerIsRunning}
         />
       )}
 

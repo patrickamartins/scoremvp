@@ -131,6 +131,28 @@ export const deleteGame = async (id: number): Promise<void> => {
   await api.delete(`/games/${id}`);
 };
 
+export const updateScoreboard = async (id: number, scoreboardData: {
+  away_score?: number;
+  timer_time?: number;
+  timer_running?: boolean;
+  current_quarter?: number;
+}): Promise<Game> => {
+  const response = await api.put(`/games/${id}/scoreboard`, scoreboardData);
+  return response.data;
+};
+
+export const getPublicScoreboard = async (publicLink: string): Promise<{
+  home_score: number;
+  away_score: number;
+  timer_time: number;
+  timer_running: boolean;
+  current_quarter: number;
+  opponent: string;
+}> => {
+  const response = await api.get(`/games/public/link/${publicLink}/scoreboard`);
+  return response.data;
+};
+
 // —— Game Stats —————————————————————————————
 
 export const getGameStats = async (gameId: number): Promise<GameStats[]> => {

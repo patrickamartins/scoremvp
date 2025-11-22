@@ -1,5 +1,5 @@
 from app.models.base import Base, game_player
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -17,6 +17,11 @@ class Game(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, server_default="now()")
     public_link = Column(String, unique=True, nullable=True, index=True)
+    # Estado do placar
+    away_score = Column(Integer, default=0)
+    timer_time = Column(Integer, default=720)  # 12 minutos em segundos
+    timer_running = Column(Boolean, default=False)
+    current_quarter = Column(Integer, default=1)
 
     # Relacionamentos
     owner = relationship("User", back_populates="games")

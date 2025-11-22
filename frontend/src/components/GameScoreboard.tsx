@@ -10,6 +10,10 @@ interface GameScoreboardProps {
   onTimerStateChange?: (isRunning: boolean, time: number) => void;
   opponentName?: string;
   readOnly?: boolean;
+  initialTime?: number;
+  initialRunning?: boolean;
+  onTimeChange?: (time: number) => void;
+  onRunningChange?: (running: boolean) => void;
 }
 
 export function GameScoreboard({ 
@@ -20,43 +24,64 @@ export function GameScoreboard({
   onQuarterChange,
   onTimerStateChange,
   opponentName = "VISITANTE",
-  readOnly = false
+  readOnly = false,
+  initialTime = 720,
+  initialRunning = false,
+  onTimeChange,
+  onRunningChange
 }: GameScoreboardProps) {
-  const [time, setTime] = useState(600); // 10 minutos em segundos
-  const [isRunning, setIsRunning] = useState(false);
+  const [time, setTime] = useState(initialTime); // 12 minutos em segundos
+  const [isRunning, setIsRunning] = useState(initialRunning);
   const [showTimeModal, setShowTimeModal] = useState(false);
-  const [tempMinutes, setTempMinutes] = useState(10);
+  const [tempMinutes, setTempMinutes] = useState(12);
   const [tempSeconds, setTempSeconds] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousQuarter = useRef(quarter);
 
+  // Sincronizar com props externas (para visualização pública)
+  useEffect(() => {
+    if (initialTime !== undefined && initialTime !== time) {
+      setTime(initialTime);
+    }
+  }, [initialTime]);
+
+  useEffect(() => {
+    if (initialRunning !== undefined && initialRunning !== isRunning) {
+      setIsRunning(initialRunning);
+    }
+  }, [initialRunning]);
+
   // Resetar cronômetro ao trocar de quarto
   useEffect(() => {
     if (previousQuarter.current !== quarter) {
-      setTime(600);
+      setTime(720); // 12 minutos
       setIsRunning(false);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       previousQuarter.current = quarter;
+      if (onTimeChange) onTimeChange(720);
+      if (onRunningChange) onRunningChange(false);
     }
-  }, [quarter]);
+  }, [quarter, onTimeChange, onRunningChange]);
 
   // Gerenciar o cronômetro
   useEffect(() => {
-    if (isRunning && time > 0) {
+    if (isRunning && time > 0 && !readOnly) {
       intervalRef.current = setInterval(() => {
         setTime((prevTime) => {
+          const newTime = prevTime <= 1 ? 0 : prevTime - 1;
+          if (onTimeChange) onTimeChange(newTime);
           if (prevTime <= 1) {
             setIsRunning(false);
+            if (onRunningChange) onRunningChange(false);
             if (intervalRef.current) {
               clearInterval(intervalRef.current);
               intervalRef.current = null;
             }
-            return 0;
           }
-          return prevTime - 1;
+          return newTime;
         });
       }, 1000);
     } else if (!isRunning && intervalRef.current) {
@@ -70,7 +95,7 @@ export function GameScoreboard({
         intervalRef.current = null;
       }
     };
-  }, [isRunning, time]);
+  }, [isRunning, time, readOnly, onTimeChange, onRunningChange]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -79,8 +104,10 @@ export function GameScoreboard({
   };
 
   const handlePlayPause = () => {
+    if (readOnly) return;
     const newState = !isRunning;
     setIsRunning(newState);
+    if (onRunningChange) onRunningChange(newState);
     if (onTimerStateChange) {
       onTimerStateChange(newState, time);
     }
@@ -102,10 +129,13 @@ export function GameScoreboard({
   };
 
   const handleSetTime = () => {
+    if (readOnly) return;
     const newTime = (tempMinutes * 60) + tempSeconds;
     setTime(newTime);
+    if (onTimeChange) onTimeChange(newTime);
     setShowTimeModal(false);
     setIsRunning(false);
+    if (onRunningChange) onRunningChange(false);
   };
 
   const handleAwayScoreIncrement = () => {

@@ -215,3 +215,67 @@ def ler_jogo_por_link(
     if not jogo:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
     return schemas.GameOut.model_validate(jogo)
+
+@router.put(
+    "/{game_id}/scoreboard",
+    response_model=schemas.GameOut,
+    summary="Atualiza o estado do placar",
+)
+def atualizar_placar(
+    game_id: int,
+    scoreboard_data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    jogo = db.query(models.Game).filter(
+        models.Game.id == game_id,
+        models.Game.owner_id == current_user.id
+    ).first()
+    if not jogo:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    
+    if "away_score" in scoreboard_data:
+        jogo.away_score = scoreboard_data.get("away_score", 0)
+    if "timer_time" in scoreboard_data:
+        jogo.timer_time = scoreboard_data.get("timer_time", 720)
+    if "timer_running" in scoreboard_data:
+        jogo.timer_running = scoreboard_data.get("timer_running", False)
+    if "current_quarter" in scoreboard_data:
+        jogo.current_quarter = scoreboard_data.get("current_quarter", 1)
+    
+    db.commit()
+    db.refresh(jogo)
+    return schemas.GameOut.model_validate(jogo)
+
+@router.get(
+    "/public/link/{public_link}/scoreboard",
+    summary="Busca apenas o estado do placar (para visualização pública)",
+)
+def buscar_placar_publico(
+    public_link: str,
+    db: Session = Depends(get_db),
+):
+    jogo = db.query(models.Game).filter(
+        models.Game.public_link == public_link
+    ).first()
+    if not jogo:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    
+    # Calcular pontuação casa a partir das estatísticas
+    from sqlalchemy import func
+    from app.models import Statistic
+    
+    home_score_result = db.query(
+        func.sum(Statistic.two_made * 2 + Statistic.three_made * 3 + Statistic.free_throw_made)
+    ).filter(Statistic.game_id == jogo.id).scalar()
+    
+    home_score = home_score_result or 0
+    
+    return {
+        "home_score": home_score,
+        "away_score": jogo.away_score or 0,
+        "timer_time": jogo.timer_time or 720,
+        "timer_running": jogo.timer_running or False,
+        "current_quarter": jogo.current_quarter or 1,
+        "opponent": jogo.opponent
+    }

@@ -39,6 +39,10 @@ class GameOut(BaseModel):
     players: List[PlayerOut] = []
     analise: Optional[str] = None
     public_link: Optional[str] = None
+    away_score: Optional[int] = 0
+    timer_time: Optional[int] = 720
+    timer_running: Optional[bool] = False
+    current_quarter: Optional[int] = 1
     # Adicione outros campos/relacionamentos se necessário
 
     class Config:
