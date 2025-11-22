@@ -43,8 +43,7 @@ ENV/
 .env.*.local
 
 # Docker
-Dockerfile
-.dockerignore
+# Não ignorar Dockerfile e .dockerignore - necessários para o build
 
 # Testes
 tests/
