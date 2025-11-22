@@ -29,8 +29,6 @@ def criar_jogo(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    data = game_in.dict()
-    
     # Gerar link único para visualização pública
     public_link = secrets.token_urlsafe(32)
     
@@ -39,10 +37,10 @@ def criar_jogo(
         public_link = secrets.token_urlsafe(32)
     
     novo = models.Game(
-        opponent=data['opponent'],
-        date=data['date'],
-        location=data.get('location'),
-        categoria=data.get('category'),
+        opponent=game_in.opponent,
+        date=game_in.date,
+        location=game_in.location,
+        categoria=game_in.category,
         status="PENDENTE",
         owner_id=current_user.id,
         public_link=public_link
@@ -52,8 +50,8 @@ def criar_jogo(
     db.refresh(novo)
 
     # Adiciona os jogadores selecionados
-    if data.get('players'):
-        for player_id in data['players']:
+    if game_in.players:
+        for player_id in game_in.players:
             player = db.query(models.Player).filter(models.Player.id == player_id).first()
             if player:
                 novo.players.append(player)

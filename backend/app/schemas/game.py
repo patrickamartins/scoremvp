@@ -11,6 +11,7 @@ class GameCreate(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     owner_id: Optional[int] = None
+    players: Optional[List[int]] = None
     analise: Optional[str] = None
     # Adicione outros campos necessários para criação
 
