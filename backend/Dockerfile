@@ -14,10 +14,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copiar start.sh
-COPY start.sh .
-RUN chmod +x start.sh
-
 # Copiar apenas a pasta app do backend
 COPY app ./app
 
@@ -27,5 +23,12 @@ ENV PYTHONPATH=/app
 ENV PORT=8000
 EXPOSE ${PORT}
 
-CMD ["./start.sh"]
+# Criar diretório de mídia
+RUN mkdir -p /app/app/media/avatars
+
+# Criar script de entrada simples
+RUN echo '#!/bin/sh\nPORT=${PORT:-8000}\nexec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --log-level info' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]
 
