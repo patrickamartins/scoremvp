@@ -43,6 +43,7 @@ type StatGroup = {
   fouls_drawn: number;
   total_fouls: number;
   interceptions: number;
+  minutes_played: number;
 };
 
 const periods = [
@@ -76,6 +77,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
     fouls_drawn: stat.faltas_recebidas ?? stat.fr ?? stat.fouls_drawn ?? 0,
     total_fouls: stat.fouls ?? stat.total_faltas ?? stat.total_fouls ?? 0,
     interceptions: stat.interference ?? stat.int ?? 0,
+    minutes_played: stat.minutes_played ?? 0,
   });
 
   const groupedStats = useMemo(() => {
@@ -99,6 +101,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
       fouls_drawn: 0,
       total_fouls: 0,
       interceptions: 0,
+      minutes_played: 0,
     });
 
     const map = new Map<number, StatGroup>();
@@ -133,6 +136,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
       bucket.fouls_drawn += stat.fouls_drawn;
       bucket.total_fouls += stat.total_fouls;
       bucket.interceptions += stat.interceptions;
+      bucket.minutes_played += stat.minutes_played;
       map.set(stat.player_id, bucket);
     });
 
@@ -161,6 +165,58 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
   }, [groupedStats, players]);
 
   const hasData = rows.length > 0;
+
+  // Calcular totais de todas as colunas
+  const totals = useMemo(() => {
+    const total: StatGroup = {
+      player_id: 0,
+      points: 0,
+      two_attempts: 0,
+      two_made: 0,
+      three_attempts: 0,
+      three_made: 0,
+      free_throw_attempts: 0,
+      free_throw_made: 0,
+      offensive_rebounds: 0,
+      defensive_rebounds: 0,
+      total_rebounds: 0,
+      assists: 0,
+      turnovers: 0,
+      steals: 0,
+      blocks: 0,
+      personal_fouls: 0,
+      fouls_drawn: 0,
+      total_fouls: 0,
+      interceptions: 0,
+      minutes_played: 0,
+    };
+
+    rows.forEach(({ stat }) => {
+      if (stat) {
+        total.points += stat.points;
+        total.two_attempts += stat.two_attempts;
+        total.two_made += stat.two_made;
+        total.three_attempts += stat.three_attempts;
+        total.three_made += stat.three_made;
+        total.free_throw_attempts += stat.free_throw_attempts;
+        total.free_throw_made += stat.free_throw_made;
+        total.offensive_rebounds += stat.offensive_rebounds;
+        total.defensive_rebounds += stat.defensive_rebounds;
+        total.total_rebounds += stat.total_rebounds;
+        total.assists += stat.assists;
+        total.turnovers += stat.turnovers;
+        total.steals += stat.steals;
+        total.blocks += stat.blocks;
+        total.personal_fouls += stat.personal_fouls;
+        total.fouls_drawn += stat.fouls_drawn;
+        total.total_fouls += stat.personal_fouls + stat.fouls_drawn;
+        total.interceptions += stat.interceptions;
+        total.minutes_played += stat.minutes_played;
+      }
+    });
+
+    return total;
+  }, [rows]);
 
   const calcEF = (s: StatGroup) => {
     const acertos = (s.two_made || 0) + (s.three_made || 0) + (s.free_throw_made || 0);
@@ -209,6 +265,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
                 <th className="text-center">Nº</th>
                 <th className="text-center">JOGADOR</th>
                 <th className="text-center">POS</th>
+                <th className="text-center">MIN</th>
                 <th className="text-center">PTS</th>
                 <th className="text-center">2P</th>
                 <th className="text-center">2PTS</th>
@@ -238,6 +295,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
                     <td className="text-center">{player.number ?? '-'}</td>
                     <td className="text-center min-w-[120px] max-w-[160px] truncate">{player.name ?? '-'}</td>
                     <td className="text-center">{getPosSigla(typeof player.position === 'string' ? player.position : undefined)}</td>
+                    <td className="text-center">{stat?.minutes_played ? stat.minutes_played.toFixed(1) : '0.0'}</td>
                     <td className="text-center">{stat?.points ?? 0}</td>
                     <td className="text-center">{stat?.two_attempts ?? 0}</td>
                     <td className="text-center">{stat?.two_made ?? 0}</td>
@@ -261,6 +319,32 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="bg-gray-100 font-bold border-t-2 border-gray-400">
+                <td className="text-center" colSpan={2}>TOTAL</td>
+                <td className="text-center">-</td>
+                <td className="text-center">{totals.minutes_played.toFixed(1)}</td>
+                <td className="text-center">{totals.points}</td>
+                <td className="text-center">{totals.two_attempts}</td>
+                <td className="text-center">{totals.two_made}</td>
+                <td className="text-center">{totals.three_attempts}</td>
+                <td className="text-center">{totals.three_made}</td>
+                <td className="text-center">{totals.free_throw_attempts}</td>
+                <td className="text-center">{totals.free_throw_made}</td>
+                <td className="text-center">{totals.offensive_rebounds}</td>
+                <td className="text-center">{totals.defensive_rebounds}</td>
+                <td className="text-center">{totals.total_rebounds}</td>
+                <td className="text-center">{totals.assists}</td>
+                <td className="text-center">{totals.turnovers}</td>
+                <td className="text-center">{totals.steals}</td>
+                <td className="text-center">{totals.blocks}</td>
+                <td className="text-center">{totals.personal_fouls}</td>
+                <td className="text-center">{totals.fouls_drawn}</td>
+                <td className="text-center">{totals.total_fouls}</td>
+                <td className="text-center">{totals.interceptions}</td>
+                <td className="text-center">{calcEF(totals)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <div className="mt-6 p-4 bg-gray-50 rounded text-xs text-gray-700">
@@ -268,6 +352,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
           <b>Nº</b>: Número do jogador &nbsp;|&nbsp;
           <b>JOGADOR</b>: Nome do Jogador &nbsp;|&nbsp;
           <b>POS</b>: Posição (ARM=Armador, ALA=Ala, ALP=Ala-Pivô, AAR=Ala-Armador, PIV=Pivô) &nbsp;|&nbsp;
+          <b>MIN</b>: Minutos jogados &nbsp;|&nbsp;
           <b>PTS</b>: Total de pontos &nbsp;|&nbsp;
           <b>2P</b>: Tentativas de 2 pontos &nbsp;|&nbsp;
           <b>2PTS</b>: Cestas de 2 pontos &nbsp;|&nbsp;

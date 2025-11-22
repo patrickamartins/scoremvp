@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Card, Input, Label } from "../components/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { api, createGame, createGameStats, getPlayers, getGameStats, updateGame, createPlayer, getGames, getGame } from "../services/api";
@@ -6,8 +6,10 @@ import { Button } from '../components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/Select';
 import { Game, GameStats } from "../types/game";
 import { Player } from "../types/player";
-import { Trash2 } from 'lucide-react';
+import { Trash2, RefreshCw } from 'lucide-react';
 import { BoxScoreTable } from '../components/BoxScoreTable';
+import { GameScoreboard } from '../components/GameScoreboard';
+import { SubstitutionModal } from '../components/SubstitutionModal';
 
 interface Player {
   id: number;
@@ -139,6 +141,17 @@ const Painel: React.FC = () => {
   const [saveModalMessage, setSaveModalMessage] = useState("");
   const [showBoxScoreModal, setShowBoxScoreModal] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
+
+  // Estados para o placar
+  const [awayScore, setAwayScore] = useState(0);
+
+  // Estados para controle de jogadores em quadra e tempo de jogo
+  const [playersOnCourt, setPlayersOnCourt] = useState<number[]>([]); // Array ordenado ao invés de Set
+  const [playerMinutes, setPlayerMinutes] = useState<Record<number, Record<number, number>>>({});
+  const [lastTickTime, setLastTickTime] = useState<number>(Date.now());
+  const [timerIsRunning, setTimerIsRunning] = useState(false);
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [playerToSubstitute, setPlayerToSubstitute] = useState<{ player: Player; index: number } | null>(null);
 
   // Buscar todas as jogadoras do banco para autocomplete ao abrir modal
   useEffect(() => {
@@ -682,29 +695,35 @@ const Painel: React.FC = () => {
 
     setSavingStats(true);
     try {
-      const statsToSave = Object.entries(statistics[quarto] || {}).map(([playerId, stats]) => ({
-        game_id: gameId,
-        player_id: parseInt(playerId),
-        points: (stats.two.hits * 2) + (stats.three.hits * 3) + stats.freeThrow.hits,
-        rebounds: (stats.rebo_ofensivo || 0) + (stats.rebo_defensivo || 0),
-        assists: stats.assists,
-        steals: stats.steals,
-        blocks: stats.blocks,
-        fp: stats.fouls, // falta pessoal
-        fouls: stats.fouls, // total de faltas (mesmo valor de fp por enquanto)
-        quarter: quarto,
-        two_attempts: stats.two.attempts,
-        two_made: stats.two.hits,
-        three_attempts: stats.three.attempts,
-        three_made: stats.three.hits,
-        free_throw_attempts: stats.freeThrow.attempts,
-        free_throw_made: stats.freeThrow.hits,
-        interference: stats.interference,
-        rebo_ofensivo: stats.rebo_ofensivo || 0,
-        rebo_defensivo: stats.rebo_defensivo || 0,
-        fr: stats.fr || 0,
-        turnovers: stats.turnovers || 0,
-      }));
+      const statsToSave = Object.entries(statistics[quarto] || {}).map(([playerId, stats]) => {
+        const pid = parseInt(playerId);
+        const minutesPlayed = (playerMinutes[quarto]?.[pid] || 0) / 60; // Converter segundos para minutos
+        
+        return {
+          game_id: gameId,
+          player_id: pid,
+          points: (stats.two.hits * 2) + (stats.three.hits * 3) + stats.freeThrow.hits,
+          rebounds: (stats.rebo_ofensivo || 0) + (stats.rebo_defensivo || 0),
+          assists: stats.assists,
+          steals: stats.steals,
+          blocks: stats.blocks,
+          fp: stats.fouls, // falta pessoal
+          fouls: stats.fouls, // total de faltas (mesmo valor de fp por enquanto)
+          quarter: quarto,
+          two_attempts: stats.two.attempts,
+          two_made: stats.two.hits,
+          three_attempts: stats.three.attempts,
+          three_made: stats.three.hits,
+          free_throw_attempts: stats.freeThrow.attempts,
+          free_throw_made: stats.freeThrow.hits,
+          interference: stats.interference,
+          rebo_ofensivo: stats.rebo_ofensivo || 0,
+          rebo_defensivo: stats.rebo_defensivo || 0,
+          fr: stats.fr || 0,
+          turnovers: stats.turnovers || 0,
+          minutes_played: parseFloat(minutesPlayed.toFixed(2)), // Arredondar para 2 casas decimais
+        };
+      });
 
       for (const stat of statsToSave) {
         await createGameStats(gameId, stat);
@@ -974,6 +993,98 @@ const Painel: React.FC = () => {
     fr: 0,
   };
 
+  // Calcular pontuação casa em tempo real baseado nas estatísticas
+  const homeScore = useMemo(() => {
+    let total = 0;
+    Object.values(statistics).forEach((quartoStats) => {
+      Object.values(quartoStats).forEach((playerStats: any) => {
+        total += (playerStats.two?.hits ?? 0) * 2;
+        total += (playerStats.three?.hits ?? 0) * 3;
+        total += (playerStats.freeThrow?.hits ?? 0);
+      });
+    });
+    return total;
+  }, [statistics]);
+
+  // Inicializar jogadores em quadra automaticamente (primeiros 5)
+  useEffect(() => {
+    if (players.length > 0 && playersOnCourt.length === 0) {
+      const firstFive = players.slice(0, Math.min(5, players.length)).map(p => p.id);
+      setPlayersOnCourt(firstFive);
+    }
+  }, [players, playersOnCourt.length]);
+
+  // Acumular tempo dos jogadores em quadra quando cronômetro está rodando
+  useEffect(() => {
+    if (!timerIsRunning || playersOnCourt.length === 0) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const deltaSeconds = (now - lastTickTime) / 1000;
+      
+      setPlayerMinutes(prev => {
+        const updated = { ...prev };
+        if (!updated[selectedQuarto]) {
+          updated[selectedQuarto] = {};
+        }
+        
+        playersOnCourt.forEach(playerId => {
+          updated[selectedQuarto][playerId] = (updated[selectedQuarto][playerId] || 0) + deltaSeconds;
+        });
+        
+        return updated;
+      });
+      
+      setLastTickTime(now);
+    }, 1000); // Atualizar a cada segundo
+
+    return () => clearInterval(interval);
+  }, [timerIsRunning, playersOnCourt, selectedQuarto, lastTickTime]);
+
+  // Resetar tempo ao trocar de quarto
+  useEffect(() => {
+    setLastTickTime(Date.now());
+  }, [selectedQuarto]);
+
+  // Callback para mudanças no cronômetro
+  const handleTimerStateChange = (isRunning: boolean, time: number) => {
+    setTimerIsRunning(isRunning);
+    setLastTickTime(Date.now());
+  };
+
+  // Abrir modal de substituição
+  const handleOpenSubstitution = (player: Player, index: number) => {
+    setPlayerToSubstitute({ player, index });
+    setShowSubstitutionModal(true);
+  };
+
+  // Realizar substituição mantendo a posição
+  const handleSubstitute = (newPlayerId: number) => {
+    if (!playerToSubstitute) return;
+
+    setPlayersOnCourt(prev => {
+      const updated = [...prev];
+      updated[playerToSubstitute.index] = newPlayerId; // Substitui na mesma posição
+      return updated;
+    });
+
+    setPlayerToSubstitute(null);
+  };
+
+  // Obter jogadores no banco (não em quadra)
+  const benchPlayers = useMemo(() => {
+    return players.filter(p => !playersOnCourt.includes(p.id));
+  }, [players, playersOnCourt]);
+
+  // Obter jogadores em quadra na ordem do array
+  const courtPlayers = useMemo(() => {
+    return playersOnCourt
+      .map(playerId => players.find(p => p.id === playerId))
+      .filter((p): p is Player => p !== undefined);
+  }, [players, playersOnCourt]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -985,6 +1096,17 @@ const Painel: React.FC = () => {
   return (
     <div className="w-full h-full">
       <h1 className="text-3xl font-bold text-[#2563eb] mb-6">Dados da Partida</h1>
+
+      {/* Placar - exibido apenas quando o jogo está salvo */}
+      {gameSaved && (
+        <GameScoreboard
+          homeScore={homeScore}
+          awayScore={awayScore}
+          onAwayScoreChange={setAwayScore}
+          quarter={selectedQuarto}
+          onTimerStateChange={handleTimerStateChange}
+        />
+      )}
 
       {/* Formulário do Jogo */}
       {!gameSaved ? (
@@ -1130,7 +1252,7 @@ const Painel: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                  {players.map((p, idx) => {
+                  {courtPlayers.map((p, idx) => {
                   // Acumular estatísticas de todos os quartos até o quarto selecionado (incluindo o atual)
                   let accumulatedStats = { ...initialPlayerStats };
                   for (let q = 1; q <= selectedQuarto; q++) {
@@ -1423,13 +1545,23 @@ const Painel: React.FC = () => {
                       </td>
                       {/* AÇÕES */}
                       <td className="border px-2 py-2 text-center">
-                        <button
-                          onClick={() => handleRemovePlayerFromGame(p.id)}
-                          className="text-red-600 hover:text-red-800 p-1"
-                          title="Remover jogador da partida"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleOpenSubstitution(p, idx)}
+                            className="text-blue-600 hover:text-blue-800 p-1"
+                            title="Substituir jogador"
+                            disabled={benchPlayers.length === 0}
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleRemovePlayerFromGame(p.id)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            title="Remover jogador da partida"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1657,6 +1789,19 @@ const Painel: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de substituição */}
+      {showSubstitutionModal && playerToSubstitute && (
+        <SubstitutionModal
+          onClose={() => {
+            setShowSubstitutionModal(false);
+            setPlayerToSubstitute(null);
+          }}
+          onSubstitute={handleSubstitute}
+          benchPlayers={benchPlayers}
+          currentPlayerName={playerToSubstitute.player.name}
+        />
       )}
 
       {/* Modal de preview do BoxScore */}

@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     MAILERSEND_SENDER_EMAIL: str = os.getenv("MAILERSEND_SENDER_EMAIL", "no-reply@scoremvp.com.br")
     MAILERSEND_SENDER_NAME: str = "ScoreMVP"
     
-    FRONTEND_URL: str = "https://scoremvp-frontend-production.up.railway.app"
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://scoremvp-frontend-production.up.railway.app")
     
     DATABASE_URL: Optional[str] = None
     ALGORITHM: str = "HS256"
