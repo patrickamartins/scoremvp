@@ -21,7 +21,7 @@ def add_scoreboard_columns():
 
         engine = create_engine(database_url)
 
-        with engine.connect() as conn:
+        with engine.begin() as conn:  # Usar begin() para transação automática
             columns_to_add = [
                 ("away_score", "INTEGER DEFAULT 0"),
                 ("timer_time", "INTEGER DEFAULT 720"),
@@ -46,7 +46,6 @@ def add_scoreboard_columns():
                         ALTER TABLE games
                         ADD COLUMN {col_name} {col_type}
                     """))
-                    conn.commit()
                     print(f"✅ Coluna {col_name} adicionada com sucesso!")
 
             print("\n✨ Estrutura final da tabela games:")

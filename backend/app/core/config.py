@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = [
         "https://scoremvp-frontend-production.up.railway.app",
         "https://scoremvp.com.br",
+        "https://www.scoremvp.com.br",
         "http://localhost:3000",
         "http://localhost:3003",
         "http://localhost:5173",
