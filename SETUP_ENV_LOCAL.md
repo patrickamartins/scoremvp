@@ -26,6 +26,7 @@ FRONTEND_URL=http://localhost:3003
 ENVIRONMENT=development
 
 # Stripe Configuration (Test Mode)
+# IMPORTANTE: Substitua pelas suas chaves reais do Stripe Dashboard
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
 STRIPE_API_KEY=sk_test_your_stripe_secret_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
@@ -35,12 +36,13 @@ STRIPE_PRICE_ID_PRO=price_xxxxx
 STRIPE_PRICE_ID_TEAM=price_xxxxx
 
 # Email Configuration (MailerSend)
-MAILERSEND_API_KEY=mlsn.633a7b62f3a7bbea05355a9fbd6828756c31b6a07effb34d03d3addbd71b4e1b
+# IMPORTANTE: Substitua pelas suas credenciais reais do MailerSend
+MAILERSEND_API_KEY=your_mailersend_api_key_here
 MAILERSEND_SMTP_HOST=smtp.mailersend.net
 MAILERSEND_SMTP_PORT=587
-MAILERSEND_SMTP_USERNAME=MS_xqZKL5@scoremvp.com
-MAILERSEND_SMTP_PASSWORD=mssp.yAA7z00.yzkq3403xv04d796.WgibWXG
-MAILERSEND_SENDER_EMAIL=no-reply@scoremvp.com.br
+MAILERSEND_SMTP_USERNAME=your_mailersend_smtp_username_here
+MAILERSEND_SMTP_PASSWORD=your_mailersend_smtp_password_here
+MAILERSEND_SENDER_EMAIL=no-reply@scoremvp.com
 MAILERSEND_SENDER_NAME=ScoreMVP
 ```
 
@@ -50,7 +52,8 @@ Crie o arquivo `frontend/.env` com o seguinte conteúdo:
 
 ```env
 VITE_API_URL=http://localhost:8000/api
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51RN6g1C4MzjUUyB7VX01q3f4OiOu8izn5BKLNnUmKkfICrvjIX5S2MFvmmF7zokjrYszc1EsJXnh2rpcxZ3c2yH50016TzlQQK
+# IMPORTANTE: Substitua pela sua chave pública do Stripe Dashboard
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
 ```
 
 ## Próximos Passos
