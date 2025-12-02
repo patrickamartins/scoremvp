@@ -11,6 +11,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from '../store';
+import { api } from '../services/api';
 
 interface MenuItem {
   path: string;
@@ -21,14 +22,39 @@ interface MenuItem {
 
 interface AdminLayoutProps {
   children?: React.ReactNode;
-  user?: { name: string; email: string; role: string };
+  user?: { name: string; email: string; role: string; plan?: string };
 }
 
 export function AdminLayout({ user: userProp }: AdminLayoutProps) {
   const storeUser = useAuthStore(state => state.user);
-  const user = userProp || storeUser || { name: 'Admin', email: '', role: 'superadmin' };
+  const setUser = useAuthStore(state => state.setUser);
+  const user = userProp || storeUser || { name: 'Admin', email: '', role: 'superadmin', plan: 'free' };
   const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
+
+  // Buscar dados do usuário se não estiver no store
+  useEffect(() => {
+    if (!storeUser && !userProp) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        api.get('/auth/me')
+          .then(response => {
+            const userData = response.data;
+            setUser({
+              id: userData.id,
+              name: userData.name,
+              email: userData.email,
+              role: userData.role,
+              plan: userData.plan,
+              token: token,
+            });
+          })
+          .catch(error => {
+            console.error('Erro ao buscar dados do usuário:', error);
+          });
+      }
+    }
+  }, [storeUser, userProp, setUser]);
 
   // Lógica de menus por papel
   let mainMenuItems: MenuItem[] = [];
@@ -95,7 +121,14 @@ export function AdminLayout({ user: userProp }: AdminLayoutProps) {
     // Aqui pode-se disparar evento global ou salvar no localStorage/histórico
   }
 
-  // Nome do plano por papel
+  // Nome do plano por valor do plan
+  const planoPorPlan: Record<string, string> = {
+    free: 'Player',
+    pro: 'MVP',
+    team: 'Team',
+  };
+
+  // Nome do plano por role (fallback)
   const planoPorRole: Record<string, string> = {
     superadmin: 'Master',
     team_admin: 'Gestor',
@@ -103,6 +136,9 @@ export function AdminLayout({ user: userProp }: AdminLayoutProps) {
     player: 'Atleta',
     guest: 'Visitante',
   };
+
+  // Determinar o plano a exibir
+  const planoExibido = user.plan ? (planoPorPlan[user.plan] || user.plan.toUpperCase()) : planoPorRole[user.role] || 'Visitante';
 
   return (
     <div className="flex" style={{ fontFamily: 'Jakarta Sans, sans-serif' }}>
@@ -161,7 +197,7 @@ export function AdminLayout({ user: userProp }: AdminLayoutProps) {
             <div className="flex flex-col items-end mr-2">
               <span className="font-semibold text-[#7B8BB2]">{user.name}</span>
               <span className="text-xs text-gray-400">{user.email}</span>
-              <span className="text-xs text-blue-600 font-bold capitalize">{planoPorRole[user.role]}</span>
+              <span className="text-xs text-blue-600 font-bold capitalize">{planoExibido}</span>
             </div>
             <button className="w-10 h-10 rounded-full border border-[#E3E3E3] overflow-hidden bg-[#F3F3F3] flex items-center justify-center">
               <UserCircle size={24} className="text-[#7B8BB2]" />

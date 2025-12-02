@@ -3,9 +3,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# Usar DATABASE_URL do ambiente diretamente, com fallback para settings
-import os
-DATABASE_URL = os.getenv("DATABASE_URL") or settings.SQLALCHEMY_DATABASE_URI
+# SEMPRE usar settings.SQLALCHEMY_DATABASE_URI que já tem a lógica correta
+# de priorizar .env e ignorar DATABASE_URL do ambiente se usar usuário errado
+DATABASE_URL = settings.SQLALCHEMY_DATABASE_URI
 
 # Configuracao do engine
 engine = create_engine(

@@ -22,12 +22,13 @@ const publics = [
   { value: 'mvp', label: 'Apenas MVP' },
 ];
 
-// Simula contexto de autenticação
-const useAuth = () => ({ user: { id: 1, name: 'Admin', role: 'admin' } });
+import { useAuthStore } from '../store';
 
 export default function NotificacoesPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const user = useAuthStore(state => state.user);
+  const isAdmin = user?.role === 'superadmin';
+  const isTeam = user?.role === 'team_admin';
+  const canSendNotifications = isAdmin || isTeam;
   const [form, setForm] = useState({ text: '', url: '', public: 'all' });
   const [sending, setSending] = useState(false);
   const [log, setLog] = useState<any[]>([]);
@@ -105,8 +106,8 @@ export default function NotificacoesPage() {
             ))}
           </ul>
         </Card>
-        {/* Formulário de envio (apenas admin) */}
-        {isAdmin && (
+        {/* Formulário de envio (apenas admin e team) */}
+        {canSendNotifications && (
           <Card className="p-6 mb-8">
             <h2 className="text-lg font-bold mb-4">Enviar nova notificação</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -155,8 +156,8 @@ export default function NotificacoesPage() {
             </Button>
           </Card>
         )}
-        {/* Log de notificações enviadas (admin) */}
-        {isAdmin && (
+        {/* Log de notificações enviadas (admin e team) */}
+        {canSendNotifications && (
           <Card className="p-6">
             <h2 className="text-lg font-bold mb-4">Log de notificações enviadas (últimos 30 dias)</h2>
             <div className="overflow-x-auto">

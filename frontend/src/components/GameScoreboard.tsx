@@ -14,6 +14,8 @@ interface GameScoreboardProps {
   initialRunning?: boolean;
   onTimeChange?: (time: number) => void;
   onRunningChange?: (running: boolean) => void;
+  homeFouls?: number;
+  awayFouls?: number;
 }
 
 export function GameScoreboard({ 
@@ -28,7 +30,9 @@ export function GameScoreboard({
   initialTime = 720,
   initialRunning = false,
   onTimeChange,
-  onRunningChange
+  onRunningChange,
+  homeFouls = 0,
+  awayFouls = 0
 }: GameScoreboardProps) {
   const [time, setTime] = useState(initialTime); // 12 minutos em segundos
   const [isRunning, setIsRunning] = useState(initialRunning);
@@ -37,6 +41,7 @@ export function GameScoreboard({
   const [tempSeconds, setTempSeconds] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousQuarter = useRef(quarter);
+  const startTimeRef = useRef<number | null>(null);
 
   // Sincronizar com props externas (para visualização pública)
   useEffect(() => {
@@ -66,27 +71,31 @@ export function GameScoreboard({
     }
   }, [quarter, onTimeChange, onRunningChange]);
 
-  // Gerenciar o cronômetro
+  // Gerenciar o cronômetro com centésimos
   useEffect(() => {
     if (isRunning && time > 0 && !readOnly) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now() - (720 - time) * 1000;
+      }
       intervalRef.current = setInterval(() => {
-        setTime((prevTime) => {
-          const newTime = prevTime <= 1 ? 0 : prevTime - 1;
-          if (onTimeChange) onTimeChange(newTime);
-          if (prevTime <= 1) {
-            setIsRunning(false);
-            if (onRunningChange) onRunningChange(false);
-            if (intervalRef.current) {
-              clearInterval(intervalRef.current);
-              intervalRef.current = null;
-            }
+        const elapsed = (Date.now() - (startTimeRef.current || Date.now())) / 1000;
+        const newTime = Math.max(0, 720 - elapsed);
+        setTime(newTime);
+        if (onTimeChange) onTimeChange(newTime);
+        if (newTime <= 0) {
+          setIsRunning(false);
+          if (onRunningChange) onRunningChange(false);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
           }
-          return newTime;
-        });
-      }, 1000);
+          startTimeRef.current = null;
+        }
+      }, 10); // Atualizar a cada 10ms para centésimos
     } else if (!isRunning && intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+      startTimeRef.current = null;
     }
 
     return () => {
@@ -95,12 +104,14 @@ export function GameScoreboard({
         intervalRef.current = null;
       }
     };
-  }, [isRunning, time, readOnly, onTimeChange, onRunningChange]);
+  }, [isRunning, readOnly, onTimeChange, onRunningChange]);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const totalCentiseconds = Math.floor(seconds * 100);
+    const mins = Math.floor(totalCentiseconds / 6000);
+    const secs = Math.floor((totalCentiseconds % 6000) / 100);
+    const centiseconds = totalCentiseconds % 100;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${centiseconds.toString().padStart(2, '0')}`;
   };
 
   const handlePlayPause = () => {
@@ -152,8 +163,8 @@ export function GameScoreboard({
 
   return (
     <>
-      <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg shadow-2xl p-6 mb-6">
-        <div className="flex items-center justify-center gap-8">
+      <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg shadow-2xl p-3 md:p-6 mb-6">
+        <div className="flex items-center justify-center gap-2 md:gap-8 flex-wrap">
           {/* Botão Play/Pause */}
           {!readOnly && (
             <button
@@ -171,27 +182,33 @@ export function GameScoreboard({
 
           {/* Placar Casa */}
           <div className="flex flex-col items-center">
-            <span className="text-white text-sm font-semibold mb-2">CASA</span>
-            <div className="bg-white rounded-lg px-6 py-4 min-w-[80px] text-center shadow-lg">
-              <span className="text-4xl font-bold text-gray-800">{homeScore}</span>
+            <span className="text-white text-xs md:text-sm font-semibold mb-1 md:mb-2">CASA</span>
+            <div className="bg-white rounded-lg px-3 md:px-6 py-2 md:py-4 min-w-[60px] md:min-w-[80px] text-center shadow-lg">
+              <span className="text-2xl md:text-4xl font-bold text-gray-800">{homeScore}</span>
+            </div>
+            {/* Bolinhas de faltas */}
+            <div className="flex gap-1 mt-1 md:mt-2">
+              {Array.from({ length: Math.min(homeFouls, 5) }).map((_, i) => (
+                <div key={i} className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500"></div>
+              ))}
             </div>
           </div>
 
           {/* Cronômetro */}
           <div className="flex flex-col items-center">
             {readOnly ? (
-              <div className="bg-red-600 rounded-lg px-8 py-4 shadow-lg">
-                <span className="text-5xl font-mono font-bold text-white tracking-wider">
+              <div className="bg-red-600 rounded-lg px-4 md:px-8 py-3 md:py-4 shadow-lg">
+                <span className="text-2xl md:text-5xl font-mono font-bold text-white tracking-wider">
                   {formatTime(time)}
                 </span>
               </div>
             ) : (
               <button
                 onClick={handleTimeClick}
-                className="bg-red-600 hover:bg-red-700 rounded-lg px-8 py-4 transition-colors shadow-lg cursor-pointer"
+                className="bg-red-600 hover:bg-red-700 rounded-lg px-4 md:px-8 py-3 md:py-4 transition-colors shadow-lg cursor-pointer"
                 title="Clique para definir o tempo"
               >
-                <span className="text-5xl font-mono font-bold text-white tracking-wider">
+                <span className="text-2xl md:text-5xl font-mono font-bold text-white tracking-wider">
                   {formatTime(time)}
                 </span>
               </button>
@@ -200,25 +217,31 @@ export function GameScoreboard({
 
           {/* Placar Visitante */}
           <div className="flex flex-col items-center">
-            <span className="text-white text-sm font-semibold mb-2">{opponentName}</span>
-            <div className="bg-white rounded-lg px-6 py-4 min-w-[80px] text-center shadow-lg relative">
-              <span className="text-4xl font-bold text-gray-800">{awayScore}</span>
+            <span className="text-white text-xs md:text-sm font-semibold mb-1 md:mb-2 truncate max-w-[100px] md:max-w-none">{opponentName}</span>
+            <div className="bg-white rounded-lg px-3 md:px-6 py-2 md:py-4 min-w-[60px] md:min-w-[80px] text-center shadow-lg relative">
+              <span className="text-2xl md:text-4xl font-bold text-gray-800">{awayScore}</span>
               {!readOnly && onAwayScoreChange && (
-                <div className="absolute -right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+                <div className="absolute -right-8 md:-right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1">
                   <button
                     onClick={handleAwayScoreIncrement}
-                    className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-2 py-1 transition-colors"
+                    className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-1.5 md:px-2 py-0.5 md:py-1 transition-colors"
                   >
                     +1
                   </button>
                   <button
                     onClick={handleAwayScoreDecrement}
-                    className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-2 py-1 transition-colors"
+                    className="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded px-1.5 md:px-2 py-0.5 md:py-1 transition-colors"
                   >
                     -1
                   </button>
                 </div>
               )}
+            </div>
+            {/* Bolinhas de faltas */}
+            <div className="flex gap-1 mt-1 md:mt-2">
+              {Array.from({ length: Math.min(awayFouls, 5) }).map((_, i) => (
+                <div key={i} className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500"></div>
+              ))}
             </div>
           </div>
         </div>

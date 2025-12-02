@@ -22,5 +22,5 @@ ENVIRONMENT=development
 MAILERSEND_API_KEY=your-mailersend-api-key
 MAILERSEND_SMTP_USERNAME=MS_2OIjID@test-r83ql3pewnpgzw1j.mlsender.net
 MAILERSEND_SMTP_PASSWORD=your-smtp-password
-MAILERSEND_SENDER_EMAIL=no-reply@scoremvp.com.br
+MAILERSEND_SENDER_EMAIL=no-reply@scoremvp.com
 MAILERSEND_SENDER_NAME=ScoreMVP 

@@ -8,6 +8,7 @@ __pycache__/
 .venv
 env/
 venv/
+venv_wsl/
 ENV/
 env.bak/
 venv.bak/
@@ -37,6 +38,7 @@ Thumbs.db
 /frontend/build
 /backend/__pycache__
 /backend/*.pyc
+*.egg-info/
 
 # Arquivos de ambiente
 .env
@@ -44,10 +46,44 @@ Thumbs.db
 .env.development
 .env.test
 .env.production
+backend/.env
+frontend/.env
 
-# Alembic
-alembic/versions/*
-!alembic/versions/293f72152a82_add_leads_table.py
+# Banco de dados e backups
+*.db
+*.sqlite3
+*.sql
+scoremvp*.sql
+*_backup.sql
+
+# Arquivos de migração temporários
+backend/add_*.py
+backend/fix_*.py
+backend/check_*.py
+backend/create_*.py
+backend/debug_*.py
+backend/import_*.py
+backend/run_*.py
+backend/start_*.py
+backend/start_*.bat
+backend/start_*.ps1
+backend/start_*.sh
+backend/migrate.sh
+backend/railway_migrations.sh
+
+# Media e uploads
+backend/app/media/*
+!backend/app/media/.gitkeep
+
+# Scripts temporários
+backend/scripts/
+scripts/
+
+# Alembic - manter apenas versões importantes
+alembic/versions/*.py
+!alembic/versions/__init__.py
 
 # Outros
-.DS_Store 
+.DS_Store
+*.cache
+*.pyc 

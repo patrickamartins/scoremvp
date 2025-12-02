@@ -1,9 +1,9 @@
 # backend/app/core/security.py
 
 from datetime import timedelta, datetime
-from typing import Any, Union
+from typing import Any, Union, Optional
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
@@ -14,10 +14,11 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+http_bearer_optional = HTTPBearer(auto_error=False)
 
 ALGORITHM = "HS256"
 
-__all__ = ["ALGORITHM", "create_access_token", "verify_password", "get_password_hash", "verify_access_token", "get_current_user"]
+__all__ = ["ALGORITHM", "create_access_token", "verify_password", "get_password_hash", "verify_access_token", "get_current_user", "get_current_user_optional"]
 
 def create_access_token(
     subject: Union[str, Any], expires_delta: timedelta = None
@@ -90,3 +91,26 @@ def get_current_user(
         print("[DEBUG] Usuário não encontrado para ID:", user_id)
         raise credentials_exception
     return user
+
+def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer_optional),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Versão opcional de get_current_user que retorna None se não houver token"""
+    if credentials is None:
+        return None
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        if isinstance(user_id, str):
+            try:
+                user_id = int(user_id)
+            except ValueError:
+                return None
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+    except (JWTError, Exception):
+        return None

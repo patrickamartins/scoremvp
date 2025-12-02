@@ -61,8 +61,30 @@ def listar_jogadoras(
     current_user: models.User = Depends(get_current_user),
 ):
     try:
-        jogadoras = db.query(models.Player).all()
+        # Se for team_admin, mostrar apenas jogadores vinculados ao seu time
+        # Se for superadmin, mostrar todos
+        # Se for player, mostrar apenas o próprio perfil
+        if current_user.role == "team_admin":
+            jogadoras = db.query(models.Player).filter(
+                models.Player.team_id == current_user.id
+            ).all()
+        elif current_user.role == "superadmin":
+            jogadoras = db.query(models.Player).all()
+        elif current_user.role == "player":
+            # Jogador vê apenas seu próprio perfil
+            jogadoras = db.query(models.Player).filter(
+                models.Player.user_id == current_user.id
+            ).all()
+        else:
+            # Outros roles não têm acesso
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso negado"
+            )
+        
         return [schemas.PlayerOut.model_validate(j) for j in jogadoras]
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao listar jogadoras: {str(e)}")
         raise HTTPException(

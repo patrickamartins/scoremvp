@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partida Finalizada - ScoreMVP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #AC7F5E;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 5px 5px;
+        }
+        .game-info {
+            background-color: white;
+            padding: 15px;
+            border-left: 4px solid #AC7F5E;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #AC7F5E;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Estatísticas Disponíveis</h1>
+    </div>
+    <div class="content">
+        <p>Olá <strong>{{ user_name }}</strong>,</p>
+        <p>A partida foi finalizada e as estatísticas já estão disponíveis para visualização!</p>
+        <div class="game-info">
+            <p><strong>Adversário:</strong> {{ game_opponent }}</p>
+            <p><strong>Data:</strong> {{ game_date }}</p>
+        </div>
+        <p>Você pode acessar todas as estatísticas, boxscore e análises da partida clicando no botão abaixo:</p>
+        <p style="text-align: center;">
+            <a href="{{ game_url }}" class="button">Ver Estatísticas</a>
+        </p>
+    </div>
+    <div class="footer">
+        <p>© 2025 ScoreMVP. Todos os direitos reservados.</p>
+    </div>
+</body>
+</html>
+

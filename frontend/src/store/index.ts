@@ -6,6 +6,8 @@ interface User {
   email: string;
   token: string;
   role: string;
+  plan?: string;
+  profile_image?: string;
 }
 
 interface AuthState {

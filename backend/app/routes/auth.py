@@ -16,7 +16,7 @@ from app.core.security import (
 )
 from app.database import get_db
 from app.core.config import settings
-from app.core.email import EmailService
+from app.core.email import email_service
 from app.schemas.auth import PasswordReset, PasswordResetRequest
 
 router = APIRouter(
@@ -24,11 +24,20 @@ router = APIRouter(
     tags=["auth"],
 )
 
-email_service = EmailService()
-
 def generate_reset_token(email: str) -> str:
     serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
     return serializer.dumps(email, salt=settings.SECURITY_PASSWORD_SALT)
+
+def generate_activation_token(email: str) -> str:
+    serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+    return serializer.dumps(email, salt=settings.SECURITY_PASSWORD_SALT + "_activation")
+
+def verify_activation_token(token: str, max_age: int = 86400) -> str:  # 24 horas
+    serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
+    try:
+        return serializer.loads(token, salt=settings.SECURITY_PASSWORD_SALT + "_activation", max_age=max_age)
+    except:
+        return None
 
 def verify_reset_token(token: str, max_age: int = 3600) -> str:
     serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
@@ -41,6 +50,18 @@ def verify_reset_token(token: str, max_age: int = 3600) -> str:
         return email
     except:
         return None
+
+@router.get("/check-email/{email}")
+def check_email_exists(email: str, db: Session = Depends(get_db)):
+    """Verifica se um email já está cadastrado"""
+    user = db.query(User).filter(User.email == email).first()
+    return {"exists": user is not None}
+
+@router.get("/check-cpf/{cpf}")
+def check_cpf_exists(cpf: str, db: Session = Depends(get_db)):
+    """Verifica se um CPF/CNPJ já está cadastrado"""
+    user = db.query(User).filter(User.cpf == cpf).first()
+    return {"exists": user is not None}
 
 @router.post(
     "/register",
@@ -60,14 +81,31 @@ def register(
         )
     
     # Cria o novo usuário
+    activation_token = generate_activation_token(user_in.email)
     user = User(
         name=user_in.name,
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
+        is_active=False,  # Requer ativação
+        email_verified=False,
+        activation_token=activation_token,
+        cpf=user_in.cpf,  # Salvar CPF/CNPJ se fornecido
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+    
+    # Enviar email de ativação
+    try:
+        email_service.send_activation_email(
+            email=user.email,
+            name=user.name,
+            activation_token=activation_token
+        )
+    except Exception as e:
+        logger.error(f"Erro ao enviar email de ativação: {e}")
+        # Não falha o registro se o email não for enviado
+    
     return user
 
 @router.post(
@@ -90,6 +128,13 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Verificar se a conta está ativada
+    if not user.is_active or not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Conta não ativada. Verifique seu email para ativar sua conta.",
         )
     access_token = create_access_token(
         subject=user.id,
@@ -154,3 +199,44 @@ def reset_password(
     db.add(user)
     db.commit()
     return {"message": "Senha alterada com sucesso"}
+
+@router.get("/activate/{token}", response_model=dict)
+def activate_account(
+    token: str,
+    db: Session = Depends(get_db)
+) -> dict:
+    """Ativa a conta do usuário usando o token de ativação"""
+    email = verify_activation_token(token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token inválido ou expirado"
+        )
+    
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    
+    if user.email_verified:
+        return {"message": "Conta já está ativada"}
+    
+    # Ativar conta
+    user.is_active = True
+    user.email_verified = True
+    user.activation_token = None
+    db.add(user)
+    db.commit()
+    
+    # Enviar email de boas-vindas
+    try:
+        email_service.send_welcome_email(
+            email=user.email,
+            name=user.name
+        )
+    except Exception as e:
+        logger.error(f"Erro ao enviar email de boas-vindas: {e}")
+    
+    return {"message": "Conta ativada com sucesso! Você receberá um email de boas-vindas."}

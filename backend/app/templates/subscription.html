@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assinatura - ScoreMVP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #AC7F5E;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 5px 5px;
+        }
+        .subscription-info {
+            background-color: white;
+            padding: 15px;
+            border-left: 4px solid #AC7F5E;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #AC7F5E;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            {% if subscription_type == 'confirmed' %}
+                Assinatura Confirmada
+            {% elif subscription_type == 'upgraded' %}
+                Plano Atualizado
+            {% elif subscription_type == 'charged' %}
+                Cobrança Realizada
+            {% elif subscription_type == 'cancelled' %}
+                Assinatura Cancelada
+            {% else %}
+                Atualização de Assinatura
+            {% endif %}
+        </h1>
+    </div>
+    <div class="content">
+        <p>Olá <strong>{{ user_name }}</strong>,</p>
+        
+        {% if subscription_type == 'confirmed' %}
+            <p>Sua assinatura do plano <strong>{{ plan_name }}</strong> foi confirmada com sucesso!</p>
+            <p>Agora você tem acesso a todos os recursos do seu plano.</p>
+        {% elif subscription_type == 'upgraded' %}
+            <p>Seu plano foi atualizado para <strong>{{ plan_name }}</strong>!</p>
+            <p>Você agora tem acesso a recursos adicionais.</p>
+        {% elif subscription_type == 'charged' %}
+            <p>A cobrança do seu plano <strong>{{ plan_name }}</strong> foi realizada com sucesso.</p>
+            <p>Obrigado pela sua assinatura!</p>
+        {% elif subscription_type == 'cancelled' %}
+            <p>Sua assinatura do plano <strong>{{ plan_name }}</strong> foi cancelada.</p>
+            <p>Você continuará tendo acesso até o final do período pago.</p>
+        {% endif %}
+        
+        <div class="subscription-info">
+            <p><strong>Plano:</strong> {{ plan_name }}</p>
+        </div>
+        
+        <p style="text-align: center;">
+            <a href="{{ frontend_url }}/profile" class="button">Ver Minha Conta</a>
+        </p>
+    </div>
+    <div class="footer">
+        <p>© 2025 ScoreMVP. Todos os direitos reservados.</p>
+    </div>
+</body>
+</html>
+

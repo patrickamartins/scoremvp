@@ -13,8 +13,10 @@ class Player(Base):
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default="now()")
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    team_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # ID do usuário team_admin que gerencia este jogador
 
     # Relacionamentos
-    user = relationship("User", back_populates="player_profile", uselist=False)
+    user = relationship("User", back_populates="player_profile", uselist=False, foreign_keys=[user_id])
+    team = relationship("User", foreign_keys=[team_id])  # Relacionamento com o time (team_admin)
     games = relationship("Game", secondary=game_player, back_populates="players")
     statistics = relationship("Statistic", back_populates="player") 

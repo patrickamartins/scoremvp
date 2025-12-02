@@ -17,8 +17,35 @@ router = APIRouter(
 
 logger = logging.getLogger(__name__)
 
-def get_stats_query(db: Session, data_inicio: Optional[datetime] = None, data_fim: Optional[datetime] = None):
-    query = db.query(models.Game)
+def get_stats_query(db: Session, current_user: models.User, data_inicio: Optional[datetime] = None, data_fim: Optional[datetime] = None):
+    """Retorna query de jogos filtrados por usuário e data"""
+    # Se for team_admin, mostrar jogos dos jogadores vinculados + seus próprios jogos
+    if current_user.role == "team_admin":
+        team_player_ids = [p.id for p in db.query(models.Player).filter(
+            models.Player.team_id == current_user.id
+        ).all()]
+        from sqlalchemy import or_
+        query = db.query(models.Game).filter(
+            or_(
+                models.Game.owner_id == current_user.id,
+                models.Game.players.any(models.Player.id.in_(team_player_ids))
+            )
+        )
+    elif current_user.role == "player":
+        # Player vê apenas jogos onde ele participou
+        player = db.query(models.Player).filter(
+            models.Player.user_id == current_user.id
+        ).first()
+        if player:
+            query = db.query(models.Game).filter(
+                models.Game.players.contains(player)
+            )
+        else:
+            query = db.query(models.Game).filter(models.Game.id == -1)  # Nenhum jogo
+    elif current_user.role == "superadmin":
+        query = db.query(models.Game)
+    else:
+        query = db.query(models.Game).filter(models.Game.owner_id == current_user.id)
 
     # Se nenhuma data for fornecida, assume o ano corrente como padrão
     if data_inicio is None and data_fim is None:
@@ -38,11 +65,12 @@ def get_public_overview(
     data_fim: Optional[datetime] = Query(None),
     jogo_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
     if jogo_id:
         jogos_query = db.query(models.Game).filter(models.Game.id == jogo_id)
     else:
-        jogos_query = get_stats_query(db, data_inicio, data_fim)
+        jogos_query = get_stats_query(db, current_user, data_inicio, data_fim)
 
     jogos = jogos_query.all()
     jogos_ids = [j.id for j in jogos]
@@ -135,11 +163,12 @@ def get_public_jogadoras_stats(
     data_fim: Optional[datetime] = Query(None),
     jogo_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
     if jogo_id:
         jogos_query = db.query(models.Game).filter(models.Game.id == jogo_id)
     else:
-        jogos_query = get_stats_query(db, data_inicio, data_fim)
+        jogos_query = get_stats_query(db, current_user, data_inicio, data_fim)
 
     jogos = jogos_query.all()
     jogos_ids = [j.id for j in jogos]
@@ -208,8 +237,9 @@ def get_public_jogos_stats(
     data_inicio: Optional[datetime] = Query(None),
     data_fim: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
-    jogos_query = get_stats_query(db, data_inicio, data_fim)
+    jogos_query = get_stats_query(db, current_user, data_inicio, data_fim)
     jogos = jogos_query.order_by(models.Game.date.desc()).all()
     logger.info(f"Dashboard jogos: jogos={[(j.id, j.date) for j in jogos]}")
     if not jogos:

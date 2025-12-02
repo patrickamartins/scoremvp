@@ -1,7 +1,9 @@
 # Environment variables
-# .env
+.env
 .env.local
 .env.*.local
+env_railway.txt
+env_template.txt
 
 # Python
 __pycache__/
@@ -27,6 +29,7 @@ var/
 
 # Virtual Environment
 venv/
+venv_wsl/
 ENV/
 
 # IDE
@@ -49,7 +52,32 @@ logs/
 # Database
 *.db
 *.sqlite3
+*.sql
+*_backup.sql
 
-# Alembic
+# Scripts temporários de migração
+add_*.py
+fix_*.py
+check_*.py
+create_*.py
+debug_*.py
+import_*.py
+run_*.py
+start_*.py
+start_*.bat
+start_*.ps1
+start_*.sh
+migrate.sh
+railway_migrations.sh
+
+# Media e uploads
+app/media/*
+!app/media/.gitkeep
+
+# Alembic - manter apenas versões importantes
 alembic/versions/*.py
 !alembic/versions/__init__.py
+
+# CSV e dados temporários
+*.csv
+estatisticas.csv

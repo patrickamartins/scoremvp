@@ -9,4 +9,5 @@ from .token import *
 from .game import GameOut, GameCreate, GameUpdate
 from .player import PlayerOut, PlayerCreate, PlayerUpdate
 from .estatistica import StatisticOut, StatisticCreate, StatisticUpdate, StatisticsSummary
-from .lead import LeadCreate, Lead 
+from .lead import LeadCreate, Lead
+from .email_template import EmailTemplateOut, EmailTemplateCreate, EmailTemplateUpdate 

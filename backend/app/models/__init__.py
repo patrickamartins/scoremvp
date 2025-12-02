@@ -10,6 +10,7 @@ from app.models.player import Player
 from app.models.statistic import Statistic
 from app.models.lead import Lead
 from app.models.notification import Notification, UserNotification, NotificationTarget
+from app.models.email_template import EmailTemplate, EmailTemplateType
 
 # Para garantir que o Alembic detecte todos os modelos
 __all__ = [
@@ -23,5 +24,7 @@ __all__ = [
     "Lead",
     "Notification",
     "UserNotification",
-    "NotificationTarget"
+    "NotificationTarget",
+    "EmailTemplate",
+    "EmailTemplateType"
 ] 

@@ -39,6 +39,7 @@ export interface LoginResponse {
     name: string;
     email: string;
     role: string;
+    plan?: string;
   };
 }
 
@@ -192,6 +193,60 @@ export const forgotPassword = async (email: string) => {
 
 export const resetPassword = async (token: string, newPassword: string) => {
   return api.post('/auth/reset-password', { token, new_password: newPassword });
+};
+
+// —— Profile ——————————————————————————————
+
+export const getProfile = async () => {
+  const response = await api.get('/profile/me');
+  return response.data;
+};
+
+export const updateProfile = async (data: any) => {
+  const response = await api.put('/profile/me', data);
+  return response.data;
+};
+
+export const uploadProfilePhoto = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/profile/me/upload-photo', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  return api.post('/profile/me/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+};
+
+export const getTeams = async () => {
+  const response = await api.get('/profile/teams');
+  return response.data;
+};
+
+export const requestTeamLink = async (teamId: number) => {
+  return api.post('/profile/me/request-team-link', { team_id: teamId });
+};
+
+// —— Stripe/Subscription ——————————————————————————————
+
+export const getMySubscription = async () => {
+  const response = await api.get('/stripe/my-subscription');
+  return response.data;
+};
+
+export const cancelSubscription = async () => {
+  return api.post('/stripe/cancel-subscription');
+};
+
+export const upgradeDowngrade = async (newPlanId: string) => {
+  return api.post('/stripe/upgrade-downgrade', { new_plan_id: newPlanId });
 };
 
 export default api;

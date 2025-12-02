@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo ao ScoreMVP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #AC7F5E;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 5px 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #AC7F5E;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Bem-vindo ao ScoreMVP!</h1>
+    </div>
+    <div class="content">
+        <p>Olá <strong>{{ user_name }}</strong>,</p>
+        <p>Sua conta foi ativada com sucesso! Estamos muito felizes em tê-lo conosco.</p>
+        <p>No ScoreMVP você pode:</p>
+        <ul>
+            <li>Registrar estatísticas de partidas em tempo real</li>
+            <li>Acompanhar a evolução dos jogadores</li>
+            <li>Visualizar relatórios e análises detalhadas</li>
+            <li>Compartilhar resultados com sua equipe</li>
+        </ul>
+        <p style="text-align: center;">
+            <a href="{{ frontend_url }}" class="button">Acessar Plataforma</a>
+        </p>
+        <p>Se você tiver alguma dúvida, nossa equipe está pronta para ajudar!</p>
+    </div>
+    <div class="footer">
+        <p>© 2025 ScoreMVP. Todos os direitos reservados.</p>
+    </div>
+</body>
+</html>
+

@@ -10,6 +10,10 @@ from app.database import get_db
 from app import models, schemas
 from app.core.security import get_current_user
 from app.schemas import GameOut
+from app.core.email import email_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/games",
@@ -75,7 +79,40 @@ def listar_jogos(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    query = db.query(models.Game).filter(models.Game.owner_id == current_user.id)
+    # Se for team_admin, mostrar jogos dos jogadores vinculados + seus próprios jogos
+    # Se for player, mostrar apenas jogos onde ele participou
+    # Se for superadmin, mostrar todos os jogos
+    if current_user.role == "team_admin":
+        # Buscar IDs dos jogadores vinculados ao time
+        team_player_ids = [p.id for p in db.query(models.Player).filter(
+            models.Player.team_id == current_user.id
+        ).all()]
+        
+        # Buscar jogos onde o usuário é owner OU onde há jogadores do time
+        from sqlalchemy import or_
+        query = db.query(models.Game).filter(
+            or_(
+                models.Game.owner_id == current_user.id,
+                models.Game.players.any(models.Player.id.in_(team_player_ids))
+            )
+        )
+    elif current_user.role == "player":
+        # Player vê apenas jogos onde ele participou
+        player = db.query(models.Player).filter(
+            models.Player.user_id == current_user.id
+        ).first()
+        if player:
+            query = db.query(models.Game).filter(
+                models.Game.players.contains(player)
+            )
+        else:
+            query = db.query(models.Game).filter(models.Game.id == -1)  # Nenhum jogo
+    elif current_user.role == "superadmin":
+        # Superadmin vê todos os jogos
+        query = db.query(models.Game)
+    else:
+        # Outros roles veem apenas seus próprios jogos
+        query = db.query(models.Game).filter(models.Game.owner_id == current_user.id)
     
     if status:
         query = query.filter(models.Game.status == status)
@@ -126,6 +163,8 @@ def atualizar_jogo(
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
 
     data = game_in.model_dump(exclude_unset=True)
+    old_status = jogo.status
+    
     for field, value in data.items():
         if field != "players":
             setattr(jogo, field, value)
@@ -144,6 +183,28 @@ def atualizar_jogo(
 
     db.commit()
     db.refresh(jogo)
+    
+    # Se a partida foi finalizada, enviar emails para os jogadores
+    if old_status != "FINALIZADA" and jogo.status == "FINALIZADA":
+        try:
+            # Buscar todos os jogadores da partida que têm usuário associado
+            for player in jogo.players:
+                if player.user_id:
+                    user = db.query(models.User).filter(models.User.id == player.user_id).first()
+                    if user and user.email:
+                        game_date = jogo.date.strftime("%d/%m/%Y") if jogo.date else "Data não informada"
+                        email_service.send_game_finished_email(
+                            email=user.email,
+                            name=user.name,
+                            game_opponent=jogo.opponent,
+                            game_date=game_date,
+                            game_id=jogo.id
+                        )
+            logger.info(f"Emails de partida finalizada enviados para jogadores do jogo {jogo.id}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar emails de partida finalizada: {e}")
+            # Não falha a atualização se o email não for enviado
+    
     return schemas.GameOut.model_validate(jogo)
 
 

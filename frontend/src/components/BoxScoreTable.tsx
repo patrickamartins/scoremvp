@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Card } from "./ui/Card";
 import { GameStats } from "../types/game";
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 type BoxScorePlayer = {
   id: number;
@@ -13,6 +14,7 @@ interface BoxScoreTableProps {
   gameId?: number | null;
   stats: GameStats[];
   players: BoxScorePlayer[];
+  hidePeriodSelector?: boolean;
 }
 
 const POS_SIGLAS: Record<string, string> = {
@@ -46,16 +48,14 @@ type StatGroup = {
   minutes_played: number;
 };
 
-const periods = [
-  { value: 'total', label: 'Partida (Total)' },
-  { value: 1, label: '1º Quarto' },
-  { value: 2, label: '2º Quarto' },
-  { value: 3, label: '3º Quarto' },
-  { value: 4, label: '4º Quarto' },
-];
+type SortColumn = {
+  key: string;
+  direction: 'asc' | 'desc' | null;
+};
 
-export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
+export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = false }: BoxScoreTableProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<'total' | number>('total');
+  const [sortColumn, setSortColumn] = useState<SortColumn>({ key: '', direction: null });
 
   const mapStat = (stat: any) => ({
     player_id: Number(stat.player_id ?? stat.id),
@@ -164,6 +164,62 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
       ));
   }, [groupedStats, players]);
 
+  // Ordenar linhas
+  const sortedRows = useMemo(() => {
+    if (!sortColumn.key || !sortColumn.direction) return rows;
+
+    return [...rows].sort((a, b) => {
+      if (!a.stat || !b.stat) return 0;
+      
+      let aValue: number = 0;
+      let bValue: number = 0;
+
+      switch (sortColumn.key) {
+        case 'number':
+          aValue = Number(a.player.number) || 0;
+          bValue = Number(b.player.number) || 0;
+          break;
+        case 'name':
+          return sortColumn.direction === 'asc' 
+            ? (a.player.name || '').localeCompare(b.player.name || '')
+            : (b.player.name || '').localeCompare(a.player.name || '');
+        case 'points':
+          aValue = a.stat.points;
+          bValue = b.stat.points;
+          break;
+        case 'two_p':
+          aValue = a.stat.two_attempts > 0 ? (a.stat.two_made / a.stat.two_attempts) * 100 : 0;
+          bValue = b.stat.two_attempts > 0 ? (b.stat.two_made / b.stat.two_attempts) * 100 : 0;
+          break;
+        case 'three_p':
+          aValue = a.stat.three_attempts > 0 ? (a.stat.three_made / a.stat.three_attempts) * 100 : 0;
+          bValue = b.stat.three_attempts > 0 ? (b.stat.three_made / b.stat.three_attempts) * 100 : 0;
+          break;
+        case 'free_throw':
+          aValue = a.stat.free_throw_attempts > 0 ? (a.stat.free_throw_made / a.stat.free_throw_attempts) * 100 : 0;
+          bValue = b.stat.free_throw_attempts > 0 ? (b.stat.free_throw_made / b.stat.free_throw_attempts) * 100 : 0;
+          break;
+        case 'rebounds':
+          aValue = a.stat.total_rebounds;
+          bValue = b.stat.total_rebounds;
+          break;
+        case 'turnovers':
+          aValue = a.stat.turnovers;
+          bValue = b.stat.turnovers;
+          break;
+        default:
+          aValue = (a.stat as any)[sortColumn.key] || 0;
+          bValue = (b.stat as any)[sortColumn.key] || 0;
+      }
+
+      if (sortColumn.direction === 'asc') {
+        return aValue - bValue;
+      } else {
+        return bValue - aValue;
+      }
+    });
+  }, [rows, sortColumn]);
+
   const hasData = rows.length > 0;
 
   // Calcular totais de todas as colunas
@@ -219,15 +275,67 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
   }, [rows]);
 
   const calcEF = (s: StatGroup) => {
-    const acertos = (s.two_made || 0) + (s.three_made || 0) + (s.free_throw_made || 0);
-    const tentativas = (s.two_attempts || 0) + (s.three_attempts || 0) + (s.free_throw_attempts || 0);
-    if (!tentativas) return '0%';
-    return ((acertos / tentativas) * 100).toFixed(1) + '%';
+    // Nova fórmula: (Pontos + Rebotes + Tocos + Roubos + Assistências + Interferencias) - (Arremessos de dois errados + Arremessos de três errados + Lances livres errados + Turnovers)
+    const pontos = s.points || 0;
+    const rebotes = s.total_rebounds || 0;
+    const tocos = s.blocks || 0;
+    const roubos = s.steals || 0;
+    const assistencias = s.assists || 0;
+    const interferencias = s.interceptions || 0;
+    
+    const dois_errados = (s.two_attempts || 0) - (s.two_made || 0);
+    const tres_errados = (s.three_attempts || 0) - (s.three_made || 0);
+    const ll_errados = (s.free_throw_attempts || 0) - (s.free_throw_made || 0);
+    const turnovers = s.turnovers || 0;
+    
+    const eficiencia = (pontos + rebotes + tocos + roubos + assistencias + interferencias) - (dois_errados + tres_errados + ll_errados + turnovers);
+    return eficiencia.toFixed(1);
   };
 
   const getPosSigla = (pos?: string) => {
     if (!pos) return '-';
     return POS_SIGLAS[pos] || pos.toUpperCase();
+  };
+
+  const formatMinutes = (minutes: number) => {
+    const mins = Math.floor(minutes);
+    const secs = Math.floor((minutes - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatPercentage = (made: number, attempts: number) => {
+    if (attempts === 0) return '0';
+    return Math.round((made / attempts) * 100).toString();
+  };
+
+  const handleSort = (columnKey: string) => {
+    if (sortColumn.key === columnKey) {
+      if (sortColumn.direction === 'asc') {
+        setSortColumn({ key: columnKey, direction: 'desc' });
+      } else if (sortColumn.direction === 'desc') {
+        setSortColumn({ key: '', direction: null });
+      }
+    } else {
+      setSortColumn({ key: columnKey, direction: 'asc' });
+    }
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortColumn.key !== columnKey) {
+      return (
+        <div className="inline-flex flex-col ml-1">
+          <ChevronUp size={12} className="text-gray-400 -mb-1" />
+          <ChevronDown size={12} className="text-gray-400" />
+        </div>
+      );
+    }
+    if (sortColumn.direction === 'asc') {
+      return <ChevronUp size={12} className="text-blue-600 ml-1" />;
+    }
+    if (sortColumn.direction === 'desc') {
+      return <ChevronDown size={12} className="text-blue-600 ml-1" />;
+    }
+    return null;
   };
 
   if (!hasData) {
@@ -240,24 +348,55 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
 
   return (
     <Card>
+      {/* Filtro de Períodos com Toggle Switches */}
+      {!hidePeriodSelector && (
+        <div className="border-b px-6 py-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <button
+              onClick={() => setSelectedPeriod('total')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                selectedPeriod === 'total'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <div className={`w-10 h-5 rounded-full relative transition-colors ${
+                selectedPeriod === 'total' ? 'bg-white' : 'bg-gray-400'
+              }`}>
+                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                  selectedPeriod === 'total' ? 'translate-x-5' : 'translate-x-0'
+                }`}></div>
+              </div>
+              <span className="text-sm font-medium">TODOS OS PERÍODOS</span>
+            </button>
+            {[1, 2, 3, 4].map((q) => (
+              <button
+                key={q}
+                onClick={() => setSelectedPeriod(q)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  selectedPeriod === q
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <div className={`w-10 h-5 rounded-full relative transition-colors ${
+                  selectedPeriod === q ? 'bg-white' : 'bg-gray-400'
+                }`}>
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                    selectedPeriod === q ? 'translate-x-5' : 'translate-x-0'
+                  }`}></div>
+                </div>
+                <span className="text-sm font-medium">{q}° Q</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="border-b px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <h2 className="text-lg font-bold">Box Score</h2>
-        <div className="flex items-center gap-2 text-sm">
-          <label className="font-medium">Período:</label>
-          <select
-            className="border rounded px-2 py-1 text-sm"
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value === 'total' ? 'total' : Number(e.target.value))}
-          >
-            {periods.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs md:text-sm">
             <thead>
@@ -266,19 +405,67 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
                 <th className="text-center">JOGADOR</th>
                 <th className="text-center">POS</th>
                 <th className="text-center">MIN</th>
-                <th className="text-center">PTS</th>
-                <th className="text-center">2P</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('points')}
+                >
+                  <div className="flex items-center justify-center">
+                    PTS
+                    <SortIcon columnKey="points" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('two_p')}
+                >
+                  <div className="flex items-center justify-center">
+                    2P%
+                    <SortIcon columnKey="two_p" />
+                  </div>
+                </th>
                 <th className="text-center">2PTS</th>
-                <th className="text-center">3P</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('three_p')}
+                >
+                  <div className="flex items-center justify-center">
+                    3P%
+                    <SortIcon columnKey="three_p" />
+                  </div>
+                </th>
                 <th className="text-center">3PTS</th>
-                <th className="text-center">LL</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('free_throw')}
+                >
+                  <div className="flex items-center justify-center">
+                    LL%
+                    <SortIcon columnKey="free_throw" />
+                  </div>
+                </th>
                 <th className="text-center">PLL</th>
                 <th className="text-center">REBO</th>
                 <th className="text-center">REBD</th>
                 <th className="text-center">TREB</th>
                 <th className="text-center">ASS</th>
-                <th className="text-center">TURN</th>
-                <th className="text-center">RB</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('turnovers')}
+                >
+                  <div className="flex items-center justify-center">
+                    TO
+                    <SortIcon columnKey="turnovers" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('rebounds')}
+                >
+                  <div className="flex items-center justify-center">
+                    BR
+                    <SortIcon columnKey="rebounds" />
+                  </div>
+                </th>
                 <th className="text-center">T</th>
                 <th className="text-center">FP</th>
                 <th className="text-center">FR</th>
@@ -288,20 +475,26 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ player, stat }, idx) => {
+              {sortedRows.map(({ player, stat }, idx) => {
                 const rowClass = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                 return (
                   <tr key={player.id} className={rowClass}>
                     <td className="text-center">{player.number ?? '-'}</td>
                     <td className="text-center min-w-[120px] max-w-[160px] truncate">{player.name ?? '-'}</td>
                     <td className="text-center">{getPosSigla(typeof player.position === 'string' ? player.position : undefined)}</td>
-                    <td className="text-center">{stat?.minutes_played ? stat.minutes_played.toFixed(1) : '0.0'}</td>
+                    <td className="text-center">{stat?.minutes_played ? formatMinutes(stat.minutes_played) : '0:00'}</td>
                     <td className="text-center">{stat?.points ?? 0}</td>
-                    <td className="text-center">{stat?.two_attempts ?? 0}</td>
+                    <td className="text-center">
+                      {stat?.two_attempts ? `${stat.two_made}/${stat.two_attempts} (${formatPercentage(stat.two_made, stat.two_attempts)})` : '0/0 (0)'}
+                    </td>
                     <td className="text-center">{stat?.two_made ?? 0}</td>
-                    <td className="text-center">{stat?.three_attempts ?? 0}</td>
+                    <td className="text-center">
+                      {stat?.three_attempts ? `${stat.three_made}/${stat.three_attempts} (${formatPercentage(stat.three_made, stat.three_attempts)})` : '0/0 (0)'}
+                    </td>
                     <td className="text-center">{stat?.three_made ?? 0}</td>
-                    <td className="text-center">{stat?.free_throw_attempts ?? 0}</td>
+                    <td className="text-center">
+                      {stat?.free_throw_attempts ? `${stat.free_throw_made}/${stat.free_throw_attempts} (${formatPercentage(stat.free_throw_made, stat.free_throw_attempts)})` : '0/0 (0)'}
+                    </td>
                     <td className="text-center">{stat?.free_throw_made ?? 0}</td>
                     <td className="text-center">{stat?.offensive_rebounds ?? 0}</td>
                     <td className="text-center">{stat?.defensive_rebounds ?? 0}</td>
@@ -314,7 +507,7 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
                     <td className="text-center">{stat?.fouls_drawn ?? 0}</td>
                     <td className="text-center">{(stat?.personal_fouls ?? 0) + (stat?.fouls_drawn ?? 0)}</td>
                     <td className="text-center">{stat?.interceptions ?? 0}</td>
-                    <td className="text-center">{stat ? calcEF(stat) : '0%'}</td>
+                    <td className="text-center">{stat ? calcEF(stat) : '0'}</td>
                   </tr>
                 );
               })}
@@ -323,13 +516,19 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
               <tr className="bg-gray-100 font-bold border-t-2 border-gray-400">
                 <td className="text-center" colSpan={2}>TOTAL</td>
                 <td className="text-center">-</td>
-                <td className="text-center">{totals.minutes_played.toFixed(1)}</td>
+                <td className="text-center">{formatMinutes(totals.minutes_played)}</td>
                 <td className="text-center">{totals.points}</td>
-                <td className="text-center">{totals.two_attempts}</td>
+                <td className="text-center">
+                  {totals.two_attempts ? `${totals.two_made}/${totals.two_attempts} (${formatPercentage(totals.two_made, totals.two_attempts)})` : '0/0 (0)'}
+                </td>
                 <td className="text-center">{totals.two_made}</td>
-                <td className="text-center">{totals.three_attempts}</td>
+                <td className="text-center">
+                  {totals.three_attempts ? `${totals.three_made}/${totals.three_attempts} (${formatPercentage(totals.three_made, totals.three_attempts)})` : '0/0 (0)'}
+                </td>
                 <td className="text-center">{totals.three_made}</td>
-                <td className="text-center">{totals.free_throw_attempts}</td>
+                <td className="text-center">
+                  {totals.free_throw_attempts ? `${totals.free_throw_made}/${totals.free_throw_attempts} (${formatPercentage(totals.free_throw_made, totals.free_throw_attempts)})` : '0/0 (0)'}
+                </td>
                 <td className="text-center">{totals.free_throw_made}</td>
                 <td className="text-center">{totals.offensive_rebounds}</td>
                 <td className="text-center">{totals.defensive_rebounds}</td>
@@ -354,24 +553,24 @@ export function BoxScoreTable({ gameId, stats, players }: BoxScoreTableProps) {
           <b>POS</b>: Posição (ARM=Armador, ALA=Ala, ALP=Ala-Pivô, AAR=Ala-Armador, PIV=Pivô) &nbsp;|&nbsp;
           <b>MIN</b>: Minutos jogados &nbsp;|&nbsp;
           <b>PTS</b>: Total de pontos &nbsp;|&nbsp;
-          <b>2P</b>: Tentativas de 2 pontos &nbsp;|&nbsp;
+          <b>2P%</b>: Aproveitamento de 2 pontos (feitos/tentativas %) &nbsp;|&nbsp;
           <b>2PTS</b>: Cestas de 2 pontos &nbsp;|&nbsp;
-          <b>3P</b>: Tentativas de 3 pontos &nbsp;|&nbsp;
+          <b>3P%</b>: Aproveitamento de 3 pontos (feitos/tentativas %) &nbsp;|&nbsp;
           <b>3PTS</b>: Cestas de 3 pontos &nbsp;|&nbsp;
-          <b>LL</b>: Tentativas de lance livre &nbsp;|&nbsp;
+          <b>LL%</b>: Aproveitamento de lance livre (feitos/tentativas %) &nbsp;|&nbsp;
           <b>PLL</b>: Lances livres convertidos &nbsp;|&nbsp;
           <b>REBO</b>: Rebotes ofensivos &nbsp;|&nbsp;
           <b>REBD</b>: Rebotes defensivos &nbsp;|&nbsp;
           <b>TREB</b>: Total de rebotes &nbsp;|&nbsp;
           <b>ASS</b>: Assistências &nbsp;|&nbsp;
-          <b>TURN</b>: Turnovers (erros) &nbsp;|&nbsp;
-          <b>RB</b>: Roubos de bola &nbsp;|&nbsp;
+          <b>TO</b>: Turnovers (erros) &nbsp;|&nbsp;
+          <b>BR</b>: Roubos de bola &nbsp;|&nbsp;
           <b>T</b>: Tocos &nbsp;|&nbsp;
           <b>FP</b>: Faltas pessoais &nbsp;|&nbsp;
           <b>FR</b>: Faltas recebidas &nbsp;|&nbsp;
           <b>TF</b>: Total de faltas &nbsp;|&nbsp;
           <b>INT</b>: Interceptações &nbsp;|&nbsp;
-          <b>EF</b>: Eficiência (%)
+          <b>EF</b>: Eficiência
         </div>
       </div>
     </Card>

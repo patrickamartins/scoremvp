@@ -24,7 +24,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.PLAYER)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=False)  # Mudado para False - requer ativação
+    email_verified = Column(Boolean, default=False)
+    activation_token = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -51,6 +53,6 @@ class User(Base):
     sent_notifications = relationship("Notification", back_populates="creator")
     notifications = relationship("UserNotification", back_populates="user")
     games = relationship("Game", back_populates="owner")
-    player_profile = relationship("Player", back_populates="user", uselist=False)
+    player_profile = relationship("Player", back_populates="user", uselist=False, foreign_keys="Player.user_id")
     # teams = relationship("Team", secondary="user_teams", back_populates="members")
     # created_teams = relationship("Team", back_populates="creator") 
