@@ -82,6 +82,23 @@ backend/app/media/*
 backend/scripts/
 scripts/
 
+# Arquivos de documentação temporários com chaves secretas
+COMANDOS_FINAIS.txt
+INSTRUCOES_CORRECAO.md
+PASSO_A_PASSO_FIX.md
+executar_correcao.sh
+fix_rebase_and_secrets.sh
+REMOVER_COMMIT_PROBLEMATICO.sh
+REMOVER_SECRETOS_GIT.md
+CORRIGIR_PUSH_GIT.md
+SOLUCAO_RAPIDA.md
+GIT_COMMIT_CHECKLIST.md
+corrigir_commit_secreto.sh
+LIMPAR_SECRETOS_DEFINITIVO.sh
+remover_secretos.sh
+EXECUTAR_AGORA.md
+SOLUCAO_DEFINITIVA_SECRETOS.md
+
 # Alembic - manter apenas versões importantes
 alembic/versions/*.py
 !alembic/versions/__init__.py
