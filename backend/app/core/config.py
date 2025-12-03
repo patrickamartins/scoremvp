@@ -44,42 +44,28 @@ class Settings(BaseSettings):
 
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
-        if isinstance(v, str):
+        # Se já foi passado um valor, usar ele
+        if isinstance(v, str) and v:
             return v
         
-        # Verificar se há DATABASE_URL no ambiente
+        # Prioridade 1: DATABASE_URL do ambiente (Railway, produção)
         database_url = os.getenv("DATABASE_URL")
         
-        # Se houver DATABASE_URL, verificar se usa o usuário correto
-        # Se usar "postgres" mas o .env tem outro usuário, ignorar
+        # Se houver DATABASE_URL, usar ela (prioridade máxima em produção)
         if database_url:
-            # Extrair usuário da DATABASE_URL
-            url_user = ""
-            if "@" in database_url:
-                user_part = database_url.split("@")[0]
-                if "://" in user_part:
-                    user_part = user_part.split("://")[1]
-                if ":" in user_part:
-                    url_user = user_part.split(":")[0]
-            
-            # Se a URL do ambiente usar "postgres" mas o .env tem outro usuário, ignorar
-            env_user = values.get('POSTGRES_USER', 'admin')
-            if url_user == "postgres" and env_user != "postgres":
-                print(f"AVISO: DATABASE_URL do ambiente usa usuario 'postgres', mas .env tem '{env_user}'")
-                print(f"Ignorando DATABASE_URL do ambiente e usando configuracoes do .env")
-                database_url = None
+            # Converter postgres:// para postgresql:// se necessário (Railway usa postgres://)
+            if database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql://", 1)
+            print(f"[DB] Usando DATABASE_URL do ambiente: {database_url.split('@')[0] if '@' in database_url else database_url[:50]}@...")
+            return str(database_url)
         
-        # Se não tiver DATABASE_URL válida, construir a partir das variáveis do .env
-        if not database_url:
-            local_url = (
-                f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}"
-                f"@{values.get('POSTGRES_SERVER')}:5432/{values.get('POSTGRES_DB')}"
-            )
-            print(f"Usando configuração local do .env: {local_url.split('@')[0]}@...")
-            return local_url
-        else:
-            print(f"Usando DATABASE_URL do ambiente: {database_url.split('@')[0] if '@' in database_url else database_url[:50]}@...")
-            return str(database_url)  # Forçar conversão para string
+        # Prioridade 2: Construir a partir das variáveis do .env (desenvolvimento local)
+        local_url = (
+            f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}"
+            f"@{values.get('POSTGRES_SERVER')}:5432/{values.get('POSTGRES_DB')}"
+        )
+        print(f"[DB] Usando configuração local do .env: {local_url.split('@')[0]}@...")
+        return local_url
 
     # Stripe settings
     STRIPE_API_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
