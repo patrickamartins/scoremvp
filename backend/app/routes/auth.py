@@ -131,11 +131,29 @@ async def login(
         )
     
     # Verificar se a conta está ativada
-    if not user.is_active or not user.email_verified:
+    # Para usuários antigos (is_active=True mas email_verified pode ser False/NULL),
+    # considerar como ativado se is_active=True
+    # Para novos usuários, exigir ambos
+    if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Conta não ativada. Verifique seu email para ativar sua conta.",
         )
+    
+    # Se o usuário está ativo mas email_verified é False/NULL (usuário antigo),
+    # atualizar email_verified para True automaticamente
+    if user.is_active and (user.email_verified is None or user.email_verified is False):
+        try:
+            user.email_verified = True
+            db.commit()
+            print(f"[DEBUG] Atualizado email_verified para True para usuário antigo: {user.email}")
+        except Exception as e:
+            print(f"[DEBUG] Erro ao atualizar email_verified: {e}")
+            db.rollback()
+            # Continuar mesmo se não conseguir atualizar (usuário antigo)
+    
+    # Não bloquear usuários antigos que estão ativos, mesmo se email_verified for False
+    # Apenas bloquear novos usuários que não ativaram (is_active=False)
     access_token = create_access_token(
         subject=user.id,
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
