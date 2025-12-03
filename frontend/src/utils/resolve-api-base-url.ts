@@ -6,21 +6,49 @@ function trimTrailingSlash(url: string) {
 }
 
 export function resolveApiBaseUrl(): string {
-  const envUrl = (import.meta.env.VITE_API_URL ?? '').trim();
-  if (envUrl) {
-    return trimTrailingSlash(envUrl);
+  // Debug: verificar o que está disponível
+  const envUrl = import.meta.env.VITE_API_URL;
+  console.log('[API] import.meta.env.VITE_API_URL:', envUrl);
+  console.log('[API] typeof envUrl:', typeof envUrl);
+  console.log('[API] envUrl?.trim():', envUrl?.trim());
+  
+  // Prioridade 1: Variável de ambiente (sempre tem prioridade)
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    const trimmedUrl = envUrl.trim();
+    console.log('[API] Usando URL da variável de ambiente:', trimmedUrl);
+    return trimTrailingSlash(trimmedUrl);
   }
 
+  // Prioridade 2: Detectar ambiente baseado no hostname
   if (typeof window !== 'undefined' && window.location) {
     const { origin, hostname } = window.location;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.log('[API] Hostname detectado:', hostname, 'Origin:', origin);
+    
+    // Se for localhost, usar local
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+      console.log('[API] Ambiente local detectado, usando:', LOCAL_FALLBACK);
       return LOCAL_FALLBACK;
     }
-    if (origin) {
-      return `${trimTrailingSlash(origin)}/api`;
+    
+    // Se for domínio de produção, usar backend de produção
+    if (hostname.includes('scoremvp.com.br') || 
+        hostname.includes('railway.app') || 
+        hostname.includes('scoremvp.com') ||
+        hostname.includes('scoremvp-frontend')) {
+      console.log('[API] Ambiente de produção detectado, usando:', PRODUCTION_FALLBACK);
+      return PRODUCTION_FALLBACK;
+    }
+    
+    // Para outros domínios, tentar usar a origin + /api
+    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      const apiUrl = `${trimTrailingSlash(origin)}/api`;
+      console.log('[API] Usando origin + /api:', apiUrl);
+      return apiUrl;
     }
   }
 
+  // Fallback final: produção
+  console.log('[API] Usando fallback de produção:', PRODUCTION_FALLBACK);
   return PRODUCTION_FALLBACK;
 }
 

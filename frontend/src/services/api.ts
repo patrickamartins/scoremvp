@@ -4,11 +4,34 @@ import { Game, GameCreate, GameUpdate, GameStats, GameStatsCreate, GameStatsUpda
 import { Player, PlayerCreate, PlayerUpdate, PlayerStats } from '../types/player';
 import { resolveApiBaseUrl } from '../utils/resolve-api-base-url';
 
+// Resolver a URL dinamicamente - não no top-level para garantir que window.location esteja disponível
+let cachedBaseUrl: string | null = null;
+
+function getApiBaseUrl(): string {
+  if (!cachedBaseUrl) {
+    cachedBaseUrl = resolveApiBaseUrl();
+    console.log('[API] Base URL resolvida:', cachedBaseUrl);
+    console.log('[API] VITE_API_URL do env:', import.meta.env.VITE_API_URL);
+    console.log('[API] import.meta.env:', import.meta.env);
+  }
+  return cachedBaseUrl;
+}
+
+// Criar instância do axios - inicializar com URL padrão, mas será atualizada no interceptor
 export const api = axios.create({
-  baseURL: resolveApiBaseUrl(),
+  baseURL: '', // Será definido dinamicamente no interceptor
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Interceptor para definir baseURL dinamicamente antes de cada requisição
+api.interceptors.request.use((config) => {
+  // Resolver a URL a cada requisição para garantir que está correta
+  if (!config.baseURL || config.baseURL === '') {
+    config.baseURL = getApiBaseUrl();
+  }
+  return config;
 });
 
 // Interceptor para adicionar o token em todas as requisições

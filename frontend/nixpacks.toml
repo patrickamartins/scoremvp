@@ -5,6 +5,8 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm ci"]
 
 [phases.build]
+# As variáveis VITE_* devem estar disponíveis durante o build
+# Railway injeta essas variáveis automaticamente do painel Variables
 cmds = ["npm run build"]
 
 [start]
