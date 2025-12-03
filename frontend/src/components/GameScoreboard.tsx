@@ -124,10 +124,15 @@ export function GameScoreboard({
     }
   };
 
-  // Notificar mudanças de tempo quando o cronômetro está rodando
+  // Notificar mudanças de tempo quando o cronômetro está rodando (com debounce)
   useEffect(() => {
     if (onTimerStateChange && isRunning) {
-      onTimerStateChange(isRunning, time);
+      // Usar debounce para evitar muitas requisições
+      const timeoutId = setTimeout(() => {
+        onTimerStateChange(isRunning, time);
+      }, 500); // Atualizar a cada 500ms no máximo
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [time, isRunning, onTimerStateChange]);
 

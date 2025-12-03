@@ -1084,37 +1084,62 @@ const Painel: React.FC = () => {
     setLastTickTime(Date.now());
   }, [selectedQuarto]);
 
+  // Debounce para salvar scoreboard
+  const scoreboardSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Callback para mudanças no cronômetro
   const handleTimerStateChange = (isRunning: boolean, time: number) => {
     setTimerIsRunning(isRunning);
     setTimerTime(time);
     setLastTickTime(Date.now());
     
-    // Salvar estado do placar no backend
-    if (gameId) {
-      updateScoreboard(gameId, {
-        timer_time: time,
-        timer_running: isRunning,
-        current_quarter: selectedQuarto,
-        away_score: awayScore
-      }).catch(err => {
-        console.error('Erro ao salvar estado do placar:', err);
-      });
+    // Salvar estado do placar no backend com debounce
+    if (gameId && gameSaved) {
+      // Limpar timeout anterior
+      if (scoreboardSaveTimeoutRef.current) {
+        clearTimeout(scoreboardSaveTimeoutRef.current);
+      }
+      
+      // Agendar salvamento após 1 segundo de inatividade
+      scoreboardSaveTimeoutRef.current = setTimeout(() => {
+        updateScoreboard(gameId, {
+          timer_time: time,
+          timer_running: isRunning,
+          current_quarter: selectedQuarto,
+          away_score: awayScore
+        }).catch(err => {
+          console.error('Erro ao salvar estado do placar:', err);
+        });
+      }, 1000);
     }
   };
 
-  // Salvar estado do placar quando awayScore muda
+  // Salvar estado do placar quando awayScore muda (com debounce)
   useEffect(() => {
     if (gameId && gameSaved) {
-      updateScoreboard(gameId, {
-        away_score: awayScore,
-        timer_time: timerTime,
-        timer_running: timerIsRunning,
-        current_quarter: selectedQuarto
-      }).catch(err => {
-        console.error('Erro ao salvar estado do placar:', err);
-      });
+      // Limpar timeout anterior
+      if (scoreboardSaveTimeoutRef.current) {
+        clearTimeout(scoreboardSaveTimeoutRef.current);
+      }
+      
+      // Agendar salvamento após 500ms de inatividade
+      scoreboardSaveTimeoutRef.current = setTimeout(() => {
+        updateScoreboard(gameId, {
+          away_score: awayScore,
+          timer_time: timerTime,
+          timer_running: timerIsRunning,
+          current_quarter: selectedQuarto
+        }).catch(err => {
+          console.error('Erro ao salvar estado do placar:', err);
+        });
+      }, 500);
     }
+    
+    return () => {
+      if (scoreboardSaveTimeoutRef.current) {
+        clearTimeout(scoreboardSaveTimeoutRef.current);
+      }
+    };
   }, [awayScore, gameId, gameSaved, timerTime, timerIsRunning, selectedQuarto]);
 
   // Abrir modal de substituição

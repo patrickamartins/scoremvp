@@ -21,21 +21,34 @@ def get_stats_query(db: Session, current_user: models.User, data_inicio: Optiona
     """Retorna query de jogos filtrados por usuário e data"""
     # Se for team_admin, mostrar jogos dos jogadores vinculados + seus próprios jogos
     if current_user.role == "team_admin":
-        team_player_ids = [p.id for p in db.query(models.Player).filter(
-            models.Player.team_id == current_user.id
-        ).all()]
+        try:
+            team_player_ids = [p.id for p in db.query(models.Player).filter(
+                models.Player.team_id == current_user.id
+            ).all()]
+        except Exception as e:
+            logger.warning(f"Erro ao filtrar por team_id (coluna pode não existir): {e}")
+            team_player_ids = []
+        
         from sqlalchemy import or_
-        query = db.query(models.Game).filter(
-            or_(
-                models.Game.owner_id == current_user.id,
-                models.Game.players.any(models.Player.id.in_(team_player_ids))
+        if team_player_ids:
+            query = db.query(models.Game).filter(
+                or_(
+                    models.Game.owner_id == current_user.id,
+                    models.Game.players.any(models.Player.id.in_(team_player_ids))
+                )
             )
-        )
+        else:
+            query = db.query(models.Game).filter(models.Game.owner_id == current_user.id)
     elif current_user.role == "player":
         # Player vê apenas jogos onde ele participou
-        player = db.query(models.Player).filter(
-            models.Player.user_id == current_user.id
-        ).first()
+        try:
+            player = db.query(models.Player).filter(
+                models.Player.user_id == current_user.id
+            ).first()
+        except Exception as e:
+            logger.warning(f"Erro ao filtrar por user_id (coluna pode não existir): {e}")
+            player = None
+        
         if player:
             query = db.query(models.Game).filter(
                 models.Game.players.contains(player)
@@ -209,13 +222,24 @@ def get_public_jogadoras_stats(
         ).first()
 
         if estatisticas and estatisticas.total_jogos > 0:
+            # Tratar colunas que podem não existir
+            try:
+                categoria = getattr(jogadora, 'categoria', None)
+            except AttributeError:
+                categoria = None
+            
+            try:
+                active = getattr(jogadora, 'active', True)
+            except AttributeError:
+                active = True
+            
             stats.append({
                 "id": jogadora.id,
                 "name": jogadora.name,
                 "number": jogadora.number,
                 "position": jogadora.position,
-                "categoria": jogadora.categoria,
-                "active": jogadora.active,
+                "categoria": categoria,
+                "active": active,
                 "created_at": jogadora.created_at,
                 "media_pontos": round(estatisticas.media_pontos or 0, 2),
                 "media_assistencias": round(estatisticas.media_assistencias or 0, 2),

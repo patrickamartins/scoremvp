@@ -65,16 +65,31 @@ def listar_jogadoras(
         # Se for superadmin, mostrar todos
         # Se for player, mostrar apenas o próprio perfil
         if current_user.role == "team_admin":
-            jogadoras = db.query(models.Player).filter(
-                models.Player.team_id == current_user.id
-            ).all()
+            # Verificar se a coluna team_id existe antes de usar
+            try:
+                jogadoras = db.query(models.Player).filter(
+                    models.Player.team_id == current_user.id
+                ).all()
+            except Exception as e:
+                logger.warning(f"Erro ao filtrar por team_id (coluna pode não existir): {e}")
+                # Se team_id não existir, retornar todos os jogadores (compatibilidade)
+                try:
+                    jogadoras = db.query(models.Player).all()
+                except Exception as e2:
+                    logger.error(f"Erro ao listar todos os jogadores: {e2}")
+                    jogadoras = []
         elif current_user.role == "superadmin":
             jogadoras = db.query(models.Player).all()
         elif current_user.role == "player":
             # Jogador vê apenas seu próprio perfil
-            jogadoras = db.query(models.Player).filter(
-                models.Player.user_id == current_user.id
-            ).all()
+            try:
+                jogadoras = db.query(models.Player).filter(
+                    models.Player.user_id == current_user.id
+                ).all()
+            except Exception as e:
+                logger.warning(f"Erro ao filtrar por user_id (coluna pode não existir): {e}")
+                # Se user_id não existir, retornar vazio (jogador não tem perfil ainda)
+                jogadoras = []
         else:
             # Outros roles não têm acesso
             raise HTTPException(
@@ -82,11 +97,14 @@ def listar_jogadoras(
                 detail="Acesso negado"
             )
         
+        # Retornar jogadoras (schema já aceita campos opcionais)
         return [schemas.PlayerOut.model_validate(j) for j in jogadoras]
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao listar jogadoras: {str(e)}")
+        logger.error(f"Erro ao listar jogadoras: {str(e)}", exc_info=True)
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao listar jogadoras: {str(e)}"

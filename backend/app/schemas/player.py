@@ -23,6 +23,8 @@ class PlayerUpdate(BaseModel):
 class PlayerOut(PlayerBase):
     id: int
     created_at: Optional[datetime] = None
+    user_id: Optional[int] = None
+    team_id: Optional[int] = None
     user: Optional[UserOut] = None
 
     @field_serializer('created_at')

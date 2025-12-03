@@ -24,21 +24,35 @@ def list_email_templates(
     current_user: User = Depends(get_current_active_superadmin),
 ):
     """Lista todos os templates de email - apenas para superadmin"""
-    templates = db.query(EmailTemplate).all()
-    result = []
-    for template in templates:
-        template_dict = {
-            "id": template.id,
-            "template_type": template.template_type,
-            "subject": template.subject,
-            "html_body": template.html_body,
-            "enabled": template.enabled,
-            "send_to_roles": json.loads(template.send_to_roles) if template.send_to_roles else [],
-            "created_at": template.created_at,
-            "updated_at": template.updated_at,
-        }
-        result.append(EmailTemplateOut(**template_dict))
-    return result
+    try:
+        templates = db.query(EmailTemplate).all()
+        result = []
+        for template in templates:
+            try:
+                template_dict = {
+                    "id": template.id,
+                    "template_type": template.template_type,
+                    "subject": template.subject,
+                    "html_body": template.html_body,
+                    "enabled": template.enabled,
+                    "send_to_roles": json.loads(template.send_to_roles) if template.send_to_roles else [],
+                    "created_at": template.created_at,
+                    "updated_at": template.updated_at,
+                }
+                result.append(EmailTemplateOut(**template_dict))
+            except Exception as e:
+                # Se houver erro ao processar um template, pular e continuar
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Erro ao processar template {template.id}: {e}")
+                continue
+        return result
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erro ao listar templates: {e}", exc_info=True)
+        # Se a tabela não existir, retornar lista vazia
+        return []
 
 @router.get(
     "/{template_type}",

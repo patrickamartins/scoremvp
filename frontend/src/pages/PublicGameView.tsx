@@ -61,7 +61,6 @@ export default function PublicGameView() {
       setHomeScore(scoreboardData.home_score);
       setTimerTime(scoreboardData.timer_time);
       setTimerRunning(scoreboardData.timer_running);
-      setSelectedQuarto(scoreboardData.current_quarter);
     } catch (err: any) {
       console.error('Erro ao buscar placar:', err);
     }
