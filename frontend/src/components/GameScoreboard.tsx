@@ -43,18 +43,18 @@ export function GameScoreboard({
   const previousQuarter = useRef(quarter);
   const startTimeRef = useRef<number | null>(null);
 
-  // Sincronizar com props externas (para visualização pública)
+  // Sincronizar com props externas (para visualização pública) - atualizar sempre que mudar
   useEffect(() => {
-    if (initialTime !== undefined && initialTime !== time) {
+    if (readOnly && initialTime !== undefined) {
       setTime(initialTime);
     }
-  }, [initialTime]);
+  }, [initialTime, readOnly]);
 
   useEffect(() => {
-    if (initialRunning !== undefined && initialRunning !== isRunning) {
+    if (readOnly && initialRunning !== undefined) {
       setIsRunning(initialRunning);
     }
-  }, [initialRunning]);
+  }, [initialRunning, readOnly]);
 
   // Resetar cronômetro ao trocar de quarto
   useEffect(() => {

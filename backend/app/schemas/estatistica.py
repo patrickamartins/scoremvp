@@ -21,6 +21,7 @@ class StatisticBase(BaseModel):
     free_throw_attempts: int
     free_throw_made: int
     interference: int
+    minutes_played: Optional[float] = 0.0  # Minutos jogados (em segundos ou minutos decimais)
 
 class StatisticCreate(StatisticBase):
     player_id: int
@@ -46,6 +47,7 @@ class StatisticUpdate(BaseModel):
     free_throw_attempts: Optional[int] = None
     free_throw_made: Optional[int] = None
     interference: Optional[int] = None
+    minutes_played: Optional[float] = None
 
 class StatisticOut(StatisticBase):
     id: int

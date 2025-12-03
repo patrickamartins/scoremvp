@@ -183,6 +183,10 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
           return sortColumn.direction === 'asc' 
             ? (a.player.name || '').localeCompare(b.player.name || '')
             : (b.player.name || '').localeCompare(a.player.name || '');
+        case 'minutes_played':
+          aValue = a.stat.minutes_played || 0;
+          bValue = b.stat.minutes_played || 0;
+          break;
         case 'points':
           aValue = a.stat.points;
           bValue = b.stat.points;
@@ -191,21 +195,73 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
           aValue = a.stat.two_attempts > 0 ? (a.stat.two_made / a.stat.two_attempts) * 100 : 0;
           bValue = b.stat.two_attempts > 0 ? (b.stat.two_made / b.stat.two_attempts) * 100 : 0;
           break;
+        case 'two_made':
+          aValue = a.stat.two_made || 0;
+          bValue = b.stat.two_made || 0;
+          break;
         case 'three_p':
           aValue = a.stat.three_attempts > 0 ? (a.stat.three_made / a.stat.three_attempts) * 100 : 0;
           bValue = b.stat.three_attempts > 0 ? (b.stat.three_made / b.stat.three_attempts) * 100 : 0;
+          break;
+        case 'three_made':
+          aValue = a.stat.three_made || 0;
+          bValue = b.stat.three_made || 0;
           break;
         case 'free_throw':
           aValue = a.stat.free_throw_attempts > 0 ? (a.stat.free_throw_made / a.stat.free_throw_attempts) * 100 : 0;
           bValue = b.stat.free_throw_attempts > 0 ? (b.stat.free_throw_made / b.stat.free_throw_attempts) * 100 : 0;
           break;
+        case 'free_throw_made':
+          aValue = a.stat.free_throw_made || 0;
+          bValue = b.stat.free_throw_made || 0;
+          break;
+        case 'offensive_rebounds':
+          aValue = a.stat.offensive_rebounds || 0;
+          bValue = b.stat.offensive_rebounds || 0;
+          break;
+        case 'defensive_rebounds':
+          aValue = a.stat.defensive_rebounds || 0;
+          bValue = b.stat.defensive_rebounds || 0;
+          break;
         case 'rebounds':
           aValue = a.stat.total_rebounds;
           bValue = b.stat.total_rebounds;
           break;
+        case 'assists':
+          aValue = a.stat.assists || 0;
+          bValue = b.stat.assists || 0;
+          break;
         case 'turnovers':
           aValue = a.stat.turnovers;
           bValue = b.stat.turnovers;
+          break;
+        case 'steals':
+          aValue = a.stat.steals || 0;
+          bValue = b.stat.steals || 0;
+          break;
+        case 'blocks':
+          aValue = a.stat.blocks || 0;
+          bValue = b.stat.blocks || 0;
+          break;
+        case 'personal_fouls':
+          aValue = a.stat.personal_fouls || 0;
+          bValue = b.stat.personal_fouls || 0;
+          break;
+        case 'fouls_drawn':
+          aValue = a.stat.fouls_drawn || 0;
+          bValue = b.stat.fouls_drawn || 0;
+          break;
+        case 'total_fouls':
+          aValue = (a.stat.personal_fouls || 0) + (a.stat.fouls_drawn || 0);
+          bValue = (b.stat.personal_fouls || 0) + (b.stat.fouls_drawn || 0);
+          break;
+        case 'interceptions':
+          aValue = a.stat.interceptions || 0;
+          bValue = b.stat.interceptions || 0;
+          break;
+        case 'efficiency':
+          aValue = parseFloat(calcEF(a.stat));
+          bValue = parseFloat(calcEF(b.stat));
           break;
         default:
           aValue = (a.stat as any)[sortColumn.key] || 0;
@@ -298,9 +354,20 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
   };
 
   const formatMinutes = (minutes: number) => {
-    const mins = Math.floor(minutes);
-    const secs = Math.floor((minutes - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    // minutes_played pode vir em segundos (float) ou minutos (float)
+    // Se for maior que 100, provavelmente está em segundos
+    if (minutes > 100) {
+      // Está em segundos, converter para minutos:segundos
+      const totalSeconds = Math.floor(minutes);
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      // Está em minutos decimais, converter para minutos:segundos
+      const mins = Math.floor(minutes);
+      const secs = Math.floor((minutes - mins) * 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
   };
 
   const formatPercentage = (made: number, attempts: number) => {
@@ -404,7 +471,15 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
                 <th className="text-center">Nº</th>
                 <th className="text-center">JOGADOR</th>
                 <th className="text-center">POS</th>
-                <th className="text-center">MIN</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('minutes_played')}
+                >
+                  <div className="flex items-center justify-center">
+                    MIN
+                    <SortIcon columnKey="minutes_played" />
+                  </div>
+                </th>
                 <th 
                   className="text-center cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('points')}
@@ -423,7 +498,15 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
                     <SortIcon columnKey="two_p" />
                   </div>
                 </th>
-                <th className="text-center">2PTS</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('two_made')}
+                >
+                  <div className="flex items-center justify-center">
+                    2PTS
+                    <SortIcon columnKey="two_made" />
+                  </div>
+                </th>
                 <th 
                   className="text-center cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('three_p')}
@@ -433,7 +516,15 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
                     <SortIcon columnKey="three_p" />
                   </div>
                 </th>
-                <th className="text-center">3PTS</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('three_made')}
+                >
+                  <div className="flex items-center justify-center">
+                    3PTS
+                    <SortIcon columnKey="three_made" />
+                  </div>
+                </th>
                 <th 
                   className="text-center cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('free_throw')}
@@ -443,11 +534,51 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
                     <SortIcon columnKey="free_throw" />
                   </div>
                 </th>
-                <th className="text-center">PLL</th>
-                <th className="text-center">REBO</th>
-                <th className="text-center">REBD</th>
-                <th className="text-center">TREB</th>
-                <th className="text-center">ASS</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('free_throw_made')}
+                >
+                  <div className="flex items-center justify-center">
+                    PLL
+                    <SortIcon columnKey="free_throw_made" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('offensive_rebounds')}
+                >
+                  <div className="flex items-center justify-center">
+                    REBO
+                    <SortIcon columnKey="offensive_rebounds" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('defensive_rebounds')}
+                >
+                  <div className="flex items-center justify-center">
+                    REBD
+                    <SortIcon columnKey="defensive_rebounds" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('rebounds')}
+                >
+                  <div className="flex items-center justify-center">
+                    TREB
+                    <SortIcon columnKey="rebounds" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('assists')}
+                >
+                  <div className="flex items-center justify-center">
+                    ASS
+                    <SortIcon columnKey="assists" />
+                  </div>
+                </th>
                 <th 
                   className="text-center cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('turnovers')}
@@ -459,19 +590,67 @@ export function BoxScoreTable({ gameId, stats, players, hidePeriodSelector = fal
                 </th>
                 <th 
                   className="text-center cursor-pointer hover:bg-gray-100 select-none"
-                  onClick={() => handleSort('rebounds')}
+                  onClick={() => handleSort('steals')}
                 >
                   <div className="flex items-center justify-center">
                     BR
-                    <SortIcon columnKey="rebounds" />
+                    <SortIcon columnKey="steals" />
                   </div>
                 </th>
-                <th className="text-center">T</th>
-                <th className="text-center">FP</th>
-                <th className="text-center">FR</th>
-                <th className="text-center">TF</th>
-                <th className="text-center">INT</th>
-                <th className="text-center">EF</th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('blocks')}
+                >
+                  <div className="flex items-center justify-center">
+                    T
+                    <SortIcon columnKey="blocks" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('personal_fouls')}
+                >
+                  <div className="flex items-center justify-center">
+                    FP
+                    <SortIcon columnKey="personal_fouls" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('fouls_drawn')}
+                >
+                  <div className="flex items-center justify-center">
+                    FR
+                    <SortIcon columnKey="fouls_drawn" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('total_fouls')}
+                >
+                  <div className="flex items-center justify-center">
+                    TF
+                    <SortIcon columnKey="total_fouls" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('interceptions')}
+                >
+                  <div className="flex items-center justify-center">
+                    INT
+                    <SortIcon columnKey="interceptions" />
+                  </div>
+                </th>
+                <th 
+                  className="text-center cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('efficiency')}
+                >
+                  <div className="flex items-center justify-center">
+                    EF
+                    <SortIcon columnKey="efficiency" />
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>

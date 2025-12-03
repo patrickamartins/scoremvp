@@ -72,13 +72,42 @@ export default function PublicGameView() {
     fetchScoreboard();
   }, [link]);
 
-  // Atualizar placar em tempo real a cada 1 segundo
+  // Buscar estatísticas atualizadas
+  const fetchStats = async () => {
+    if (!link) return;
+
+    try {
+      const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
+      setStats(statsResponse.data);
+      
+      // Calcular faltas acumuladas
+      const homeFoulsTotal = statsResponse.data
+        .filter((s: any) => s.fp)
+        .reduce((sum: number, s: any) => sum + (s.fp || 0), 0);
+      setHomeFouls(homeFoulsTotal);
+    } catch (err: any) {
+      console.error('Erro ao buscar estatísticas:', err);
+    }
+  };
+
+  // Atualizar placar em tempo real a cada 200ms para sincronização precisa
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
       fetchScoreboard();
-    }, 1000); // 1 segundo para atualização em tempo real
+    }, 200); // 200ms para atualização quase em tempo real
+
+    return () => clearInterval(interval);
+  }, [link, loading]);
+
+  // Atualizar estatísticas a cada 2 segundos (quando são salvas no painel)
+  useEffect(() => {
+    if (!link || loading) return;
+
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 2000); // 2 segundos para atualizar estatísticas
 
     return () => clearInterval(interval);
   }, [link, loading]);
