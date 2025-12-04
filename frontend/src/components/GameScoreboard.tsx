@@ -42,89 +42,89 @@ export function GameScoreboard({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousQuarter = useRef(quarter);
   const startTimeRef = useRef<number | null>(null);
-  const lastSyncTimeRef = useRef<{ time: number; timestamp: number } | null>(null);
+  const lastInitialTimeRef = useRef<number | null>(null);
+  const lastInitialRunningRef = useRef<boolean | null>(null);
   const timeRef = useRef(initialTime); // Ref para acessar o tempo atual dentro do intervalo
-  const isRunningRef = useRef(initialRunning); // Ref para acessar o estado de running dentro do intervalo
 
   // Resetar cronômetro ao trocar de quarto
   useEffect(() => {
     if (previousQuarter.current !== quarter) {
-      setTime(720); // 12 minutos
+      setTime(720);
       setIsRunning(false);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       startTimeRef.current = null;
-      lastSyncTimeRef.current = null;
+      lastInitialTimeRef.current = null;
+      lastInitialRunningRef.current = null;
       previousQuarter.current = quarter;
       if (onTimeChange) onTimeChange(720);
       if (onRunningChange) onRunningChange(false);
     }
   }, [quarter, onTimeChange, onRunningChange]);
 
-  // Sincronizar com props externas (para visualização pública)
+  // Sincronizar com props externas (para visualização pública) - apenas quando mudar
   useEffect(() => {
     if (readOnly && initialTime !== undefined && initialRunning !== undefined) {
-      const wasRunning = isRunningRef.current;
-      const now = Date.now();
+      const timeChanged = lastInitialTimeRef.current !== initialTime;
+      const runningChanged = lastInitialRunningRef.current !== initialRunning;
       
-      // Só atualizar se houver mudança de estado (pausado <-> rodando) ou se for a primeira vez
-      if (initialRunning !== wasRunning || !lastSyncTimeRef.current) {
+      // Só atualizar se houver mudança real
+      if (runningChanged) {
+        // Mudança de estado (pausado <-> rodando)
+        const now = Date.now();
+        
         if (initialRunning) {
-          // Timer está rodando: configurar startTimeRef
-          const elapsed = 720 - initialTime; // Tempo decorrido desde o início (em segundos)
+          // Timer está rodando: configurar startTimeRef baseado no tempo recebido
+          const elapsed = 720 - initialTime; // Tempo decorrido desde o início
           startTimeRef.current = now - (elapsed * 1000);
-          lastSyncTimeRef.current = { time: initialTime, timestamp: now };
           setTime(initialTime);
           timeRef.current = initialTime;
           setIsRunning(true);
         } else {
           // Timer está pausado: atualizar diretamente
-          startTimeRef.current = null;
-          lastSyncTimeRef.current = null;
           setTime(initialTime);
           timeRef.current = initialTime;
           setIsRunning(false);
+          startTimeRef.current = null;
         }
-      } else if (initialRunning && startTimeRef.current && lastSyncTimeRef.current) {
-        // Timer já está rodando: verificar se precisa resincronizar (apenas se diferença > 2 segundos)
-        const currentElapsed = (now - startTimeRef.current) / 1000;
-        const currentCalculatedTime = 720 - currentElapsed;
-        const diff = Math.abs(currentCalculatedTime - initialTime);
         
-        // Se a diferença for maior que 2 segundos, resincronizar
-        if (diff > 2) {
-          const elapsed = 720 - initialTime;
-          startTimeRef.current = now - (elapsed * 1000);
-          lastSyncTimeRef.current = { time: initialTime, timestamp: now };
-          setTime(initialTime);
-          timeRef.current = initialTime;
-        }
+        lastInitialTimeRef.current = initialTime;
+        lastInitialRunningRef.current = initialRunning;
+      } else if (timeChanged && !initialRunning) {
+        // Timer pausado e tempo mudou: atualizar diretamente
+        setTime(initialTime);
+        timeRef.current = initialTime;
+        lastInitialTimeRef.current = initialTime;
       }
+      // Se timer está rodando e apenas o tempo mudou, não fazer nada
+      // O cronômetro local continuará rodando
     } else if (!readOnly) {
       // Modo não-readOnly: usar estados locais normalmente
-      if (initialTime !== undefined && initialTime !== time && !isRunningRef.current) {
+      if (initialTime !== undefined && initialTime !== timeRef.current && !isRunning) {
         setTime(initialTime);
         timeRef.current = initialTime;
       }
-      if (initialRunning !== undefined && initialRunning !== isRunningRef.current) {
+      if (initialRunning !== undefined && initialRunning !== isRunning) {
         setIsRunning(initialRunning);
       }
     }
-  }, [initialTime, initialRunning, readOnly]);
+  }, [initialTime, initialRunning, readOnly, isRunning]);
 
-  // Atualizar refs quando estados mudarem
+  // Atualizar timeRef quando time mudar
   useEffect(() => {
     timeRef.current = time;
   }, [time]);
 
+  // Gerenciar o cronômetro com centésimos - RODA SEMPRE QUE isRunning É TRUE
   useEffect(() => {
-    isRunningRef.current = isRunning;
-  }, [isRunning]);
+    // Limpar intervalo anterior se existir
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-  // Gerenciar o cronômetro com centésimos
-  useEffect(() => {
     if (isRunning) {
       // Garantir que startTimeRef está configurado
       if (!startTimeRef.current) {
@@ -133,21 +133,19 @@ export function GameScoreboard({
         startTimeRef.current = Date.now() - (elapsed * 1000);
       }
       
+      // Iniciar intervalo imediatamente
       intervalRef.current = setInterval(() => {
         if (!startTimeRef.current) {
-          // Fallback: se startTimeRef não existir, criar baseado no tempo atual
           const currentTime = timeRef.current;
           const elapsed = 720 - currentTime;
           startTimeRef.current = Date.now() - (elapsed * 1000);
         }
         
         const now = Date.now();
-        const elapsed = (now - startTimeRef.current) / 1000; // Tempo decorrido em segundos (com decimais)
+        const elapsed = (now - startTimeRef.current) / 1000;
         const newTime = Math.max(0, 720 - elapsed);
-        // Manter precisão de centésimos (2 casas decimais)
-        const roundedTime = Math.round(newTime * 100) / 100;
-        timeRef.current = roundedTime;
-        setTime(roundedTime);
+        timeRef.current = newTime;
+        setTime(newTime);
         
         if (onTimeChange && !readOnly) {
           onTimeChange(newTime);
@@ -166,10 +164,6 @@ export function GameScoreboard({
       }, 10); // Atualizar a cada 10ms para centésimos
     } else {
       // Timer pausado: limpar intervalo
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
       if (!readOnly) {
         startTimeRef.current = null;
       }
