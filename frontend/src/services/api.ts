@@ -172,6 +172,8 @@ export const getPublicScoreboard = async (publicLink: string): Promise<{
   timer_running: boolean;
   current_quarter: number;
   opponent: string;
+  home_fouls: number;
+  away_fouls: number;
 }> => {
   const response = await api.get(`/games/public/link/${publicLink}/scoreboard`);
   return response.data;

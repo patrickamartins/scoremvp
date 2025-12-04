@@ -315,11 +315,34 @@ def buscar_placar_publico(
     
     home_score = home_score_result or 0
     
+    # Calcular faltas recebidas (faltas do adversário) - apenas do quarto atual
+    current_quarter = jogo.current_quarter or 1
+    away_fouls_result = db.query(
+        func.sum(Statistic.fr)
+    ).filter(
+        Statistic.game_id == jogo.id,
+        Statistic.quarter == current_quarter
+    ).scalar()
+    
+    away_fouls = away_fouls_result or 0
+    
+    # Calcular faltas da casa (faltas pessoais) - apenas do quarto atual
+    home_fouls_result = db.query(
+        func.sum(Statistic.fp)
+    ).filter(
+        Statistic.game_id == jogo.id,
+        Statistic.quarter == current_quarter
+    ).scalar()
+    
+    home_fouls = home_fouls_result or 0
+    
     return {
         "home_score": home_score,
         "away_score": jogo.away_score or 0,
         "timer_time": jogo.timer_time or 720,
         "timer_running": jogo.timer_running or False,
-        "current_quarter": jogo.current_quarter or 1,
-        "opponent": jogo.opponent
+        "current_quarter": current_quarter,
+        "opponent": jogo.opponent,
+        "home_fouls": home_fouls,
+        "away_fouls": away_fouls
     }

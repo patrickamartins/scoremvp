@@ -1010,16 +1010,25 @@ const Painel: React.FC = () => {
     return total;
   }, [statistics]);
 
-  // Calcular faltas acumuladas da equipe casa
+  // Calcular faltas acumuladas da equipe casa (apenas do quarto atual)
   const homeFouls = useMemo(() => {
     let total = 0;
-    Object.values(statistics).forEach((quartoStats) => {
-      Object.values(quartoStats).forEach((playerStats: any) => {
-        total += playerStats.fouls ?? 0;
-      });
+    const quartoStats = statistics[selectedQuarto] || {};
+    Object.values(quartoStats).forEach((playerStats: any) => {
+      total += playerStats.fouls ?? 0;
     });
     return total;
-  }, [statistics]);
+  }, [statistics, selectedQuarto]);
+
+  // Calcular faltas recebidas (faltas do adversário) - apenas do quarto atual
+  const awayFouls = useMemo(() => {
+    let total = 0;
+    const quartoStats = statistics[selectedQuarto] || {};
+    Object.values(quartoStats).forEach((playerStats: any) => {
+      total += playerStats.fr ?? 0; // fr = faltas recebidas
+    });
+    return total;
+  }, [statistics, selectedQuarto]);
 
   // Inicializar jogadores em quadra automaticamente (primeiros 5)
   // Os primeiros 5 jogadores adicionados vão para o painel, do 6º em diante vão para o banco
@@ -1232,7 +1241,7 @@ const Painel: React.FC = () => {
           onTimeChange={setTimerTime}
           onRunningChange={setTimerIsRunning}
           homeFouls={homeFouls}
-          awayFouls={0}
+          awayFouls={awayFouls}
         />
       )}
 

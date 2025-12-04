@@ -46,15 +46,30 @@ export function GameScoreboard({
   // Sincronizar com props externas (para visualização pública) - atualizar sempre que mudar
   useEffect(() => {
     if (readOnly && initialTime !== undefined) {
-      setTime(initialTime);
+      // Se o timer não estiver rodando, atualizar o tempo diretamente
+      // Se estiver rodando, não atualizar para não interferir com o contador
+      if (!isRunning) {
+        setTime(initialTime);
+        // Resetar a referência de tempo quando o tempo é atualizado externamente
+        startTimeRef.current = null;
+      } else {
+        // Se estiver rodando, ajustar o startTimeRef para manter a sincronização
+        startTimeRef.current = Date.now() - (720 - initialTime) * 1000;
+      }
     }
-  }, [initialTime, readOnly]);
+  }, [initialTime, readOnly, isRunning]);
 
   useEffect(() => {
     if (readOnly && initialRunning !== undefined) {
+      const wasRunning = isRunning;
       setIsRunning(initialRunning);
+      
+      // Se estava pausado e agora deve rodar, resetar o startTimeRef
+      if (!wasRunning && initialRunning) {
+        startTimeRef.current = Date.now() - (720 - time) * 1000;
+      }
     }
-  }, [initialRunning, readOnly]);
+  }, [initialRunning, readOnly, time]);
 
   // Resetar cronômetro ao trocar de quarto
   useEffect(() => {
@@ -65,18 +80,24 @@ export function GameScoreboard({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      startTimeRef.current = null; // Resetar referência de tempo
       previousQuarter.current = quarter;
       if (onTimeChange) onTimeChange(720);
       if (onRunningChange) onRunningChange(false);
     }
   }, [quarter, onTimeChange, onRunningChange]);
 
-  // Gerenciar o cronômetro com centésimos
+  // Gerenciar o cronômetro com centésimos (funciona tanto no painel quanto na página pública)
   useEffect(() => {
-    if (isRunning && time > 0 && !readOnly) {
-      if (!startTimeRef.current) {
+    if (isRunning && time > 0) {
+      // Se for readOnly (página pública), usar o tempo inicial como base
+      if (readOnly && !startTimeRef.current) {
+        // Calcular o tempo de início baseado no tempo atual
+        startTimeRef.current = Date.now() - (720 - time) * 1000;
+      } else if (!readOnly && !startTimeRef.current) {
         startTimeRef.current = Date.now() - (720 - time) * 1000;
       }
+      
       intervalRef.current = setInterval(() => {
         const elapsed = (Date.now() - (startTimeRef.current || Date.now())) / 1000;
         const newTime = Math.max(0, 720 - elapsed);
@@ -95,7 +116,10 @@ export function GameScoreboard({
     } else if (!isRunning && intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
-      startTimeRef.current = null;
+      // Não resetar startTimeRef quando pausar em modo readOnly, para manter a referência
+      if (!readOnly) {
+        startTimeRef.current = null;
+      }
     }
 
     return () => {
@@ -104,7 +128,7 @@ export function GameScoreboard({
         intervalRef.current = null;
       }
     };
-  }, [isRunning, readOnly, onTimeChange, onRunningChange]);
+  }, [isRunning, readOnly, onTimeChange, onRunningChange, time]);
 
   const formatTime = (seconds: number) => {
     const totalCentiseconds = Math.floor(seconds * 100);
@@ -242,7 +266,7 @@ export function GameScoreboard({
                 </div>
               )}
             </div>
-            {/* Bolinhas de faltas */}
+            {/* Bolinhas de faltas do adversário (faltas recebidas pelas jogadoras) */}
             <div className="flex gap-1 mt-1 md:mt-2">
               {Array.from({ length: Math.min(awayFouls, 5) }).map((_, i) => (
                 <div key={i} className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500"></div>

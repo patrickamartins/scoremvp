@@ -18,6 +18,7 @@ export default function PublicGameView() {
   const [homeScore, setHomeScore] = useState(0);
   const [timerTime, setTimerTime] = useState(720);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [currentQuarter, setCurrentQuarter] = useState(1);
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
 
@@ -35,12 +36,7 @@ export default function PublicGameView() {
       // Buscar estatísticas (apenas uma vez, não atualiza automaticamente)
       const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
       setStats(statsResponse.data);
-      
-      // Calcular faltas acumuladas
-      const homeFoulsTotal = statsResponse.data
-        .filter((s: any) => s.fp)
-        .reduce((sum: number, s: any) => sum + (s.fp || 0), 0);
-      setHomeFouls(homeFoulsTotal);
+      // As faltas são atualizadas pelo fetchScoreboard que já busca do backend
 
       setError(null);
     } catch (err: any) {
@@ -61,6 +57,10 @@ export default function PublicGameView() {
       setHomeScore(scoreboardData.home_score);
       setTimerTime(scoreboardData.timer_time);
       setTimerRunning(scoreboardData.timer_running);
+      setCurrentQuarter(scoreboardData.current_quarter || 1);
+      // Atualizar faltas do quarto atual
+      setHomeFouls(scoreboardData.home_fouls || 0);
+      setAwayFouls(scoreboardData.away_fouls || 0);
     } catch (err: any) {
       console.error('Erro ao buscar placar:', err);
     }
@@ -79,12 +79,7 @@ export default function PublicGameView() {
     try {
       const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
       setStats(statsResponse.data);
-      
-      // Calcular faltas acumuladas
-      const homeFoulsTotal = statsResponse.data
-        .filter((s: any) => s.fp)
-        .reduce((sum: number, s: any) => sum + (s.fp || 0), 0);
-      setHomeFouls(homeFoulsTotal);
+      // As faltas são atualizadas pelo fetchScoreboard que já busca do backend
     } catch (err: any) {
       console.error('Erro ao buscar estatísticas:', err);
     }
@@ -149,7 +144,7 @@ export default function PublicGameView() {
           <GameScoreboard
             homeScore={homeScore}
             awayScore={awayScore}
-            quarter={1}
+            quarter={currentQuarter}
             opponentName={game.opponent}
             readOnly={true}
             initialTime={timerTime}
