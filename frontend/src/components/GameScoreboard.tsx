@@ -97,9 +97,16 @@ export function GameScoreboard({
         setTime(initialTime);
         timeRef.current = initialTime;
         lastInitialTimeRef.current = initialTime;
+      } else if (timeChanged && initialRunning) {
+        // Timer está rodando e tempo mudou: sincronizar startTimeRef com o tempo recebido
+        // Isso garante que o cronômetro local continue rodando sincronizado com o backend
+        const now = Date.now();
+        const elapsed = 720 - initialTime; // Tempo decorrido desde o início
+        startTimeRef.current = now - (elapsed * 1000);
+        setTime(initialTime);
+        timeRef.current = initialTime;
+        lastInitialTimeRef.current = initialTime;
       }
-      // Se timer está rodando e apenas o tempo mudou, não fazer nada
-      // O cronômetro local continuará rodando
     } else if (!readOnly) {
       // Modo não-readOnly: usar estados locais normalmente
       if (initialTime !== undefined && initialTime !== timeRef.current && !isRunning) {
@@ -127,6 +134,8 @@ export function GameScoreboard({
 
     if (isRunning) {
       // Garantir que startTimeRef está configurado
+      // Em modo readOnly, o startTimeRef já deve estar configurado pela sincronização
+      // Mas garantimos que está configurado aqui também
       if (!startTimeRef.current) {
         const currentTime = timeRef.current;
         const elapsed = 720 - currentTime;
@@ -135,6 +144,7 @@ export function GameScoreboard({
       
       // Iniciar intervalo imediatamente
       intervalRef.current = setInterval(() => {
+        // Garantir que startTimeRef está configurado (fallback de segurança)
         if (!startTimeRef.current) {
           const currentTime = timeRef.current;
           const elapsed = 720 - currentTime;
@@ -164,6 +174,7 @@ export function GameScoreboard({
       }, 10); // Atualizar a cada 10ms para centésimos
     } else {
       // Timer pausado: limpar intervalo
+      // Em modo readOnly, mantemos o startTimeRef para sincronização futura
       if (!readOnly) {
         startTimeRef.current = null;
       }
