@@ -900,6 +900,21 @@ const Painel: React.FC = () => {
           setPlayers(fullGame.players);
         }
         setPublicLink(fullGame.public_link || null);
+        
+        // Inicializar estado do placar a partir do jogo carregado
+        if (fullGame.timer_time !== undefined) {
+          setTimerTime(fullGame.timer_time);
+        }
+        if (fullGame.timer_running !== undefined) {
+          setTimerIsRunning(fullGame.timer_running);
+          lastTimerRunningStateRef.current = fullGame.timer_running;
+        }
+        if (fullGame.away_score !== undefined) {
+          setAwayScore(fullGame.away_score);
+        }
+        if (fullGame.current_quarter !== undefined) {
+          setSelectedQuarto(fullGame.current_quarter);
+        }
       
       // Carregar estatísticas do jogo
       setLoadingStats(true);
@@ -1095,22 +1110,33 @@ const Painel: React.FC = () => {
 
   // Debounce para salvar scoreboard
   const scoreboardSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTimerRunningStateRef = useRef<boolean | null>(null);
+  
+  // Inicializar lastTimerRunningStateRef quando o timerIsRunning é definido
+  useEffect(() => {
+    if (lastTimerRunningStateRef.current === null) {
+      lastTimerRunningStateRef.current = timerIsRunning;
+    }
+  }, [timerIsRunning]);
   
   // Callback para mudanças no cronômetro
   const handleTimerStateChange = (isRunning: boolean, time: number) => {
+    const timerStateChanged = lastTimerRunningStateRef.current !== isRunning;
     setTimerIsRunning(isRunning);
     setTimerTime(time);
     setLastTickTime(Date.now());
     
-    // Salvar estado do placar no backend com debounce
+    // Salvar estado do placar no backend
     if (gameId && gameSaved) {
-      // Limpar timeout anterior
-      if (scoreboardSaveTimeoutRef.current) {
-        clearTimeout(scoreboardSaveTimeoutRef.current);
-      }
-      
-      // Agendar salvamento após 1 segundo de inatividade
-      scoreboardSaveTimeoutRef.current = setTimeout(() => {
+      // Se o estado do timer mudou (play/pause), salvar IMEDIATAMENTE
+      if (timerStateChanged) {
+        // Limpar timeout anterior
+        if (scoreboardSaveTimeoutRef.current) {
+          clearTimeout(scoreboardSaveTimeoutRef.current);
+          scoreboardSaveTimeoutRef.current = null;
+        }
+        
+        // Salvar imediatamente quando muda de estado
         updateScoreboard(gameId, {
           timer_time: time,
           timer_running: isRunning,
@@ -1119,7 +1145,27 @@ const Painel: React.FC = () => {
         }).catch(err => {
           console.error('Erro ao salvar estado do placar:', err);
         });
-      }, 1000);
+        
+        lastTimerRunningStateRef.current = isRunning;
+      } else {
+        // Se apenas o tempo mudou, usar debounce
+        // Limpar timeout anterior
+        if (scoreboardSaveTimeoutRef.current) {
+          clearTimeout(scoreboardSaveTimeoutRef.current);
+        }
+        
+        // Agendar salvamento após 1 segundo de inatividade
+        scoreboardSaveTimeoutRef.current = setTimeout(() => {
+          updateScoreboard(gameId, {
+            timer_time: time,
+            timer_running: isRunning,
+            current_quarter: selectedQuarto,
+            away_score: awayScore
+          }).catch(err => {
+            console.error('Erro ao salvar estado do placar:', err);
+          });
+        }, 1000);
+      }
     }
   };
 

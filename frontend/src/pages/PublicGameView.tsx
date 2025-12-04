@@ -85,13 +85,13 @@ export default function PublicGameView() {
     }
   };
 
-  // Atualizar placar em tempo real a cada 200ms para sincronização precisa
+  // Atualizar placar em tempo real a cada 500ms para sincronização precisa
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
       fetchScoreboard();
-    }, 200); // 200ms para atualização quase em tempo real
+    }, 500); // 500ms para atualização em tempo real (reduzido de 200ms para evitar muitas requisições)
 
     return () => clearInterval(interval);
   }, [link, loading]);

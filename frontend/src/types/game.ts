@@ -50,6 +50,11 @@ export interface Game {
   players?: Player[];
   createdAt?: string;
   updatedAt?: string;
+  public_link?: string;
+  away_score?: number;
+  timer_time?: number;
+  timer_running?: boolean;
+  current_quarter?: number;
 }
 
 export interface GameAction {
