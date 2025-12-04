@@ -42,51 +42,9 @@ export function GameScoreboard({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousQuarter = useRef(quarter);
   const startTimeRef = useRef<number | null>(null);
-  const lastSyncTimeRef = useRef<number | null>(null); // Para sincronização em modo readOnly
-  const timeRef = useRef(initialTime); // Ref para manter o tempo atual sem causar re-renders desnecessários
-
-  // Sincronizar com props externas (para visualização pública)
-  useEffect(() => {
-    if (readOnly) {
-      // Atualizar estado de running
-      if (initialRunning !== undefined) {
-        setIsRunning(initialRunning);
-      }
-      
-      // Atualizar tempo
-      if (initialTime !== undefined) {
-        if (!initialRunning) {
-          // Timer pausado: atualizar diretamente
-          setTime(initialTime);
-          timeRef.current = initialTime;
-          startTimeRef.current = null;
-        } else {
-          // Timer rodando: configurar startTimeRef se necessário
-          if (!startTimeRef.current) {
-            const now = Date.now();
-            const elapsed = 720 - initialTime;
-            startTimeRef.current = now - (elapsed * 1000);
-            setTime(initialTime);
-            timeRef.current = initialTime;
-          } else {
-            // Timer já está rodando: resincronizar apenas se houver diferença significativa
-            const now = Date.now();
-            const currentElapsed = (now - startTimeRef.current) / 1000;
-            const currentCalculatedTime = 720 - currentElapsed;
-            const diff = Math.abs(currentCalculatedTime - initialTime);
-            
-            // Se a diferença for maior que 1 segundo, resincronizar
-            if (diff > 1) {
-              const elapsed = 720 - initialTime;
-              startTimeRef.current = now - (elapsed * 1000);
-              setTime(initialTime);
-              timeRef.current = initialTime;
-            }
-          }
-        }
-      }
-    }
-  }, [initialTime, initialRunning, readOnly]);
+  const lastSyncTimeRef = useRef<{ time: number; timestamp: number } | null>(null);
+  const timeRef = useRef(initialTime); // Ref para acessar o tempo atual dentro do intervalo
+  const isRunningRef = useRef(initialRunning); // Ref para acessar o estado de running dentro do intervalo
 
   // Resetar cronômetro ao trocar de quarto
   useEffect(() => {
@@ -97,39 +55,99 @@ export function GameScoreboard({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      startTimeRef.current = null; // Resetar referência de tempo
+      startTimeRef.current = null;
+      lastSyncTimeRef.current = null;
       previousQuarter.current = quarter;
       if (onTimeChange) onTimeChange(720);
       if (onRunningChange) onRunningChange(false);
     }
   }, [quarter, onTimeChange, onRunningChange]);
 
-  // Atualizar timeRef quando time mudar
+  // Sincronizar com props externas (para visualização pública)
+  useEffect(() => {
+    if (readOnly && initialTime !== undefined && initialRunning !== undefined) {
+      const wasRunning = isRunningRef.current;
+      const now = Date.now();
+      
+      // Só atualizar se houver mudança de estado (pausado <-> rodando) ou se for a primeira vez
+      if (initialRunning !== wasRunning || !lastSyncTimeRef.current) {
+        if (initialRunning) {
+          // Timer está rodando: configurar startTimeRef
+          const elapsed = 720 - initialTime; // Tempo decorrido desde o início (em segundos)
+          startTimeRef.current = now - (elapsed * 1000);
+          lastSyncTimeRef.current = { time: initialTime, timestamp: now };
+          setTime(initialTime);
+          timeRef.current = initialTime;
+          setIsRunning(true);
+        } else {
+          // Timer está pausado: atualizar diretamente
+          startTimeRef.current = null;
+          lastSyncTimeRef.current = null;
+          setTime(initialTime);
+          timeRef.current = initialTime;
+          setIsRunning(false);
+        }
+      } else if (initialRunning && startTimeRef.current && lastSyncTimeRef.current) {
+        // Timer já está rodando: verificar se precisa resincronizar (apenas se diferença > 2 segundos)
+        const currentElapsed = (now - startTimeRef.current) / 1000;
+        const currentCalculatedTime = 720 - currentElapsed;
+        const diff = Math.abs(currentCalculatedTime - initialTime);
+        
+        // Se a diferença for maior que 2 segundos, resincronizar
+        if (diff > 2) {
+          const elapsed = 720 - initialTime;
+          startTimeRef.current = now - (elapsed * 1000);
+          lastSyncTimeRef.current = { time: initialTime, timestamp: now };
+          setTime(initialTime);
+          timeRef.current = initialTime;
+        }
+      }
+    } else if (!readOnly) {
+      // Modo não-readOnly: usar estados locais normalmente
+      if (initialTime !== undefined && initialTime !== time && !isRunningRef.current) {
+        setTime(initialTime);
+        timeRef.current = initialTime;
+      }
+      if (initialRunning !== undefined && initialRunning !== isRunningRef.current) {
+        setIsRunning(initialRunning);
+      }
+    }
+  }, [initialTime, initialRunning, readOnly]);
+
+  // Atualizar refs quando estados mudarem
   useEffect(() => {
     timeRef.current = time;
   }, [time]);
 
-  // Gerenciar o cronômetro com centésimos (funciona tanto no painel quanto na página pública)
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
+
+  // Gerenciar o cronômetro com centésimos
   useEffect(() => {
     if (isRunning) {
-      // Inicializar startTimeRef se não existir
+      // Garantir que startTimeRef está configurado
       if (!startTimeRef.current) {
         const currentTime = timeRef.current;
-        const elapsed = 720 - currentTime; // Tempo decorrido em segundos
+        const elapsed = 720 - currentTime;
         startTimeRef.current = Date.now() - (elapsed * 1000);
       }
       
       intervalRef.current = setInterval(() => {
         if (!startTimeRef.current) {
+          // Fallback: se startTimeRef não existir, criar baseado no tempo atual
           const currentTime = timeRef.current;
           const elapsed = 720 - currentTime;
           startTimeRef.current = Date.now() - (elapsed * 1000);
         }
         
-        const elapsed = (Date.now() - startTimeRef.current) / 1000;
+        const now = Date.now();
+        const elapsed = (now - startTimeRef.current) / 1000; // Tempo decorrido em segundos (com decimais)
         const newTime = Math.max(0, 720 - elapsed);
-        timeRef.current = newTime;
-        setTime(newTime);
+        // Manter precisão de centésimos (2 casas decimais)
+        const roundedTime = Math.round(newTime * 100) / 100;
+        timeRef.current = roundedTime;
+        setTime(roundedTime);
         
         if (onTimeChange && !readOnly) {
           onTimeChange(newTime);
@@ -146,10 +164,12 @@ export function GameScoreboard({
           timeRef.current = 0;
         }
       }, 10); // Atualizar a cada 10ms para centésimos
-    } else if (!isRunning && intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-      // Manter startTimeRef em modo readOnly para poder retomar
+    } else {
+      // Timer pausado: limpar intervalo
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       if (!readOnly) {
         startTimeRef.current = null;
       }
@@ -167,11 +187,13 @@ export function GameScoreboard({
     // Garantir que seconds seja um número válido
     const validSeconds = Math.max(0, seconds || 0);
     
-    // Calcular centésimos corretamente
+    // Calcular minutos, segundos e centésimos
+    // Usar Math.floor para garantir que não arredondamos incorretamente
     const totalCentiseconds = Math.floor(validSeconds * 100);
     const mins = Math.floor(totalCentiseconds / 6000);
-    const secs = Math.floor((totalCentiseconds % 6000) / 100);
-    const centiseconds = totalCentiseconds % 100;
+    const remainingCentiseconds = totalCentiseconds % 6000;
+    const secs = Math.floor(remainingCentiseconds / 100);
+    const centiseconds = remainingCentiseconds % 100;
     
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${centiseconds.toString().padStart(2, '0')}`;
   };
@@ -368,4 +390,5 @@ export function GameScoreboard({
     </>
   );
 }
+
 
