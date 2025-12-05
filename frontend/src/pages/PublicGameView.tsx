@@ -53,14 +53,15 @@ export default function PublicGameView() {
 
     try {
       const scoreboardData = await getPublicScoreboard(link);
+      // Usar diretamente os valores calculados pelo backend (igual ao cronômetro e placar do adversário)
       setAwayScore(scoreboardData.away_score);
-      setHomeScore(scoreboardData.home_score);
+      setHomeScore(scoreboardData.home_score); // Já calculado pelo backend
       setTimerTime(scoreboardData.timer_time);
       setTimerRunning(scoreboardData.timer_running);
       setCurrentQuarter(scoreboardData.current_quarter || 1);
-      // Atualizar faltas do quarto atual
-      setHomeFouls(scoreboardData.home_fouls || 0);
-      setAwayFouls(scoreboardData.away_fouls || 0);
+      // Usar diretamente os valores calculados pelo backend (igual ao cronômetro e placar do adversário)
+      setHomeFouls(scoreboardData.home_fouls || 0); // Já calculado pelo backend
+      setAwayFouls(scoreboardData.away_fouls || 0); // Já calculado pelo backend
     } catch (err: any) {
       console.error('Erro ao buscar placar:', err);
     }
@@ -72,70 +73,37 @@ export default function PublicGameView() {
     fetchScoreboard();
   }, [link]);
 
-  // Buscar estatísticas atualizadas
+  // Buscar estatísticas atualizadas (apenas para o BoxScore, não para o placar)
   const fetchStats = async () => {
     if (!link) return;
 
     try {
       const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
       setStats(statsResponse.data);
-      // As faltas são atualizadas pelo fetchScoreboard que já busca do backend
     } catch (err: any) {
       console.error('Erro ao buscar estatísticas:', err);
     }
   };
 
-  // Calcular placar da casa em tempo real a partir das estatísticas
-  const calculatedHomeScore = useMemo(() => {
-    let total = 0;
-    stats.forEach((stat) => {
-      total += (stat.two_made || 0) * 2;
-      total += (stat.three_made || 0) * 3;
-      total += (stat.free_throw_made || 0);
-    });
-    return total;
-  }, [stats]);
-
-  // Calcular faltas em tempo real a partir das estatísticas do quarto atual
-  const calculatedHomeFouls = useMemo(() => {
-    let total = 0;
-    stats
-      .filter((stat) => stat.quarter === currentQuarter)
-      .forEach((stat) => {
-        total += stat.fp || 0; // faltas pessoais da casa
-      });
-    return total;
-  }, [stats, currentQuarter]);
-
-  const calculatedAwayFouls = useMemo(() => {
-    let total = 0;
-    stats
-      .filter((stat) => stat.quarter === currentQuarter)
-      .forEach((stat) => {
-        total += stat.fr || 0; // faltas recebidas (faltas do adversário)
-      });
-    return total;
-  }, [stats, currentQuarter]);
-
-  // Atualizar placar em tempo real a cada 500ms para sincronização precisa
-  // Mas NÃO atualizar homeScore e faltas aqui, pois vêm do backend que pode estar desatualizado
+  // Atualizar placar em tempo real a cada 500ms (igual ao cronômetro e placar do adversário)
+  // O backend já calcula home_score, home_fouls e away_fouls, então usamos diretamente
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
-      fetchScoreboard();
-    }, 500); // 500ms para atualização em tempo real (reduzido de 200ms para evitar muitas requisições)
+      fetchScoreboard(); // Busca tudo: cronômetro, placar adversário, placar casa e faltas
+    }, 500); // 500ms para atualização em tempo real
 
     return () => clearInterval(interval);
   }, [link, loading]);
 
-  // Atualizar estatísticas a cada 500ms para atualizar o placar da casa e faltas em tempo real
+  // Atualizar estatísticas apenas para o BoxScore (menos frequente)
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
-      fetchStats();
-    }, 500); // 500ms para atualizar estatísticas e recalcular placar da casa e faltas
+      fetchStats(); // Apenas para o BoxScore, não afeta o placar
+    }, 2000); // 2 segundos é suficiente para o BoxScore
 
     return () => clearInterval(interval);
   }, [link, loading]);
@@ -175,7 +143,7 @@ export default function PublicGameView() {
         {/* Placar */}
         <div className="mb-6">
           <GameScoreboard
-            homeScore={calculatedHomeScore}
+            homeScore={homeScore}
             awayScore={awayScore}
             quarter={currentQuarter}
             opponentName={game.opponent}
@@ -184,8 +152,8 @@ export default function PublicGameView() {
             initialRunning={timerRunning}
             onTimeChange={setTimerTime}
             onRunningChange={setTimerRunning}
-            homeFouls={calculatedHomeFouls}
-            awayFouls={calculatedAwayFouls}
+            homeFouls={homeFouls}
+            awayFouls={awayFouls}
           />
         </div>
 
