@@ -96,7 +96,29 @@ export default function PublicGameView() {
     return total;
   }, [stats]);
 
+  // Calcular faltas em tempo real a partir das estatísticas do quarto atual
+  const calculatedHomeFouls = useMemo(() => {
+    let total = 0;
+    stats
+      .filter((stat) => stat.quarter === currentQuarter)
+      .forEach((stat) => {
+        total += stat.fp || 0; // faltas pessoais da casa
+      });
+    return total;
+  }, [stats, currentQuarter]);
+
+  const calculatedAwayFouls = useMemo(() => {
+    let total = 0;
+    stats
+      .filter((stat) => stat.quarter === currentQuarter)
+      .forEach((stat) => {
+        total += stat.fr || 0; // faltas recebidas (faltas do adversário)
+      });
+    return total;
+  }, [stats, currentQuarter]);
+
   // Atualizar placar em tempo real a cada 500ms para sincronização precisa
+  // Mas NÃO atualizar homeScore e faltas aqui, pois vêm do backend que pode estar desatualizado
   useEffect(() => {
     if (!link || loading) return;
 
@@ -107,13 +129,13 @@ export default function PublicGameView() {
     return () => clearInterval(interval);
   }, [link, loading]);
 
-  // Atualizar estatísticas a cada 1 segundo para atualizar o placar da casa em tempo real
+  // Atualizar estatísticas a cada 500ms para atualizar o placar da casa e faltas em tempo real
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
       fetchStats();
-    }, 1000); // 1 segundo para atualizar estatísticas e recalcular placar da casa
+    }, 500); // 500ms para atualizar estatísticas e recalcular placar da casa e faltas
 
     return () => clearInterval(interval);
   }, [link, loading]);
@@ -162,8 +184,8 @@ export default function PublicGameView() {
             initialRunning={timerRunning}
             onTimeChange={setTimerTime}
             onRunningChange={setTimerRunning}
-            homeFouls={homeFouls}
-            awayFouls={awayFouls}
+            homeFouls={calculatedHomeFouls}
+            awayFouls={calculatedAwayFouls}
           />
         </div>
 

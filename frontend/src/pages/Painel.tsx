@@ -1111,6 +1111,8 @@ const Painel: React.FC = () => {
   // Debounce para salvar scoreboard
   const scoreboardSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTimerRunningStateRef = useRef<boolean | null>(null);
+  const statsSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastStatsHashRef = useRef<string>('');
   
   // Inicializar lastTimerRunningStateRef quando o timerIsRunning é definido
   useEffect(() => {
@@ -1196,6 +1198,38 @@ const Painel: React.FC = () => {
       }
     };
   }, [awayScore, gameId, gameSaved, timerTime, timerIsRunning, selectedQuarto]);
+
+  // Salvar estatísticas automaticamente quando mudarem (com debounce)
+  useEffect(() => {
+    if (!gameId || !gameSaved) return;
+    
+    // Criar hash das estatísticas do quarto atual para detectar mudanças
+    const currentStats = statistics[selectedQuarto] || {};
+    const statsHash = JSON.stringify(currentStats);
+    
+    // Só salvar se as estatísticas realmente mudaram e há algo para salvar
+    if (statsHash !== lastStatsHashRef.current && hasStatsToSaveForQuarter(selectedQuarto)) {
+      // Limpar timeout anterior
+      if (statsSaveTimeoutRef.current) {
+        clearTimeout(statsSaveTimeoutRef.current);
+      }
+      
+      // Agendar salvamento após 2 segundos de inatividade
+      statsSaveTimeoutRef.current = setTimeout(() => {
+        handleSaveStats(selectedQuarto, { showToast: false }).catch(err => {
+          console.error('Erro ao salvar estatísticas automaticamente:', err);
+        });
+        // Atualizar hash após salvar
+        lastStatsHashRef.current = statsHash;
+      }, 2000);
+    }
+    
+    return () => {
+      if (statsSaveTimeoutRef.current) {
+        clearTimeout(statsSaveTimeoutRef.current);
+      }
+    };
+  }, [statistics, gameId, gameSaved, selectedQuarto, handleSaveStats, hasStatsToSaveForQuarter]);
 
   // Abrir modal de substituição
   const handleOpenSubstitution = (player: Player, index: number) => {
