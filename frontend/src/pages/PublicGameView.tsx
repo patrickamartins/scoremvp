@@ -85,6 +85,17 @@ export default function PublicGameView() {
     }
   };
 
+  // Calcular placar da casa em tempo real a partir das estatísticas
+  const calculatedHomeScore = useMemo(() => {
+    let total = 0;
+    stats.forEach((stat) => {
+      total += (stat.two_made || 0) * 2;
+      total += (stat.three_made || 0) * 3;
+      total += (stat.free_throw_made || 0);
+    });
+    return total;
+  }, [stats]);
+
   // Atualizar placar em tempo real a cada 500ms para sincronização precisa
   useEffect(() => {
     if (!link || loading) return;
@@ -96,13 +107,13 @@ export default function PublicGameView() {
     return () => clearInterval(interval);
   }, [link, loading]);
 
-  // Atualizar estatísticas a cada 2 segundos (quando são salvas no painel)
+  // Atualizar estatísticas a cada 1 segundo para atualizar o placar da casa em tempo real
   useEffect(() => {
     if (!link || loading) return;
 
     const interval = setInterval(() => {
       fetchStats();
-    }, 2000); // 2 segundos para atualizar estatísticas
+    }, 1000); // 1 segundo para atualizar estatísticas e recalcular placar da casa
 
     return () => clearInterval(interval);
   }, [link, loading]);
@@ -142,7 +153,7 @@ export default function PublicGameView() {
         {/* Placar */}
         <div className="mb-6">
           <GameScoreboard
-            homeScore={homeScore}
+            homeScore={calculatedHomeScore}
             awayScore={awayScore}
             quarter={currentQuarter}
             opponentName={game.opponent}
