@@ -27,8 +27,11 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
     setError("");
     setSuccess("");
     
+    console.log("[FORGOT-PASSWORD] Iniciando requisição para:", email);
+    
     try {
       const response = await forgotPassword(email);
+      console.log("[FORGOT-PASSWORD] Resposta recebida:", response);
       // O backend sempre retorna sucesso (mesmo se o email não existir, por segurança)
       if (response?.data?.message) {
         setSuccess(response.data.message);
@@ -37,7 +40,9 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
       }
       setEmail("");
     } catch (err: any) {
-      console.error("Erro completo ao enviar email de recuperação:", err);
+      console.error("[FORGOT-PASSWORD] Erro completo ao enviar email de recuperação:", err);
+      console.error("[FORGOT-PASSWORD] Response:", err.response);
+      console.error("[FORGOT-PASSWORD] Status:", err.response?.status);
       const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Erro ao enviar email. Verifique sua conexão e tente novamente.";
       setError(errorMessage);
     } finally {

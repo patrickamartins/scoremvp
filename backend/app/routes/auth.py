@@ -120,13 +120,25 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    print("[DEBUG] LOGIN ENDPOINT CHAMADO")
-    print("[DEBUG] form_data.username:", form_data.username)
-    print("[DEBUG] form_data.password:", form_data.password)
+    logger.info(f"[LOGIN] Tentativa de login para: {form_data.username}")
     user = db.query(User).filter(User.email == form_data.username).first()
-    print("[DEBUG] user:", user)
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        print("[DEBUG] Usuário não encontrado ou senha inválida")
+    
+    if not user:
+        logger.warning(f"[LOGIN] Usuário não encontrado: {form_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    logger.info(f"[LOGIN] Usuário encontrado: {user.email}, ID: {user.id}, Ativo: {user.is_active}")
+    
+    # Verificar senha
+    password_valid = verify_password(form_data.password, user.hashed_password)
+    logger.info(f"[LOGIN] Senha válida: {password_valid}")
+    
+    if not password_valid:
+        logger.warning(f"[LOGIN] Senha inválida para usuário: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -183,22 +195,29 @@ def forgot_password(
     request: PasswordResetRequest,
     db: Session = Depends(get_db)
 ) -> dict:
+    logger.info(f"[FORGOT-PASSWORD] Requisição recebida para email: {request.email}")
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
+        logger.info(f"[FORGOT-PASSWORD] Usuário não encontrado para email: {request.email}")
         # Por segurança, sempre retorna a mesma mensagem
         return {"message": "Se o email existir, você receberá as instruções de recuperação de senha."}
     
+    logger.info(f"[FORGOT-PASSWORD] Usuário encontrado: {user.email}, ID: {user.id}")
     token = generate_reset_token(user.email)
+    logger.info(f"[FORGOT-PASSWORD] Token gerado, tentando enviar email...")
+    
     try:
         success = email_service.send_password_reset_email(
             email=user.email,
             reset_token=token
         )
-        if not success:
-            logger.error(f"Falha ao enviar email de recuperação de senha para {user.email}")
+        if success:
+            logger.info(f"[FORGOT-PASSWORD] Email enviado com sucesso para {user.email}")
+        else:
+            logger.error(f"[FORGOT-PASSWORD] Falha ao enviar email de recuperação de senha para {user.email}")
             # Ainda retorna sucesso por segurança, mas loga o erro
     except Exception as e:
-        logger.error(f"Erro ao enviar email de recuperação de senha: {e}")
+        logger.error(f"[FORGOT-PASSWORD] Erro ao enviar email de recuperação de senha: {e}", exc_info=True)
         # Não levanta exceção para não revelar se o email existe ou não
         # Apenas loga o erro
     
