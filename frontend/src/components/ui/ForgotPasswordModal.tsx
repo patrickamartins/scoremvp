@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { forgotPassword } from "../../services/auth";
+import { forgotPassword } from "../../services/api";
 import { Input } from "./Input";
 import { Button } from "./Button";
 
@@ -18,15 +18,28 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) {
+      setError("Por favor, informe um email válido.");
+      return;
+    }
+    
     setLoading(true);
     setError("");
     setSuccess("");
+    
     try {
-      await forgotPassword(email);
-      setSuccess("Se o email estiver cadastrado, você receberá um link para redefinir sua senha.");
+      const response = await forgotPassword(email);
+      // O backend sempre retorna sucesso (mesmo se o email não existir, por segurança)
+      if (response?.data?.message) {
+        setSuccess(response.data.message);
+      } else {
+        setSuccess("Se o email estiver cadastrado, você receberá um link para redefinir sua senha.");
+      }
       setEmail("");
     } catch (err: any) {
-      setError("Erro ao enviar email. Tente novamente.");
+      console.error("Erro completo ao enviar email de recuperação:", err);
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Erro ao enviar email. Verifique sua conexão e tente novamente.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

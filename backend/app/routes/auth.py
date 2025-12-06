@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from itsdangerous import URLSafeTimedSerializer
+import logging
 
 from app.models import User
 from app.schemas.user import UserResponse, UserCreate
@@ -18,6 +19,8 @@ from app.database import get_db
 from app.core.config import settings
 from app.core.email import email_service
 from app.schemas.auth import PasswordReset, PasswordResetRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -182,18 +185,24 @@ def forgot_password(
 ) -> dict:
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
+        # Por segurança, sempre retorna a mesma mensagem
         return {"message": "Se o email existir, você receberá as instruções de recuperação de senha."}
+    
     token = generate_reset_token(user.email)
     try:
-        email_service.send_password_reset_email(
+        success = email_service.send_password_reset_email(
             email=user.email,
             reset_token=token
         )
+        if not success:
+            logger.error(f"Falha ao enviar email de recuperação de senha para {user.email}")
+            # Ainda retorna sucesso por segurança, mas loga o erro
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro ao enviar email de recuperação de senha"
-        )
+        logger.error(f"Erro ao enviar email de recuperação de senha: {e}")
+        # Não levanta exceção para não revelar se o email existe ou não
+        # Apenas loga o erro
+    
+    # Sempre retorna a mesma mensagem por segurança
     return {"message": "Se o email existir, você receberá as instruções de recuperação de senha."}
 
 @router.post("/reset-password", response_model=dict)

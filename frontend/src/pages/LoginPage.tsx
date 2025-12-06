@@ -107,7 +107,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 placeholder="example@gmail.com"
-                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
             
@@ -123,7 +123,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   required
                 />
                 <button
@@ -177,13 +177,24 @@ export default function LoginPage() {
       
       {/* Lado direito: Ilustração */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-purple-100 to-indigo-100 items-center justify-center p-8">
-        <div className="max-w-md text-center">
-          <div className="mb-6">
-            {/* Ilustração placeholder - você pode substituir por uma imagem real */}
-            <div className="w-full h-64 bg-white rounded-lg shadow-lg flex items-center justify-center">
-              <p className="text-gray-400">Ilustração</p>
-            </div>
-          </div>
+        <div className="max-w-md w-full h-full flex items-center justify-center">
+          <img 
+            src="/images/ilustracao-login.png" 
+            alt="Ilustração de login" 
+            className="w-full h-auto max-h-full object-contain"
+            onError={(e) => {
+              // Tenta outras extensões se .png não funcionar
+              const target = e.target as HTMLImageElement;
+              const currentSrc = target.src;
+              if (currentSrc.includes('.png')) {
+                target.src = '/images/ilustracao-login.jpg';
+              } else if (currentSrc.includes('.jpg')) {
+                target.src = '/images/ilustracao-login.svg';
+              } else if (currentSrc.includes('.svg')) {
+                target.src = '/images/ilustracao-login.webp';
+              }
+            }}
+          />
         </div>
       </div>
       

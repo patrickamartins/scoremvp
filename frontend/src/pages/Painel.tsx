@@ -10,6 +10,7 @@ import { Trash2, RefreshCw } from 'lucide-react';
 import { BoxScoreTable } from '../components/BoxScoreTable';
 import { GameScoreboard } from '../components/GameScoreboard';
 import { SubstitutionModal } from '../components/SubstitutionModal';
+import { useAuthStore } from "../store";
 
 interface Player {
   id: number;
@@ -85,6 +86,10 @@ const initialPlayerStats: PlayerStatistics & { rebo_ofensivo?: number; rebo_defe
 
 const Painel: React.FC = () => {
   usePageTitle("Painel");
+  const user = useAuthStore(state => state.user);
+  const userPlan = user?.plan || 'free';
+  const userRole = user?.role || 'player';
+  
   const [games, setGames] = useState<Game[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
@@ -96,6 +101,17 @@ const Painel: React.FC = () => {
     description: "",
     variant: "default",
   });
+  
+  // Verificar se pode adicionar jogadores (apenas plano team)
+  const canAddPlayers = userPlan === 'team';
+  
+  // Contar jogos do usuário para verificar limite do plano player
+  const userGamesCount = useMemo(() => {
+    return games.filter(game => game.status !== 'PENDENTE').length;
+  }, [games]);
+  
+  // Verificar se player atingiu limite de 2 jogos
+  const isPlayerBlocked = userPlan === 'free' && userGamesCount >= 2;
 
   // Formulário do jogo
   const initialGameForm = {
@@ -370,6 +386,18 @@ const Painel: React.FC = () => {
 
   const handleCreateGame = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verificar se player atingiu limite de 2 jogos
+    if (isPlayerBlocked) {
+      setGameFormError("Você atingiu o limite de 2 jogos do plano gratuito. Faça upgrade para o plano MVP para cadastrar jogos ilimitados.");
+      setToast({
+        title: "Limite atingido",
+        description: "Faça upgrade para o plano MVP para continuar cadastrando jogos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!gameForm.adversario.trim()) {
       setGameFormError("Adversário é obrigatório");
       return;
@@ -1325,8 +1353,28 @@ const Painel: React.FC = () => {
         />
       )}
 
+      {/* Mensagem de bloqueio para player após 2 jogos */}
+      {isPlayerBlocked && (
+        <Card className="mb-8 p-6 bg-yellow-50 border-yellow-200">
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-yellow-800 mb-2">
+              Limite de Jogos Atingido
+            </h3>
+            <p className="text-yellow-700 mb-4">
+              Você atingiu o limite de 2 jogos do plano gratuito. Faça upgrade para o plano MVP para cadastrar jogos ilimitados e continuar registrando suas estatísticas.
+            </p>
+            <Button
+              onClick={() => window.location.href = '/subscription'}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded font-bold"
+            >
+              Fazer Upgrade para MVP
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Formulário do Jogo */}
-      {!gameSaved ? (
+      {!gameSaved && !isPlayerBlocked ? (
         <div className="mb-8">
           <form onSubmit={handleCreateGame} className="grid grid-cols-3 gap-4 mb-4">
             <div>
@@ -1409,7 +1457,7 @@ const Painel: React.FC = () => {
       ) : null}
 
           {/* Dropdown de quarto e tabela de estatísticas */}
-      {gameSaved && (
+      {gameSaved && !isPlayerBlocked && (
         <>
           <div className="flex items-center gap-4 mb-4">
             <Label htmlFor="quarto">PERÍODO DO JOGO</Label>
@@ -1820,8 +1868,8 @@ const Painel: React.FC = () => {
         </>
       )}
 
-      {/* Botão flutuante */}
-      {gameSaved && (
+      {/* Botão flutuante - apenas para plano team */}
+      {gameSaved && canAddPlayers && (
         <button
           ref={addPlayerBtnRef}
           className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl z-50"
