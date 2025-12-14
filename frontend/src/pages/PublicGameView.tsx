@@ -31,13 +31,59 @@ export default function PublicGameView() {
       const gameResponse = await api.get(`/games/public/link/${link}`);
       const gameData = gameResponse.data;
       setGame(gameData);
-      setPlayers(gameData.players || []);
-
-      // Buscar estatísticas (apenas uma vez, não atualiza automaticamente)
+      
+      // Buscar estatísticas para obter todos os jogadores que têm estatísticas
       const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
-      setStats(statsResponse.data);
-      // As faltas são atualizadas pelo fetchScoreboard que já busca do backend
+      const statsData = statsResponse.data;
+      setStats(statsData);
 
+      // Obter jogadores vinculados ao jogo
+      const gamePlayers = gameData.players || [];
+      
+      // Extrair IDs únicos de jogadores que têm estatísticas
+      const playerIdsWithStats = new Set<number>();
+      statsData.forEach((stat: GameStats) => {
+        if (stat.player_id) {
+          playerIdsWithStats.add(Number(stat.player_id));
+        }
+      });
+
+      // Se houver jogadores com estatísticas que não estão no jogo, criar objetos básicos
+      const missingPlayerIds = Array.from(playerIdsWithStats).filter(
+        (id) => !gamePlayers.some((p: Player) => p.id === id)
+      );
+
+      let allPlayers: Player[] = [...gamePlayers];
+      
+      if (missingPlayerIds.length > 0) {
+        try {
+          // Tentar buscar jogadores do diretório geral (requer autenticação, pode falhar)
+          const { getPlayers } = await import('../services/api');
+          const allPlayersList = await getPlayers();
+          const additionalPlayers = allPlayersList.filter((p: Player) => 
+            missingPlayerIds.includes(p.id)
+          );
+          allPlayers = [...gamePlayers, ...additionalPlayers];
+        } catch (err) {
+          // Se falhar, criar objetos básicos para jogadores que têm estatísticas
+          // mas não estão mais vinculados ao jogo
+          const basicPlayers: Player[] = missingPlayerIds.map((id) => ({
+            id,
+            name: `Jogador ${id}`, // Fallback temporário
+            number: id,
+            position: '',
+          }));
+          allPlayers = [...gamePlayers, ...basicPlayers];
+          console.warn('Alguns jogadores não foram encontrados, usando fallback:', missingPlayerIds);
+        }
+      }
+
+      // Remover duplicatas mantendo a ordem
+      const uniquePlayers = Array.from(
+        new Map(allPlayers.map((p) => [p.id, p])).values()
+      );
+
+      setPlayers(uniquePlayers);
       setError(null);
     } catch (err: any) {
       console.error('Erro ao buscar dados do jogo:', err);
@@ -79,20 +125,68 @@ export default function PublicGameView() {
 
     try {
       const statsResponse = await api.get(`/estatisticas/public/link/${link}`);
-      setStats(statsResponse.data);
+      const statsData = statsResponse.data;
+      setStats(statsData);
+
+      // Atualizar lista de jogadores caso novos jogadores tenham estatísticas
+      if (game) {
+        const gamePlayers = game.players || [];
+        const playerIdsWithStats = new Set<number>();
+        statsData.forEach((stat: GameStats) => {
+          if (stat.player_id) {
+            playerIdsWithStats.add(Number(stat.player_id));
+          }
+        });
+
+        const missingPlayerIds = Array.from(playerIdsWithStats).filter(
+          (id) => !gamePlayers.some((p: Player) => p.id === id)
+        );
+
+        if (missingPlayerIds.length > 0) {
+          try {
+            const { getPlayers } = await import('../services/api');
+            const allPlayersList = await getPlayers();
+            const additionalPlayers = allPlayersList.filter((p: Player) => 
+              missingPlayerIds.includes(p.id)
+            );
+            const updatedPlayers = [...gamePlayers, ...additionalPlayers];
+            const uniquePlayers = Array.from(
+              new Map(updatedPlayers.map((p) => [p.id, p])).values()
+            );
+            setPlayers(uniquePlayers);
+          } catch (err) {
+            // Se falhar, criar objetos básicos para jogadores que têm estatísticas
+            const basicPlayers: Player[] = missingPlayerIds.map((id) => ({
+              id,
+              name: `Jogador ${id}`, // Fallback temporário
+              number: id,
+              position: '',
+            }));
+            const updatedPlayers = [...gamePlayers, ...basicPlayers];
+            const uniquePlayers = Array.from(
+              new Map(updatedPlayers.map((p) => [p.id, p])).values()
+            );
+            setPlayers(uniquePlayers);
+            console.warn('Não foi possível atualizar lista de jogadores, usando fallback:', err);
+          }
+        }
+      }
     } catch (err: any) {
       console.error('Erro ao buscar estatísticas:', err);
     }
   };
 
-  // Atualizar placar em tempo real a cada 500ms (igual ao cronômetro e placar do adversário)
+  // Atualizar placar em tempo real a cada 300ms para reduzir delay
   // O backend já calcula home_score, home_fouls e away_fouls, então usamos diretamente
   useEffect(() => {
     if (!link || loading) return;
 
+    // Buscar imediatamente ao montar
+    fetchScoreboard();
+
     const interval = setInterval(() => {
       fetchScoreboard(); // Busca tudo: cronômetro, placar adversário, placar casa e faltas
-    }, 500); // 500ms para atualização em tempo real
+    }, 300); // 300ms para atualização mais rápida em tempo real
 
     return () => clearInterval(interval);
   }, [link, loading]);

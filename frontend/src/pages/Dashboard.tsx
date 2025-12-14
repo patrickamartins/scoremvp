@@ -374,9 +374,10 @@ export default function DashboardPage() {
 
     async function fetchGamePlayers() {
       try {
+        // Buscar jogadores vinculados ao jogo
         const detailed = await getGame(selectedGame.id);
         if (cancelled) return;
-        const players = Array.isArray(detailed.players)
+        const gamePlayers = Array.isArray(detailed.players)
           ? detailed.players.map((player: any) => ({
               id: player.id,
               name: player.name,
@@ -384,8 +385,51 @@ export default function DashboardPage() {
               position: player.position,
             }))
           : [];
-        setSelectedGamePlayers(players);
-      } catch {
+
+        // Buscar jogadores que têm estatísticas no jogo (mesmo que não estejam mais vinculados)
+        const gameStats = await getGameStats(selectedGame.id);
+        if (cancelled) return;
+        
+        // Extrair IDs únicos de jogadores que têm estatísticas
+        const playerIdsWithStats = new Set<number>();
+        gameStats.forEach((stat: GameStats) => {
+          if (stat.player_id) {
+            playerIdsWithStats.add(Number(stat.player_id));
+          }
+        });
+
+        // Buscar informações dos jogadores que têm estatísticas mas não estão no jogo
+        const missingPlayerIds = Array.from(playerIdsWithStats).filter(
+          (id) => !gamePlayers.some((p) => p.id === id)
+        );
+
+        let additionalPlayers: BoxScorePlayer[] = [];
+        if (missingPlayerIds.length > 0) {
+          // Buscar jogadores do diretório geral
+          const allPlayers = await getPlayers();
+          additionalPlayers = allPlayers
+            .filter((p: Player) => missingPlayerIds.includes(p.id))
+            .map((player: Player) => ({
+              id: player.id,
+              name: player.name,
+              number: player.number,
+              position: player.position,
+            }));
+        }
+
+        // Combinar jogadores do jogo com jogadores que têm estatísticas
+        const allGamePlayers = [...gamePlayers, ...additionalPlayers];
+        
+        // Remover duplicatas mantendo a ordem
+        const uniquePlayers = Array.from(
+          new Map(allGamePlayers.map((p) => [p.id, p])).values()
+        );
+
+        if (!cancelled) {
+          setSelectedGamePlayers(uniquePlayers);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar jogadores do jogo:', error);
         if (!cancelled) setSelectedGamePlayers([]);
       }
     }
