@@ -467,18 +467,33 @@ export default function DashboardPage() {
   const playersFromStatsMap = useMemo(() => {
     const map: Record<number, BoxScorePlayer> = {};
     const allStats = selectedGame ? stats : rangeStats;
+    
+    // Primeiro, extrair jogadores diretamente das estatísticas (se tiverem campo player)
     allStats.forEach((stat: any) => {
-      if (stat.player_id && stat.player && !map[stat.player_id]) {
-        map[stat.player_id] = {
-          id: stat.player_id,
-          name: stat.player.name || `Jogador ${stat.player_id}`,
-          number: stat.player.number,
-          position: stat.player.position,
-        };
+      if (stat.player_id) {
+        const playerId = Number(stat.player_id);
+        if (!map[playerId]) {
+          if (stat.player) {
+            // Se a estatística tem informações do jogador, usar diretamente
+            map[playerId] = {
+              id: playerId,
+              name: stat.player.name || `Jogador ${playerId}`,
+              number: stat.player.number,
+              position: stat.player.position,
+            };
+          } else if (selectedGame && selectedGamePlayers.length > 0) {
+            // Se não tem, tentar encontrar nos jogadores do jogo selecionado
+            const gamePlayer = selectedGamePlayers.find(p => p.id === playerId);
+            if (gamePlayer) {
+              map[playerId] = gamePlayer;
+            }
+          }
+        }
       }
     });
+    
     return map;
-  }, [stats, rangeStats, selectedGame]);
+  }, [stats, rangeStats, selectedGame, selectedGamePlayers]);
 
   const resolvePlayerInfo = useCallback(
     (playerId: number): BoxScorePlayer => {
@@ -499,22 +514,45 @@ export default function DashboardPage() {
 
   const aggregatedEntries = useMemo(() => {
     const activeMap = selectedGame ? selectedAggregatedMap : rangeAggregatedMap;
+    const allStats = selectedGame ? stats : rangeStats;
+    
+    // Criar mapa de jogadores das estatísticas para acesso rápido
+    const statsPlayersMap = new Map<number, BoxScorePlayer>();
+    allStats.forEach((stat: any) => {
+      if (stat.player_id && stat.player && !statsPlayersMap.has(stat.player_id)) {
+        statsPlayersMap.set(stat.player_id, {
+          id: stat.player_id,
+          name: stat.player.name || `Jogador ${stat.player_id}`,
+          number: stat.player.number,
+          position: stat.player.position,
+        });
+      }
+    });
+    
     return Array.from(activeMap.values())
       .filter(aggregatedHasValues)
       .map((stat) => {
-        const info = resolvePlayerInfo(stat.player_id);
+        // Prioridade 1: Informações do jogador que vêm diretamente das estatísticas
+        let playerInfo: BoxScorePlayer;
+        if (statsPlayersMap.has(stat.player_id)) {
+          playerInfo = statsPlayersMap.get(stat.player_id)!;
+        } else {
+          // Fallback: usar resolvePlayerInfo
+          playerInfo = resolvePlayerInfo(stat.player_id);
+        }
+        
         return {
           player: {
-            id: info.id,
-            name: info.name ?? `Jogador ${stat.player_id}`,
-            number: info.number,
-            position: info.position,
+            id: playerInfo.id,
+            name: playerInfo.name ?? `Jogador ${stat.player_id}`,
+            number: playerInfo.number,
+            position: playerInfo.position,
           },
           stat,
         };
       })
       .sort((a, b) => (b.stat.points ?? 0) - (a.stat.points ?? 0));
-  }, [selectedGame, selectedAggregatedMap, rangeAggregatedMap, resolvePlayerInfo]);
+  }, [selectedGame, selectedAggregatedMap, rangeAggregatedMap, resolvePlayerInfo, stats, rangeStats]);
 
   const comparativeChartData = useMemo(
     () =>
@@ -640,16 +678,56 @@ export default function DashboardPage() {
       });
   }, [playerLines, playerLinesMap, selectedGame, stats, games, rangeStats, metricValue]);
 
-  const boxScorePlayers = useMemo(
-    () =>
-      aggregatedEntries.map(({ player }) => ({
-        id: player.id,
-        name: player.name,
-        number: player.number,
-        position: player.position,
-      })),
-    [aggregatedEntries]
-  );
+  // Criar lista de jogadores para o BoxScore extraindo diretamente das estatísticas
+  const boxScorePlayers = useMemo(() => {
+    const playersMap = new Map<number, BoxScorePlayer>();
+    
+    // Usar estatísticas do jogo selecionado ou do range
+    const allStats = selectedGame ? stats : rangeStats;
+    
+    // Extrair jogadores diretamente das estatísticas (prioridade máxima)
+    allStats.forEach((stat: any) => {
+      if (stat.player_id) {
+        const playerId = Number(stat.player_id);
+        if (!playersMap.has(playerId)) {
+          // Se a estatística tem informações do jogador, usar diretamente
+          if (stat.player) {
+            playersMap.set(playerId, {
+              id: playerId,
+              name: stat.player.name || `Jogador ${playerId}`,
+              number: stat.player.number,
+              position: stat.player.position,
+            });
+          } else {
+            // Se não tem, usar resolvePlayerInfo como fallback
+            const playerInfo = resolvePlayerInfo(playerId);
+            playersMap.set(playerId, {
+              id: playerId,
+              name: playerInfo.name || `Jogador ${playerId}`,
+              number: playerInfo.number,
+              position: playerInfo.position,
+            });
+          }
+        }
+      }
+    });
+    
+    // Se ainda não encontrou jogadores, usar aggregatedEntries
+    if (playersMap.size === 0 && aggregatedEntries.length > 0) {
+      aggregatedEntries.forEach(({ player }) => {
+        if (!playersMap.has(player.id)) {
+          playersMap.set(player.id, {
+            id: player.id,
+            name: player.name || `Jogador ${player.id}`,
+            number: player.number,
+            position: player.position,
+          });
+        }
+      });
+    }
+    
+    return Array.from(playersMap.values());
+  }, [stats, rangeStats, selectedGame, aggregatedEntries, resolvePlayerInfo]);
 
   const boxScoreStats = selectedGame ? stats : rangeStats;
 
