@@ -40,48 +40,37 @@ export default function PublicGameView() {
       // Obter jogadores vinculados ao jogo
       const gamePlayers = gameData.players || [];
       
-      // Extrair IDs únicos de jogadores que têm estatísticas
-      const playerIdsWithStats = new Set<number>();
-      statsData.forEach((stat: GameStats) => {
-        if (stat.player_id) {
-          playerIdsWithStats.add(Number(stat.player_id));
+      // Extrair jogadores das estatísticas (agora o backend retorna player dentro de cada stat)
+      const playersFromStats = new Map<number, Player>();
+      statsData.forEach((stat: any) => {
+        if (stat.player_id && stat.player) {
+          const playerId = Number(stat.player_id);
+          if (!playersFromStats.has(playerId)) {
+            playersFromStats.set(playerId, {
+              id: playerId,
+              name: stat.player.name || `Jogador ${playerId}`,
+              number: stat.player.number || playerId,
+              position: stat.player.position || '',
+            });
+          }
         }
       });
 
-      // Se houver jogadores com estatísticas que não estão no jogo, criar objetos básicos
-      const missingPlayerIds = Array.from(playerIdsWithStats).filter(
-        (id) => !gamePlayers.some((p: Player) => p.id === id)
-      );
-
-      let allPlayers: Player[] = [...gamePlayers];
+      // Combinar jogadores do jogo com jogadores das estatísticas
+      const allPlayersMap = new Map<number, Player>();
       
-      if (missingPlayerIds.length > 0) {
-        try {
-          // Tentar buscar jogadores do diretório geral (requer autenticação, pode falhar)
-          const { getPlayers } = await import('../services/api');
-          const allPlayersList = await getPlayers();
-          const additionalPlayers = allPlayersList.filter((p: Player) => 
-            missingPlayerIds.includes(p.id)
-          );
-          allPlayers = [...gamePlayers, ...additionalPlayers];
-        } catch (err) {
-          // Se falhar, criar objetos básicos para jogadores que têm estatísticas
-          // mas não estão mais vinculados ao jogo
-          const basicPlayers: Player[] = missingPlayerIds.map((id) => ({
-            id,
-            name: `Jogador ${id}`, // Fallback temporário
-            number: id,
-            position: '',
-          }));
-          allPlayers = [...gamePlayers, ...basicPlayers];
-          console.warn('Alguns jogadores não foram encontrados, usando fallback:', missingPlayerIds);
-        }
-      }
+      // Adicionar jogadores do jogo
+      gamePlayers.forEach((p: Player) => {
+        allPlayersMap.set(p.id, p);
+      });
+      
+      // Adicionar jogadores das estatísticas (sobrescreve se já existir, mas mantém dados mais completos)
+      playersFromStats.forEach((p, id) => {
+        allPlayersMap.set(id, p);
+      });
 
-      // Remover duplicatas mantendo a ordem
-      const uniquePlayers = Array.from(
-        new Map(allPlayers.map((p) => [p.id, p])).values()
-      );
+      // Converter para array
+      const uniquePlayers = Array.from(allPlayersMap.values());
 
       setPlayers(uniquePlayers);
       setError(null);
@@ -128,48 +117,42 @@ export default function PublicGameView() {
       const statsData = statsResponse.data;
       setStats(statsData);
 
-      // Atualizar lista de jogadores caso novos jogadores tenham estatísticas
+      // Atualizar lista de jogadores usando informações das estatísticas
       if (game) {
         const gamePlayers = game.players || [];
-        const playerIdsWithStats = new Set<number>();
-        statsData.forEach((stat: GameStats) => {
-          if (stat.player_id) {
-            playerIdsWithStats.add(Number(stat.player_id));
+        
+        // Extrair jogadores das estatísticas (agora o backend retorna player dentro de cada stat)
+        const playersFromStats = new Map<number, Player>();
+        statsData.forEach((stat: any) => {
+          if (stat.player_id && stat.player) {
+            const playerId = Number(stat.player_id);
+            if (!playersFromStats.has(playerId)) {
+              playersFromStats.set(playerId, {
+                id: playerId,
+                name: stat.player.name || `Jogador ${playerId}`,
+                number: stat.player.number || playerId,
+                position: stat.player.position || '',
+              });
+            }
           }
         });
 
-        const missingPlayerIds = Array.from(playerIdsWithStats).filter(
-          (id) => !gamePlayers.some((p: Player) => p.id === id)
-        );
+        // Combinar jogadores do jogo com jogadores das estatísticas
+        const allPlayersMap = new Map<number, Player>();
+        
+        // Adicionar jogadores do jogo
+        gamePlayers.forEach((p: Player) => {
+          allPlayersMap.set(p.id, p);
+        });
+        
+        // Adicionar jogadores das estatísticas
+        playersFromStats.forEach((p, id) => {
+          allPlayersMap.set(id, p);
+        });
 
-        if (missingPlayerIds.length > 0) {
-          try {
-            const { getPlayers } = await import('../services/api');
-            const allPlayersList = await getPlayers();
-            const additionalPlayers = allPlayersList.filter((p: Player) => 
-              missingPlayerIds.includes(p.id)
-            );
-            const updatedPlayers = [...gamePlayers, ...additionalPlayers];
-            const uniquePlayers = Array.from(
-              new Map(updatedPlayers.map((p) => [p.id, p])).values()
-            );
-            setPlayers(uniquePlayers);
-          } catch (err) {
-            // Se falhar, criar objetos básicos para jogadores que têm estatísticas
-            const basicPlayers: Player[] = missingPlayerIds.map((id) => ({
-              id,
-              name: `Jogador ${id}`, // Fallback temporário
-              number: id,
-              position: '',
-            }));
-            const updatedPlayers = [...gamePlayers, ...basicPlayers];
-            const uniquePlayers = Array.from(
-              new Map(updatedPlayers.map((p) => [p.id, p])).values()
-            );
-            setPlayers(uniquePlayers);
-            console.warn('Não foi possível atualizar lista de jogadores, usando fallback:', err);
-          }
-        }
+        // Converter para array
+        const uniquePlayers = Array.from(allPlayersMap.values());
+        setPlayers(uniquePlayers);
       }
     } catch (err: any) {
       console.error('Erro ao buscar estatísticas:', err);

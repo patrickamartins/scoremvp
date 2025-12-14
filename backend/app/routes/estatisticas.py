@@ -71,7 +71,6 @@ def create_statistic(
 
 @router.get(
     "/game/{game_id}",
-    response_model=List[schemas.StatisticOut],
     summary="List statistics of a game",
 )
 def list_game_statistics(
@@ -81,6 +80,8 @@ def list_game_statistics(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    from sqlalchemy.orm import joinedload
+    
     # Verifica se o jogo existe e pertence ao usuário
     game = db.query(models.Game).filter(
         models.Game.id == game_id,
@@ -89,7 +90,10 @@ def list_game_statistics(
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     
-    query = db.query(models.Statistic).filter(
+    # Buscar estatísticas com informações dos jogadores
+    query = db.query(models.Statistic).options(
+        joinedload(models.Statistic.player)
+    ).filter(
         models.Statistic.game_id == game_id
     )
     
@@ -99,7 +103,22 @@ def list_game_statistics(
         query = query.filter(models.Statistic.player_id == player_id)
     
     stats = query.all()
-    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
+    
+    # Retornar estatísticas com informações dos jogadores
+    result = []
+    for stat in stats:
+        stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
+        # Adicionar informações do jogador se disponível
+        if stat.player:
+            stat_dict['player'] = {
+                'id': stat.player.id,
+                'name': stat.player.name,
+                'number': stat.player.number,
+                'position': stat.player.position,
+            }
+        result.append(stat_dict)
+    
+    return result
 
 @router.get(
     "/game/{game_id}/summary",
@@ -202,7 +221,6 @@ def delete_statistic(
 
 @router.get(
     "/public/game/{game_id}",
-    response_model=List[schemas.StatisticOut],
     summary="Lista estatísticas públicas de um jogo",
 )
 def listar_estatisticas_publicas(
@@ -211,13 +229,18 @@ def listar_estatisticas_publicas(
     player_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
+    from sqlalchemy.orm import joinedload
+    
     game = db.query(models.Game).filter(
         models.Game.id == game_id
     ).first()
     if not game:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
     
-    query = db.query(models.Statistic).filter(
+    # Buscar estatísticas com informações dos jogadores
+    query = db.query(models.Statistic).options(
+        joinedload(models.Statistic.player)
+    ).filter(
         models.Statistic.game_id == game_id
     )
     
@@ -227,11 +250,25 @@ def listar_estatisticas_publicas(
         query = query.filter(models.Statistic.player_id == player_id)
     
     stats = query.all()
-    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
+    
+    # Retornar estatísticas com informações dos jogadores
+    result = []
+    for stat in stats:
+        stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
+        # Adicionar informações do jogador se disponível
+        if stat.player:
+            stat_dict['player'] = {
+                'id': stat.player.id,
+                'name': stat.player.name,
+                'number': stat.player.number,
+                'position': stat.player.position,
+            }
+        result.append(stat_dict)
+    
+    return result
 
 @router.get(
     "/public/link/{public_link}",
-    response_model=List[schemas.StatisticOut],
     summary="Lista estatísticas públicas de um jogo por link único",
 )
 def listar_estatisticas_por_link(
@@ -240,13 +277,18 @@ def listar_estatisticas_por_link(
     player_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
+    from sqlalchemy.orm import joinedload
+    
     game = db.query(models.Game).filter(
         models.Game.public_link == public_link
     ).first()
     if not game:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
     
-    query = db.query(models.Statistic).filter(
+    # Buscar estatísticas com informações dos jogadores
+    query = db.query(models.Statistic).options(
+        joinedload(models.Statistic.player)
+    ).filter(
         models.Statistic.game_id == game.id
     )
     
@@ -256,7 +298,22 @@ def listar_estatisticas_por_link(
         query = query.filter(models.Statistic.player_id == player_id)
     
     stats = query.all()
-    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
+    
+    # Retornar estatísticas com informações dos jogadores
+    result = []
+    for stat in stats:
+        stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
+        # Adicionar informações do jogador se disponível
+        if stat.player:
+            stat_dict['player'] = {
+                'id': stat.player.id,
+                'name': stat.player.name,
+                'number': stat.player.number,
+                'position': stat.player.position,
+            }
+        result.append(stat_dict)
+    
+    return result
 
 @router.get(
     "/games/{game_id}/stats",

@@ -31,6 +31,13 @@ export interface GameStats {
   rebo_ofensivo?: number;
   rebo_defensivo?: number;
   fr?: number;
+  // Informações do jogador (incluídas pelo backend)
+  player?: {
+    id: number;
+    name: string;
+    number?: number;
+    position?: string;
+  };
 }
 
 export interface PlayerGameStats {

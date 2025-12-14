@@ -390,40 +390,37 @@ export default function DashboardPage() {
         const gameStats = await getGameStats(selectedGame.id);
         if (cancelled) return;
         
-        // Extrair IDs únicos de jogadores que têm estatísticas
-        const playerIdsWithStats = new Set<number>();
-        gameStats.forEach((stat: GameStats) => {
-          if (stat.player_id) {
-            playerIdsWithStats.add(Number(stat.player_id));
+        // Extrair jogadores das estatísticas (agora o backend retorna player dentro de cada stat)
+        const playersFromStats = new Map<number, BoxScorePlayer>();
+        gameStats.forEach((stat: any) => {
+          if (stat.player_id && stat.player) {
+            const playerId = Number(stat.player_id);
+            if (!playersFromStats.has(playerId)) {
+              playersFromStats.set(playerId, {
+                id: playerId,
+                name: stat.player.name || `Jogador ${playerId}`,
+                number: stat.player.number,
+                position: stat.player.position,
+              });
+            }
           }
         });
 
-        // Buscar informações dos jogadores que têm estatísticas mas não estão no jogo
-        const missingPlayerIds = Array.from(playerIdsWithStats).filter(
-          (id) => !gamePlayers.some((p) => p.id === id)
-        );
-
-        let additionalPlayers: BoxScorePlayer[] = [];
-        if (missingPlayerIds.length > 0) {
-          // Buscar jogadores do diretório geral
-          const allPlayers = await getPlayers();
-          additionalPlayers = allPlayers
-            .filter((p: Player) => missingPlayerIds.includes(p.id))
-            .map((player: Player) => ({
-              id: player.id,
-              name: player.name,
-              number: player.number,
-              position: player.position,
-            }));
-        }
-
-        // Combinar jogadores do jogo com jogadores que têm estatísticas
-        const allGamePlayers = [...gamePlayers, ...additionalPlayers];
+        // Combinar jogadores do jogo com jogadores das estatísticas
+        const allPlayersMap = new Map<number, BoxScorePlayer>();
         
-        // Remover duplicatas mantendo a ordem
-        const uniquePlayers = Array.from(
-          new Map(allGamePlayers.map((p) => [p.id, p])).values()
-        );
+        // Adicionar jogadores do jogo
+        gamePlayers.forEach((p) => {
+          allPlayersMap.set(p.id, p);
+        });
+        
+        // Adicionar jogadores das estatísticas (sobrescreve se já existir, mas mantém dados mais completos)
+        playersFromStats.forEach((p, id) => {
+          allPlayersMap.set(id, p);
+        });
+
+        // Converter para array
+        const uniquePlayers = Array.from(allPlayersMap.values());
 
         if (!cancelled) {
           setSelectedGamePlayers(uniquePlayers);
