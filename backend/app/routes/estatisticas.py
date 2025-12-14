@@ -317,7 +317,6 @@ def listar_estatisticas_por_link(
 
 @router.get(
     "/games/{game_id}/stats",
-    response_model=List[schemas.StatisticOut],
     summary="Lista estatísticas de um jogo (compatível com frontend)",
 )
 def listar_stats_game(
@@ -325,6 +324,8 @@ def listar_stats_game(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    from sqlalchemy.orm import joinedload
+    
     # Verifica se o jogo existe e pertence ao usuário
     game = db.query(models.Game).filter(
         models.Game.id == game_id,
@@ -332,8 +333,27 @@ def listar_stats_game(
     ).first()
     if not game:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-    stats = db.query(models.Statistic).filter(models.Statistic.game_id == game_id).all()
-    return [schemas.StatisticOut.model_validate(stat) for stat in stats]
+    
+    # Buscar estatísticas com informações dos jogadores
+    stats = db.query(models.Statistic).options(
+        joinedload(models.Statistic.player)
+    ).filter(models.Statistic.game_id == game_id).all()
+    
+    # Retornar estatísticas com informações dos jogadores
+    result = []
+    for stat in stats:
+        stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
+        # Adicionar informações do jogador se disponível
+        if stat.player:
+            stat_dict['player'] = {
+                'id': stat.player.id,
+                'name': stat.player.name,
+                'number': stat.player.number,
+                'position': stat.player.position,
+            }
+        result.append(stat_dict)
+    
+    return result
 
 # Alias: GET /stats/games/{game_id} (retorna estatísticas do jogo)
 @router.get(
@@ -446,7 +466,6 @@ def create_stats_game_frontend(
 # Rota específica para compatibilidade com frontend: GET /estatisticas/stats/games/{game_id}
 @router.get(
     "/estatisticas/stats/games/{game_id}",
-    response_model=List[schemas.StatisticOut],
     summary="Rota específica para compatibilidade com frontend - GET",
 )
 def get_stats_game_frontend(
@@ -454,7 +473,37 @@ def get_stats_game_frontend(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    return listar_stats_game(game_id, db, current_user)
+    # Usar a mesma lógica de listar_stats_game
+    from sqlalchemy.orm import joinedload
+    
+    # Verifica se o jogo existe e pertence ao usuário
+    game = db.query(models.Game).filter(
+        models.Game.id == game_id,
+        models.Game.owner_id == current_user.id
+    ).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    
+    # Buscar estatísticas com informações dos jogadores
+    stats = db.query(models.Statistic).options(
+        joinedload(models.Statistic.player)
+    ).filter(models.Statistic.game_id == game_id).all()
+    
+    # Retornar estatísticas com informações dos jogadores
+    result = []
+    for stat in stats:
+        stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
+        # Adicionar informações do jogador se disponível
+        if stat.player:
+            stat_dict['player'] = {
+                'id': stat.player.id,
+                'name': stat.player.name,
+                'number': stat.player.number,
+                'position': stat.player.position,
+            }
+        result.append(stat_dict)
+    
+    return result
 
 # Rota específica para compatibilidade com frontend: GET /estatisticas/stats/games/{game_id}/players
 @router.get(

@@ -463,13 +463,35 @@ export default function DashboardPage() {
     return map;
   }, [selectedGamePlayers]);
 
+  // Extrair informações dos jogadores diretamente das estatísticas
+  const playersFromStatsMap = useMemo(() => {
+    const map: Record<number, BoxScorePlayer> = {};
+    const allStats = selectedGame ? stats : rangeStats;
+    allStats.forEach((stat: any) => {
+      if (stat.player_id && stat.player && !map[stat.player_id]) {
+        map[stat.player_id] = {
+          id: stat.player_id,
+          name: stat.player.name || `Jogador ${stat.player_id}`,
+          number: stat.player.number,
+          position: stat.player.position,
+        };
+      }
+    });
+    return map;
+  }, [stats, rangeStats, selectedGame]);
+
   const resolvePlayerInfo = useCallback(
     (playerId: number): BoxScorePlayer => {
+      // Prioridade 1: Informações do jogador que vêm diretamente das estatísticas
+      if (playersFromStatsMap[playerId]) return playersFromStatsMap[playerId];
+      // Prioridade 2: Jogadores do jogo selecionado
       if (selectedGamePlayersMap[playerId]) return selectedGamePlayersMap[playerId];
+      // Prioridade 3: Diretório geral de jogadores
       if (playersDirectory[playerId]) return playersDirectory[playerId];
+      // Fallback: Nome genérico
       return { id: playerId, name: `Jogador ${playerId}` };
     },
-    [selectedGamePlayersMap, playersDirectory]
+    [playersFromStatsMap, selectedGamePlayersMap, playersDirectory]
   );
 
   const selectedAggregatedMap = useMemo(() => aggregateStatsList(stats), [stats]);
