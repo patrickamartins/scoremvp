@@ -109,7 +109,7 @@ def list_game_statistics(
     # Coletar todos os player_ids únicos para buscar em batch
     player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
     
-    # Buscar todos os jogadores de uma vez
+    # Buscar todos os jogadores de uma vez (SEM FILTRO DE USUÁRIO)
     players_dict = {}
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
@@ -132,7 +132,7 @@ def list_game_statistics(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
-        # SEMPRE adicionar informações do jogador, mesmo que seja None
+        # SEMPRE adicionar informações do jogador
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -141,10 +141,11 @@ def list_game_statistics(
                 'position': player.position,
             }
         elif stat.player_id:
-            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            # Se não encontrou o jogador, ainda assim adicionar o ID
+            # Isso pode acontecer se o jogador foi deletado mas as estatísticas permaneceram
             stat_dict['player'] = {
                 'id': stat.player_id,
-                'name': None,  # Frontend vai buscar
+                'name': None,
                 'number': None,
                 'position': None,
             }
@@ -289,7 +290,7 @@ def listar_estatisticas_publicas(
     # Coletar todos os player_ids únicos para buscar em batch
     player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
     
-    # Buscar todos os jogadores de uma vez
+    # Buscar todos os jogadores de uma vez (SEM FILTRO DE USUÁRIO)
     players_dict = {}
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
@@ -312,7 +313,7 @@ def listar_estatisticas_publicas(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
-        # SEMPRE adicionar informações do jogador, mesmo que seja None
+        # SEMPRE adicionar informações do jogador
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -321,10 +322,11 @@ def listar_estatisticas_publicas(
                 'position': player.position,
             }
         elif stat.player_id:
-            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            # Se não encontrou o jogador, ainda assim adicionar o ID
+            # Isso pode acontecer se o jogador foi deletado mas as estatísticas permaneceram
             stat_dict['player'] = {
                 'id': stat.player_id,
-                'name': None,  # Frontend vai buscar
+                'name': None,
                 'number': None,
                 'position': None,
             }
@@ -370,7 +372,7 @@ def listar_estatisticas_por_link(
     # Coletar todos os player_ids únicos para buscar em batch
     player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
     
-    # Buscar todos os jogadores de uma vez
+    # Buscar todos os jogadores de uma vez (SEM FILTRO DE USUÁRIO)
     players_dict = {}
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
@@ -393,7 +395,7 @@ def listar_estatisticas_por_link(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
-        # SEMPRE adicionar informações do jogador, mesmo que seja None
+        # SEMPRE adicionar informações do jogador
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -402,10 +404,11 @@ def listar_estatisticas_por_link(
                 'position': player.position,
             }
         elif stat.player_id:
-            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            # Se não encontrou o jogador, ainda assim adicionar o ID
+            # Isso pode acontecer se o jogador foi deletado mas as estatísticas permaneceram
             stat_dict['player'] = {
                 'id': stat.player_id,
-                'name': None,  # Frontend vai buscar
+                'name': None,
                 'number': None,
                 'position': None,
             }
@@ -443,7 +446,7 @@ def listar_stats_game(
     # Coletar todos os player_ids únicos para buscar em batch
     player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
     
-    # Buscar todos os jogadores de uma vez
+    # Buscar todos os jogadores de uma vez (SEM FILTRO DE USUÁRIO)
     players_dict = {}
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
@@ -466,7 +469,7 @@ def listar_stats_game(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
-        # SEMPRE adicionar informações do jogador, mesmo que seja None
+        # SEMPRE adicionar informações do jogador
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -475,10 +478,11 @@ def listar_stats_game(
                 'position': player.position,
             }
         elif stat.player_id:
-            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            # Se não encontrou o jogador, ainda assim adicionar o ID
+            # Isso pode acontecer se o jogador foi deletado mas as estatísticas permaneceram
             stat_dict['player'] = {
                 'id': stat.player_id,
-                'name': None,  # Frontend vai buscar
+                'name': None,
                 'number': None,
                 'position': None,
             }
@@ -626,7 +630,7 @@ def get_stats_game_frontend(
     # Coletar todos os player_ids únicos para buscar em batch
     player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
     
-    # Buscar todos os jogadores de uma vez
+    # Buscar todos os jogadores de uma vez (SEM FILTRO DE USUÁRIO)
     players_dict = {}
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
@@ -649,7 +653,7 @@ def get_stats_game_frontend(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
-        # SEMPRE adicionar informações do jogador, mesmo que seja None
+        # SEMPRE adicionar informações do jogador
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -658,10 +662,11 @@ def get_stats_game_frontend(
                 'position': player.position,
             }
         elif stat.player_id:
-            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            # Se não encontrou o jogador, ainda assim adicionar o ID
+            # Isso pode acontecer se o jogador foi deletado mas as estatísticas permaneceram
             stat_dict['player'] = {
                 'id': stat.player_id,
-                'name': None,  # Frontend vai buscar
+                'name': None,
                 'number': None,
                 'position': None,
             }

@@ -61,41 +61,28 @@ def listar_jogadoras(
     current_user: models.User = Depends(get_current_user),
 ):
     try:
-        # Se for team_admin, mostrar apenas jogadores vinculados ao seu time
-        # Se for superadmin, mostrar todos
-        # Se for player, mostrar apenas o próprio perfil
-        if current_user.role == "team_admin":
-            # Verificar se a coluna team_id existe antes de usar
-            try:
-                jogadoras = db.query(models.Player).filter(
-                    models.Player.team_id == current_user.id
-                ).all()
-            except Exception as e:
-                logger.warning(f"Erro ao filtrar por team_id (coluna pode não existir): {e}")
-                # Se team_id não existir, retornar todos os jogadores (compatibilidade)
-                try:
-                    jogadoras = db.query(models.Player).all()
-                except Exception as e2:
-                    logger.error(f"Erro ao listar todos os jogadores: {e2}")
-                    jogadoras = []
-        elif current_user.role == "superadmin":
+        # Para team_admin e superadmin: retornar todos os jogadores
+        # Para player: retornar apenas o próprio perfil (se existir)
+        # Para outros roles: retornar todos os jogadores (compatibilidade)
+        if current_user.role == "team_admin" or current_user.role == "superadmin":
+            # Retornar todos os jogadores
             jogadoras = db.query(models.Player).all()
         elif current_user.role == "player":
-            # Jogador vê apenas seu próprio perfil
+            # Jogador vê apenas seu próprio perfil (se existir)
             try:
                 jogadoras = db.query(models.Player).filter(
                     models.Player.user_id == current_user.id
                 ).all()
+                # Se não encontrou por user_id, retornar todos (compatibilidade)
+                if not jogadoras:
+                    jogadoras = db.query(models.Player).all()
             except Exception as e:
                 logger.warning(f"Erro ao filtrar por user_id (coluna pode não existir): {e}")
-                # Se user_id não existir, retornar vazio (jogador não tem perfil ainda)
-                jogadoras = []
+                # Se user_id não existir, retornar todos os jogadores (compatibilidade)
+                jogadoras = db.query(models.Player).all()
         else:
-            # Outros roles não têm acesso
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Acesso negado"
-            )
+            # Outros roles: retornar todos os jogadores (compatibilidade)
+            jogadoras = db.query(models.Player).all()
         
         # Retornar jogadoras (schema já aceita campos opcionais)
         return [schemas.PlayerOut.model_validate(j) for j in jogadoras]
