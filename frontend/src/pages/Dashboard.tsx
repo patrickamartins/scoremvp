@@ -388,30 +388,53 @@ export default function DashboardPage() {
         
         // Extrair jogadores diretamente das estatísticas (prioridade máxima)
         const playersFromStats = new Map<number, BoxScorePlayer>();
+        const playerIdsFromStats = new Set<number>();
+        
         gameStats.forEach((stat: any) => {
           if (stat.player_id) {
             const playerId = Number(stat.player_id);
+            playerIdsFromStats.add(playerId);
+            
             if (!playersFromStats.has(playerId)) {
-              if (stat.player) {
-                // Se a estatística tem informações do jogador, usar diretamente
+              if (stat.player && stat.player.name) {
+                // Se a estatística tem informações completas do jogador, usar diretamente
                 playersFromStats.set(playerId, {
                   id: playerId,
-                  name: stat.player.name || `Jogador ${playerId}`,
+                  name: stat.player.name,
                   number: stat.player.number,
                   position: stat.player.position,
-                });
-              } else {
-                // Se não tem, criar objeto básico (será preenchido depois)
-                playersFromStats.set(playerId, {
-                  id: playerId,
-                  name: `Jogador ${playerId}`, // Temporário, será substituído
-                  number: undefined,
-                  position: undefined,
                 });
               }
             }
           }
         });
+        
+        // Se não encontrou jogadores nas estatísticas, buscar diretamente do banco AGORA
+        if (playersFromStats.size === 0 && playerIdsFromStats.size > 0) {
+          console.log('[Dashboard] Nenhum jogador encontrado nas estatísticas, buscando do banco...');
+          try {
+            const allPlayers = await getPlayers();
+            console.log('[Dashboard] Todos os jogadores do banco:', allPlayers);
+            const missingPlayerIds = Array.from(playerIdsFromStats);
+            missingPlayerIds.forEach((playerId) => {
+              const player = allPlayers.find((p: Player) => p.id === playerId);
+              if (player && !playersFromStats.has(playerId)) {
+                console.log(`[Dashboard] Encontrado jogador ${playerId}:`, player);
+                playersFromStats.set(playerId, {
+                  id: playerId,
+                  name: player.name,
+                  number: player.number,
+                  position: player.position,
+                });
+              } else if (!player) {
+                console.warn(`[Dashboard] Jogador ${playerId} não encontrado no banco!`);
+              }
+            });
+            console.log('[Dashboard] Jogadores buscados do banco:', Array.from(playersFromStats.values()));
+          } catch (err) {
+            console.error('[Dashboard] Erro ao buscar jogadores do banco:', err);
+          }
+        }
 
         // SEGUNDO: Buscar jogadores vinculados ao jogo (para completar informações)
         const detailed = await getGame(selectedGame.id);
@@ -455,29 +478,34 @@ export default function DashboardPage() {
 
         // QUARTO: Se ainda faltar informações, buscar do diretório geral
         const missingIds = Array.from(allPlayersMap.values())
-          .filter(p => !p.name || p.name.startsWith('Jogador ') || !p.number || !p.position)
+          .filter(p => !p.name || p.name.startsWith('Jogador ') || p.number === undefined || p.position === undefined)
           .map(p => p.id);
         
         if (missingIds.length > 0) {
+          console.log('[Dashboard] Buscando informações faltantes para jogadores:', missingIds);
           try {
             const allPlayers = await getPlayers();
+            console.log('[Dashboard] Total de jogadores no banco:', allPlayers.length);
             missingIds.forEach((id) => {
               const player = allPlayers.find((p: Player) => p.id === id);
               if (player && allPlayersMap.has(id)) {
                 const existing = allPlayersMap.get(id)!;
+                console.log(`[Dashboard] Preenchendo informações do jogador ${id}:`, player);
                 if (!existing.name || existing.name.startsWith('Jogador ')) {
                   existing.name = player.name;
                 }
-                if (!existing.number && player.number) {
+                if (existing.number === undefined && player.number !== undefined) {
                   existing.number = player.number;
                 }
-                if (!existing.position && player.position) {
+                if (existing.position === undefined && player.position !== undefined) {
                   existing.position = player.position;
                 }
+              } else if (!player) {
+                console.warn(`[Dashboard] Jogador ${id} não encontrado no diretório geral!`);
               }
             });
           } catch (err) {
-            console.warn('Não foi possível buscar jogadores do diretório:', err);
+            console.error('[Dashboard] Erro ao buscar jogadores do diretório:', err);
           }
         }
 

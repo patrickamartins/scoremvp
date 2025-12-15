@@ -114,6 +114,12 @@ def list_game_statistics(
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
         players_dict = {p.id: p for p in players}
+        # Log para debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ESTATISTICAS] Buscando jogadores para IDs: {player_ids}")
+        logger.info(f"[ESTATISTICAS] Jogadores encontrados: {[p.id for p in players]}")
+        logger.info(f"[ESTATISTICAS] Jogadores com nomes: {[(p.id, p.name) for p in players]}")
     
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
@@ -126,6 +132,7 @@ def list_game_statistics(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
+        # SEMPRE adicionar informações do jogador, mesmo que seja None
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -133,6 +140,15 @@ def list_game_statistics(
                 'number': player.number,
                 'position': player.position,
             }
+        elif stat.player_id:
+            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            stat_dict['player'] = {
+                'id': stat.player_id,
+                'name': None,  # Frontend vai buscar
+                'number': None,
+                'position': None,
+            }
+        
         result.append(stat_dict)
     
     return result
@@ -278,6 +294,12 @@ def listar_estatisticas_publicas(
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
         players_dict = {p.id: p for p in players}
+        # Log para debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ESTATISTICAS] Buscando jogadores para IDs: {player_ids}")
+        logger.info(f"[ESTATISTICAS] Jogadores encontrados: {[p.id for p in players]}")
+        logger.info(f"[ESTATISTICAS] Jogadores com nomes: {[(p.id, p.name) for p in players]}")
     
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
@@ -290,6 +312,7 @@ def listar_estatisticas_publicas(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
+        # SEMPRE adicionar informações do jogador, mesmo que seja None
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -297,6 +320,15 @@ def listar_estatisticas_publicas(
                 'number': player.number,
                 'position': player.position,
             }
+        elif stat.player_id:
+            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            stat_dict['player'] = {
+                'id': stat.player_id,
+                'name': None,  # Frontend vai buscar
+                'number': None,
+                'position': None,
+            }
+        
         result.append(stat_dict)
     
     return result
@@ -343,6 +375,12 @@ def listar_estatisticas_por_link(
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
         players_dict = {p.id: p for p in players}
+        # Log para debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ESTATISTICAS] Buscando jogadores para IDs: {player_ids}")
+        logger.info(f"[ESTATISTICAS] Jogadores encontrados: {[p.id for p in players]}")
+        logger.info(f"[ESTATISTICAS] Jogadores com nomes: {[(p.id, p.name) for p in players]}")
     
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
@@ -355,6 +393,7 @@ def listar_estatisticas_por_link(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
+        # SEMPRE adicionar informações do jogador, mesmo que seja None
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -362,6 +401,15 @@ def listar_estatisticas_por_link(
                 'number': player.number,
                 'position': player.position,
             }
+        elif stat.player_id:
+            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            stat_dict['player'] = {
+                'id': stat.player_id,
+                'name': None,  # Frontend vai buscar
+                'number': None,
+                'position': None,
+            }
+        
         result.append(stat_dict)
     
     return result
@@ -400,6 +448,12 @@ def listar_stats_game(
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
         players_dict = {p.id: p for p in players}
+        # Log para debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ESTATISTICAS] Buscando jogadores para IDs: {player_ids}")
+        logger.info(f"[ESTATISTICAS] Jogadores encontrados: {[p.id for p in players]}")
+        logger.info(f"[ESTATISTICAS] Jogadores com nomes: {[(p.id, p.name) for p in players]}")
     
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
@@ -412,6 +466,7 @@ def listar_stats_game(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
+        # SEMPRE adicionar informações do jogador, mesmo que seja None
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -419,6 +474,15 @@ def listar_stats_game(
                 'number': player.number,
                 'position': player.position,
             }
+        elif stat.player_id:
+            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            stat_dict['player'] = {
+                'id': stat.player_id,
+                'name': None,  # Frontend vai buscar
+                'number': None,
+                'position': None,
+            }
+        
         result.append(stat_dict)
     
     return result
@@ -567,6 +631,12 @@ def get_stats_game_frontend(
     if player_ids:
         players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
         players_dict = {p.id: p for p in players}
+        # Log para debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ESTATISTICAS] Buscando jogadores para IDs: {player_ids}")
+        logger.info(f"[ESTATISTICAS] Jogadores encontrados: {[p.id for p in players]}")
+        logger.info(f"[ESTATISTICAS] Jogadores com nomes: {[(p.id, p.name) for p in players]}")
     
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
@@ -579,6 +649,7 @@ def get_stats_game_frontend(
             # Se não está carregado, buscar do dicionário
             player = players_dict[stat.player_id]
         
+        # SEMPRE adicionar informações do jogador, mesmo que seja None
         if player:
             stat_dict['player'] = {
                 'id': player.id,
@@ -586,6 +657,15 @@ def get_stats_game_frontend(
                 'number': player.number,
                 'position': player.position,
             }
+        elif stat.player_id:
+            # Se não encontrou o jogador, ainda assim adicionar o ID para o frontend buscar
+            stat_dict['player'] = {
+                'id': stat.player_id,
+                'name': None,  # Frontend vai buscar
+                'number': None,
+                'position': None,
+            }
+        
         result.append(stat_dict)
     
     return result
