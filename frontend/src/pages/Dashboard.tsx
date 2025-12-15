@@ -678,56 +678,31 @@ export default function DashboardPage() {
       });
   }, [playerLines, playerLinesMap, selectedGame, stats, games, rangeStats, metricValue]);
 
-  // Criar lista de jogadores para o BoxScore extraindo diretamente das estatísticas
+  // Jogadores usados no BoxScore:
+  // - Quando há jogo selecionado: usa diretamente os jogadores vinculados ao jogo (mesmo modelo da página pública)
+  // - Quando não há jogo selecionado (visão geral): cai no comportamento agregado anterior
   const boxScorePlayers = useMemo(() => {
+    // Caso principal: jogo selecionado → usar exatamente os jogadores do jogo
+    if (selectedGame && selectedGamePlayers.length > 0) {
+      return selectedGamePlayers;
+    }
+
+    // Visão geral (sem jogo selecionado): manter comportamento agregado
     const playersMap = new Map<number, BoxScorePlayer>();
-    
-    // Usar estatísticas do jogo selecionado ou do range
-    const allStats = selectedGame ? stats : rangeStats;
-    
-    // Extrair jogadores diretamente das estatísticas (prioridade máxima)
-    allStats.forEach((stat: any) => {
-      if (stat.player_id) {
-        const playerId = Number(stat.player_id);
-        if (!playersMap.has(playerId)) {
-          // Se a estatística tem informações do jogador, usar diretamente
-          if (stat.player) {
-            playersMap.set(playerId, {
-              id: playerId,
-              name: stat.player.name || `Jogador ${playerId}`,
-              number: stat.player.number,
-              position: stat.player.position,
-            });
-          } else {
-            // Se não tem, usar resolvePlayerInfo como fallback
-            const playerInfo = resolvePlayerInfo(playerId);
-            playersMap.set(playerId, {
-              id: playerId,
-              name: playerInfo.name || `Jogador ${playerId}`,
-              number: playerInfo.number,
-              position: playerInfo.position,
-            });
-          }
-        }
+
+    aggregatedEntries.forEach(({ player }) => {
+      if (!playersMap.has(player.id)) {
+        playersMap.set(player.id, {
+          id: player.id,
+          name: player.name || `Jogador ${player.id}`,
+          number: player.number,
+          position: player.position,
+        });
       }
     });
-    
-    // Se ainda não encontrou jogadores, usar aggregatedEntries
-    if (playersMap.size === 0 && aggregatedEntries.length > 0) {
-      aggregatedEntries.forEach(({ player }) => {
-        if (!playersMap.has(player.id)) {
-          playersMap.set(player.id, {
-            id: player.id,
-            name: player.name || `Jogador ${player.id}`,
-            number: player.number,
-            position: player.position,
-          });
-        }
-      });
-    }
-    
+
     return Array.from(playersMap.values());
-  }, [stats, rangeStats, selectedGame, aggregatedEntries, resolvePlayerInfo]);
+  }, [selectedGame, selectedGamePlayers, aggregatedEntries]);
 
   const boxScoreStats = selectedGame ? stats : rangeStats;
 
