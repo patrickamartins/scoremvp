@@ -106,15 +106,32 @@ def list_game_statistics(
     
     # Retornar estatísticas com informações dos jogadores
     result = []
+    # Coletar todos os player_ids únicos para buscar em batch
+    player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
+    
+    # Buscar todos os jogadores de uma vez
+    players_dict = {}
+    if player_ids:
+        players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
+        players_dict = {p.id: p for p in players}
+    
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
-        # Adicionar informações do jogador se disponível
+        # Adicionar informações do jogador
+        player = None
         if stat.player:
+            # Se o relacionamento está carregado, usar diretamente
+            player = stat.player
+        elif stat.player_id and stat.player_id in players_dict:
+            # Se não está carregado, buscar do dicionário
+            player = players_dict[stat.player_id]
+        
+        if player:
             stat_dict['player'] = {
-                'id': stat.player.id,
-                'name': stat.player.name,
-                'number': stat.player.number,
-                'position': stat.player.position,
+                'id': player.id,
+                'name': player.name,
+                'number': player.number,
+                'position': player.position,
             }
         result.append(stat_dict)
     
@@ -253,15 +270,32 @@ def listar_estatisticas_publicas(
     
     # Retornar estatísticas com informações dos jogadores
     result = []
+    # Coletar todos os player_ids únicos para buscar em batch
+    player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
+    
+    # Buscar todos os jogadores de uma vez
+    players_dict = {}
+    if player_ids:
+        players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
+        players_dict = {p.id: p for p in players}
+    
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
-        # Adicionar informações do jogador se disponível
+        # Adicionar informações do jogador
+        player = None
         if stat.player:
+            # Se o relacionamento está carregado, usar diretamente
+            player = stat.player
+        elif stat.player_id and stat.player_id in players_dict:
+            # Se não está carregado, buscar do dicionário
+            player = players_dict[stat.player_id]
+        
+        if player:
             stat_dict['player'] = {
-                'id': stat.player.id,
-                'name': stat.player.name,
-                'number': stat.player.number,
-                'position': stat.player.position,
+                'id': player.id,
+                'name': player.name,
+                'number': player.number,
+                'position': player.position,
             }
         result.append(stat_dict)
     
@@ -301,15 +335,32 @@ def listar_estatisticas_por_link(
     
     # Retornar estatísticas com informações dos jogadores
     result = []
+    # Coletar todos os player_ids únicos para buscar em batch
+    player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
+    
+    # Buscar todos os jogadores de uma vez
+    players_dict = {}
+    if player_ids:
+        players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
+        players_dict = {p.id: p for p in players}
+    
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
-        # Adicionar informações do jogador se disponível
+        # Adicionar informações do jogador
+        player = None
         if stat.player:
+            # Se o relacionamento está carregado, usar diretamente
+            player = stat.player
+        elif stat.player_id and stat.player_id in players_dict:
+            # Se não está carregado, buscar do dicionário
+            player = players_dict[stat.player_id]
+        
+        if player:
             stat_dict['player'] = {
-                'id': stat.player.id,
-                'name': stat.player.name,
-                'number': stat.player.number,
-                'position': stat.player.position,
+                'id': player.id,
+                'name': player.name,
+                'number': player.number,
+                'position': player.position,
             }
         result.append(stat_dict)
     
@@ -341,15 +392,32 @@ def listar_stats_game(
     
     # Retornar estatísticas com informações dos jogadores
     result = []
+    # Coletar todos os player_ids únicos para buscar em batch
+    player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
+    
+    # Buscar todos os jogadores de uma vez
+    players_dict = {}
+    if player_ids:
+        players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
+        players_dict = {p.id: p for p in players}
+    
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
-        # Adicionar informações do jogador se disponível
+        # Adicionar informações do jogador
+        player = None
         if stat.player:
+            # Se o relacionamento está carregado, usar diretamente
+            player = stat.player
+        elif stat.player_id and stat.player_id in players_dict:
+            # Se não está carregado, buscar do dicionário
+            player = players_dict[stat.player_id]
+        
+        if player:
             stat_dict['player'] = {
-                'id': stat.player.id,
-                'name': stat.player.name,
-                'number': stat.player.number,
-                'position': stat.player.position,
+                'id': player.id,
+                'name': player.name,
+                'number': player.number,
+                'position': player.position,
             }
         result.append(stat_dict)
     
@@ -491,15 +559,32 @@ def get_stats_game_frontend(
     
     # Retornar estatísticas com informações dos jogadores
     result = []
+    # Coletar todos os player_ids únicos para buscar em batch
+    player_ids = list(set([stat.player_id for stat in stats if stat.player_id]))
+    
+    # Buscar todos os jogadores de uma vez
+    players_dict = {}
+    if player_ids:
+        players = db.query(models.Player).filter(models.Player.id.in_(player_ids)).all()
+        players_dict = {p.id: p for p in players}
+    
     for stat in stats:
         stat_dict = schemas.StatisticOut.model_validate(stat).model_dump()
-        # Adicionar informações do jogador se disponível
+        # Adicionar informações do jogador
+        player = None
         if stat.player:
+            # Se o relacionamento está carregado, usar diretamente
+            player = stat.player
+        elif stat.player_id and stat.player_id in players_dict:
+            # Se não está carregado, buscar do dicionário
+            player = players_dict[stat.player_id]
+        
+        if player:
             stat_dict['player'] = {
-                'id': stat.player.id,
-                'name': stat.player.name,
-                'number': stat.player.number,
-                'position': stat.player.position,
+                'id': player.id,
+                'name': player.name,
+                'number': player.number,
+                'position': player.position,
             }
         result.append(stat_dict)
     

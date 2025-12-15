@@ -357,8 +357,16 @@ export default function DashboardPage() {
   useEffect(() => {
     if (selectedGame?.id) {
       getGameStats(selectedGame.id)
-        .then((data) => setStats(data))
-        .catch(() => setStats([]));
+        .then((data) => {
+          // Debug: verificar se as estatísticas têm informações dos jogadores
+          console.log('[Dashboard] Estatísticas recebidas:', data);
+          console.log('[Dashboard] Primeira estatística tem player?', data[0]?.player);
+          setStats(data);
+        })
+        .catch((err) => {
+          console.error('[Dashboard] Erro ao buscar estatísticas:', err);
+          setStats([]);
+        });
     } else {
       setStats([]);
     }
@@ -374,7 +382,38 @@ export default function DashboardPage() {
 
     async function fetchGamePlayers() {
       try {
-        // Buscar jogadores vinculados ao jogo
+        // PRIMEIRO: Buscar estatísticas do jogo (elas já vêm com informações dos jogadores)
+        const gameStats = await getGameStats(selectedGame.id);
+        if (cancelled) return;
+        
+        // Extrair jogadores diretamente das estatísticas (prioridade máxima)
+        const playersFromStats = new Map<number, BoxScorePlayer>();
+        gameStats.forEach((stat: any) => {
+          if (stat.player_id) {
+            const playerId = Number(stat.player_id);
+            if (!playersFromStats.has(playerId)) {
+              if (stat.player) {
+                // Se a estatística tem informações do jogador, usar diretamente
+                playersFromStats.set(playerId, {
+                  id: playerId,
+                  name: stat.player.name || `Jogador ${playerId}`,
+                  number: stat.player.number,
+                  position: stat.player.position,
+                });
+              } else {
+                // Se não tem, criar objeto básico (será preenchido depois)
+                playersFromStats.set(playerId, {
+                  id: playerId,
+                  name: `Jogador ${playerId}`, // Temporário, será substituído
+                  number: undefined,
+                  position: undefined,
+                });
+              }
+            }
+          }
+        });
+
+        // SEGUNDO: Buscar jogadores vinculados ao jogo (para completar informações)
         const detailed = await getGame(selectedGame.id);
         if (cancelled) return;
         const gamePlayers = Array.isArray(detailed.players)
@@ -386,43 +425,68 @@ export default function DashboardPage() {
             }))
           : [];
 
-        // Buscar jogadores que têm estatísticas no jogo (mesmo que não estejam mais vinculados)
-        const gameStats = await getGameStats(selectedGame.id);
-        if (cancelled) return;
-        
-        // Extrair jogadores das estatísticas (agora o backend retorna player dentro de cada stat)
-        const playersFromStats = new Map<number, BoxScorePlayer>();
-        gameStats.forEach((stat: any) => {
-          if (stat.player_id && stat.player) {
-            const playerId = Number(stat.player_id);
-            if (!playersFromStats.has(playerId)) {
-              playersFromStats.set(playerId, {
-                id: playerId,
-                name: stat.player.name || `Jogador ${playerId}`,
-                number: stat.player.number,
-                position: stat.player.position,
-              });
-            }
-          }
-        });
-
-        // Combinar jogadores do jogo com jogadores das estatísticas
+        // TERCEIRO: Combinar jogadores das estatísticas com jogadores do jogo
         const allPlayersMap = new Map<number, BoxScorePlayer>();
         
-        // Adicionar jogadores do jogo
-        gamePlayers.forEach((p) => {
-          allPlayersMap.set(p.id, p);
-        });
-        
-        // Adicionar jogadores das estatísticas (sobrescreve se já existir, mas mantém dados mais completos)
+        // Adicionar jogadores das estatísticas primeiro (prioridade)
         playersFromStats.forEach((p, id) => {
           allPlayersMap.set(id, p);
         });
+        
+        // Completar com informações dos jogadores do jogo (se não tiver nome completo)
+        gamePlayers.forEach((p) => {
+          if (allPlayersMap.has(p.id)) {
+            // Se já existe, completar informações faltantes
+            const existing = allPlayersMap.get(p.id)!;
+            if (!existing.name || existing.name.startsWith('Jogador ')) {
+              existing.name = p.name;
+            }
+            if (!existing.number && p.number) {
+              existing.number = p.number;
+            }
+            if (!existing.position && p.position) {
+              existing.position = p.position;
+            }
+          } else {
+            // Se não existe, adicionar
+            allPlayersMap.set(p.id, p);
+          }
+        });
+
+        // QUARTO: Se ainda faltar informações, buscar do diretório geral
+        const missingIds = Array.from(allPlayersMap.values())
+          .filter(p => !p.name || p.name.startsWith('Jogador ') || !p.number || !p.position)
+          .map(p => p.id);
+        
+        if (missingIds.length > 0) {
+          try {
+            const allPlayers = await getPlayers();
+            missingIds.forEach((id) => {
+              const player = allPlayers.find((p: Player) => p.id === id);
+              if (player && allPlayersMap.has(id)) {
+                const existing = allPlayersMap.get(id)!;
+                if (!existing.name || existing.name.startsWith('Jogador ')) {
+                  existing.name = player.name;
+                }
+                if (!existing.number && player.number) {
+                  existing.number = player.number;
+                }
+                if (!existing.position && player.position) {
+                  existing.position = player.position;
+                }
+              }
+            });
+          } catch (err) {
+            console.warn('Não foi possível buscar jogadores do diretório:', err);
+          }
+        }
 
         // Converter para array
         const uniquePlayers = Array.from(allPlayersMap.values());
 
         if (!cancelled) {
+          console.log('[Dashboard] Jogadores extraídos:', uniquePlayers);
+          console.log('[Dashboard] Jogadores das estatísticas:', Array.from(playersFromStats.values()));
           setSelectedGamePlayers(uniquePlayers);
         }
       } catch (error) {
@@ -682,27 +746,75 @@ export default function DashboardPage() {
   // - Quando há jogo selecionado: usa diretamente os jogadores vinculados ao jogo (mesmo modelo da página pública)
   // - Quando não há jogo selecionado (visão geral): cai no comportamento agregado anterior
   const boxScorePlayers = useMemo(() => {
-    // Caso principal: jogo selecionado → usar exatamente os jogadores do jogo
-    if (selectedGame && selectedGamePlayers.length > 0) {
-      return selectedGamePlayers;
-    }
-
-    // Visão geral (sem jogo selecionado): manter comportamento agregado
     const playersMap = new Map<number, BoxScorePlayer>();
-
-    aggregatedEntries.forEach(({ player }) => {
-      if (!playersMap.has(player.id)) {
-        playersMap.set(player.id, {
-          id: player.id,
-          name: player.name || `Jogador ${player.id}`,
-          number: player.number,
-          position: player.position,
+    
+    // Caso principal: jogo selecionado
+    if (selectedGame) {
+      // Prioridade 1: Usar jogadores já extraídos (selectedGamePlayers)
+      if (selectedGamePlayers.length > 0) {
+        selectedGamePlayers.forEach((p) => {
+          playersMap.set(p.id, p);
         });
       }
-    });
+      
+      // Prioridade 2: Extrair jogadores diretamente das estatísticas do jogo selecionado
+      stats.forEach((stat: any) => {
+        if (stat.player_id) {
+          const playerId = Number(stat.player_id);
+          if (!playersMap.has(playerId)) {
+            if (stat.player) {
+              // Se a estatística tem informações do jogador, usar diretamente
+              playersMap.set(playerId, {
+                id: playerId,
+                name: stat.player.name || `Jogador ${playerId}`,
+                number: stat.player.number,
+                position: stat.player.position,
+              });
+            } else {
+              // Se não tem, usar resolvePlayerInfo
+              const playerInfo = resolvePlayerInfo(playerId);
+              playersMap.set(playerId, {
+                id: playerId,
+                name: playerInfo.name || `Jogador ${playerId}`,
+                number: playerInfo.number,
+                position: playerInfo.position,
+              });
+            }
+          }
+        }
+      });
+      
+      // Se ainda não encontrou jogadores, usar aggregatedEntries
+      if (playersMap.size === 0) {
+        aggregatedEntries.forEach(({ player }) => {
+          if (!playersMap.has(player.id)) {
+            playersMap.set(player.id, {
+              id: player.id,
+              name: player.name || `Jogador ${player.id}`,
+              number: player.number,
+              position: player.position,
+            });
+          }
+        });
+      }
+    } else {
+      // Visão geral (sem jogo selecionado): usar aggregatedEntries
+      aggregatedEntries.forEach(({ player }) => {
+        if (!playersMap.has(player.id)) {
+          playersMap.set(player.id, {
+            id: player.id,
+            name: player.name || `Jogador ${player.id}`,
+            number: player.number,
+            position: player.position,
+          });
+        }
+      });
+    }
 
-    return Array.from(playersMap.values());
-  }, [selectedGame, selectedGamePlayers, aggregatedEntries]);
+    const result = Array.from(playersMap.values());
+    console.log('[Dashboard] boxScorePlayers final:', result);
+    return result;
+  }, [selectedGame, selectedGamePlayers, aggregatedEntries, stats, resolvePlayerInfo]);
 
   const boxScoreStats = selectedGame ? stats : rangeStats;
 
